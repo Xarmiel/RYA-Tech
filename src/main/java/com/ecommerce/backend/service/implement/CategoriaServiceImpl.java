@@ -24,8 +24,9 @@ public class CategoriaServiceImpl implements CategoriaService {
     @Override
     @Transactional
     public CategoriaResponseDto crearCategoria(CategoriaCreateDto dto) {
-        if (categoriaRepository.findBySlug(dto.slug()).isPresent()) {
-            throw new BadRequestException("Ya existe una categoría con el slug: " + dto.slug());
+        if (categoriaRepository.findByNombre(dto.nombre().trim()).isPresent() ||
+            categoriaRepository.findBySlug(dto.slug().trim()).isPresent()) {
+            throw new BadRequestException("Categoria existente");
         }
 
         Categoria parent = null;

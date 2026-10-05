@@ -49,6 +49,28 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional(readOnly = true)
+    public ProductoResponseDto obtenerPorNombre(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new BadRequestException("El nombre del producto no puede estar vacío");
+        }
+        return productoRepository.findByNombreIgnoreCaseAndActivoTrue(nombre.trim())
+            .map(productoMapper::toResponseDto)
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductoResponseDto> buscarPorNombre(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return listarActivos();
+        }
+        return productoRepository.buscarPorNombreContiene(query.trim()).stream()
+            .map(productoMapper::toResponseDto)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ProductoResponseDto> listarActivos() {
         return productoRepository.findByActivoTrue().stream()
             .map(productoMapper::toResponseDto)
@@ -65,9 +87,34 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional
+    public ProductoResponseDto actualizarProducto(UUID id, com.ecommerce.backend.dto.request.ProductoUpdateDto dto) {
+        Producto producto = productoRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+        producto.setNombre(dto.nombre().trim());
+        producto.setPrecioBase(dto.precioBase());
+        producto.setImagenUrl(dto.imagenUrl().trim());
+
+        return productoMapper.toResponseDto(productoRepository.save(producto));
+    }
+
+    @Override
+    @Transactional
     public void desactivarProducto(UUID id) {
         Producto producto = productoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
+        producto.setActivo(false);
+        productoRepository.save(producto);
+    }
+
+    @Override
+    @Transactional
+    public void desactivarPorNombre(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new BadRequestException("El nombre del producto no puede estar vacío");
+        }
+        Producto producto = productoRepository.findByNombreIgnoreCaseAndActivoTrue(nombre.trim())
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
         producto.setActivo(false);
         productoRepository.save(producto);
     }

@@ -24,6 +24,11 @@ public interface ProductoRepository extends JpaRepository<Producto, UUID> {
 
     List<Producto> findByTipoProducto(TipoProductoEnum tipoProducto);
 
+    Optional<Producto> findByNombreIgnoreCaseAndActivoTrue(String nombre);
+
+    @Query("SELECT p FROM Producto p WHERE LOWER(p.nombre) LIKE LOWER(CONCAT('%', :query, '%')) AND p.activo = true")
+    List<Producto> buscarPorNombreContiene(@Param("query") String query);
+
     @Query("SELECT p FROM Producto p LEFT JOIN FETCH p.especificaciones LEFT JOIN FETCH p.categoria WHERE p.id = :id")
     Optional<Producto> findByIdWithEspecificaciones(@Param("id") UUID id);
 }

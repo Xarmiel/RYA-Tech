@@ -34,3 +34,8 @@ build/
 # Archivos de entorno y logs
 *.log
 .env
+
+# Documentación y configuraciones sensibles
+application.properties
+**/application.properties
+docs/

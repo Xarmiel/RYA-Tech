@@ -39,9 +39,27 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.obtenerPorId(id));
     }
 
+    @GetMapping("/buscar")
+    public ResponseEntity<ProductoResponseDto> obtenerPorNombre(@RequestParam String nombre) {
+        return ResponseEntity.ok(productoService.obtenerPorNombre(nombre));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductoResponseDto> actualizarProducto(
+            @PathVariable UUID id,
+            @Valid @RequestBody com.ecommerce.backend.dto.request.ProductoUpdateDto dto) {
+        return ResponseEntity.ok(productoService.actualizarProducto(id, dto));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desactivarProducto(@PathVariable UUID id) {
         productoService.desactivarProducto(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/nombre")
+    public ResponseEntity<Void> desactivarPorNombre(@RequestParam String nombre) {
+        productoService.desactivarPorNombre(nombre);
         return ResponseEntity.noContent().build();
     }
 }

@@ -35,9 +35,9 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(auth -> auth
-                // Recursos estáticos (HTML, CSS, JS, Imágenes)
+                
                 .requestMatchers("/", "/index.html", "/html/**", "/css/**", "/js/**", "/images/**", "/h2-console/**").permitAll()
-                // Endpoints públicos de la API
+                
                 .requestMatchers("/api/**").permitAll()
                 .anyRequest().permitAll()
             );

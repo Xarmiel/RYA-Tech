@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | RYA Tech</title>
+  <link rel="stylesheet" href="../css/core/base.css">
+  <link rel="stylesheet" href="../css/core/header.css">
+  <link rel="stylesheet" href="../css/catalog/products.css">
+  <link rel="stylesheet" href="../css/catalog/carousel.css">
+  <link rel="stylesheet" href="../css/commerce/cart.css">
+  <link rel="stylesheet" href="../css/core/responsive.css">
+  <link rel="stylesheet" href="../css/pages/admin.css">
+</head>
+<body>
+
+  <header>
+    <a class="logo logo-link" href="inicio.html" aria-label="RYA, página de inicio"><img class="logo-image" src="../images/RYA.jpeg" alt="Logo de RYA Tech"></a>
+    <nav aria-label="Navegación principal">
+      <ul>
+        <li><a href="inicio.html">Inicio</a></li>
+        <li><a href="index.html">Catálogo</a></li>
+        <li><a href="asesorias.html">Asesorías</a></li>
+        <li><a href="admin.html" class="is-active" style="color:var(--color-cyan); font-weight:600;">Administración</a></li>
+      </ul>
+    </nav>
+    <div class="nav-icons">
+      <div class="search-box">
+        <input id="headerSearchInput" type="text" placeholder="Buscar productos..." aria-label="Buscar productos">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+      <button class="cart-btn" id="header-cart-btn" aria-label="Ver carrito">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"></path>
+        </svg>
+        Carrito (0)
+      </button>
+    </div>
+  </header>
+
+  <main class="admin-container">
+    <div class="admin-header">
+      <h1>Panel de Administración</h1>
+      <p>Gestión avanzada de catálogo comercial, categorías y motor de asesorías.</p>
+    </div>
+
+    <!-- Navegación por Módulos Principales -->
+    <div class="admin-tabs">
+      <button type="button" class="admin-tab-btn is-active" data-tab="tab-catalogo">Gestión de Catálogo</button>
+      <button type="button" class="admin-tab-btn" data-tab="tab-asesoria">Gestión de Asesorías</button>
+    </div>
+
+    <!-- Módulo 1: Gestión de Catálogo -->
+    <section id="tab-catalogo" class="admin-panel is-active">
+      <div class="admin-subnav">
+        <button type="button" class="admin-subnav-btn is-active" data-sub="sub-agregar">Agregar</button>
+        <button type="button" class="admin-subnav-btn" data-sub="sub-editar">Editar</button>
+        <button type="button" class="admin-subnav-btn" data-sub="sub-eliminar">Eliminar</button>
+      </div>
+
+      <!-- Subpanel 1: AGREGAR -->
+      <div id="sub-agregar" class="admin-subview">
+        <div class="admin-subcard">
+          <div style="display:flex; gap:16px; margin-bottom:20px;">
+            <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+              <input type="radio" name="tipoAgregarCatalogo" value="categoria" checked>
+              <strong>Agregar categoría</strong>
+            </label>
+            <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+              <input type="radio" name="tipoAgregarCatalogo" value="producto">
+              <strong>Agregar en categoría</strong>
+            </label>
+          </div>
+
+          <!-- Opción A: Agregar Categoría (Subcategoría) -->
+          <form id="form-agregar-categoria" style="display:block;">
+            <h3 class="admin-subcard-title">Nueva Subcategoría</h3>
+            <div class="admin-form-row">
+              <div class="admin-form-group">
+                <label for="cat-padre-select">Categoría Principal *</label>
+                <select id="cat-padre-select" required>
+                  <option value="">Seleccione una opción</option>
+                  <option value="Componente">Componente</option>
+                  <option value="Periféricos">Periféricos</option>
+                </select>
+              </div>
+              <div class="admin-form-group">
+                <label for="cat-nombre-input">Nombre de la nueva subcategoría *</label>
+                <input type="text" id="cat-nombre-input" placeholder="Ej: Fuentes SFX, Monitores OLED..." required>
+              </div>
+            </div>
+            <button type="submit" class="admin-btn-primary">Guardar Subcategoría</button>
+            <div id="msg-agregar-categoria" class="admin-message"></div>
+          </form>
+
+          <!-- Opción B: Agregar en Categoría (Producto) -->
+          <form id="form-agregar-producto" style="display:none;">
+            <h3 class="admin-subcard-title">Nuevo Producto en Catálogo</h3>
+            <div class="admin-form-row">
+              <div class="admin-form-group">
+                <label for="prod-macro-select">Categoría *</label>
+                <select id="prod-macro-select" required>
+                  <option value="">Seleccione categoría</option>
+                  <option value="Componente">Componente</option>
+                  <option value="Periféricos">Periféricos</option>
+                </select>
+              </div>
+              <div class="admin-form-group">
+                <label for="prod-subcat-select">Subcategoría *</label>
+                <select id="prod-subcat-select" required>
+                  <option value="">Seleccione subcategoría</option>
+                </select>
+              </div>
+            </div>
+            <div class="admin-form-group">
+              <label for="prod-nombre-input">Nombre del producto *</label>
+              <input type="text" id="prod-nombre-input" placeholder="Ej: ASUS ROG Strix B650-A Gaming WiFi" required>
+            </div>
+            <div class="admin-form-row">
+              <div class="admin-form-group">
+                <label for="prod-precio-input">Precio (S/) *</label>
+                <input type="number" id="prod-precio-input" step="0.01" min="0.01" placeholder="Ej: 890.00" required>
+              </div>
+              <div class="admin-form-group">
+                <label for="prod-url-input">URL de la imagen *</label>
+                <input type="url" id="prod-url-input" placeholder="https://..." required>
+              </div>
+            </div>
+            <button type="submit" class="admin-btn-primary">Guardar Producto</button>
+            <div id="msg-agregar-producto" class="admin-message"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Subpanel 2: EDITAR -->
+      <div id="sub-editar" class="admin-subview" style="display:none;">
+        <div class="admin-subcard">
+          <h3 class="admin-subcard-title">Buscar Producto para Editar</h3>
+          <form id="form-buscar-editar" style="display:flex; gap:12px; align-items:flex-end;">
+            <div class="admin-form-group" style="flex:1; margin-bottom:0;">
+              <label for="edit-search-nombre">Nombre del producto *</label>
+              <input type="text" id="edit-search-nombre" placeholder="Ingrese nombre exacto o búsqueda del producto" required>
+            </div>
+            <button type="submit" class="admin-btn-primary">Buscar</button>
+          </form>
+          <div id="msg-buscar-editar" class="admin-message"></div>
+
+          <!-- Formulario interactivo de edición cuando se encuentra -->
+          <form id="form-guardar-editar" style="display:none; margin-top:24px; border-top:1px solid var(--line); padding-top:20px;">
+            <h4 style="color:var(--color-cyan); margin-bottom:16px;">Editar Parámetros de Producto</h4>
+            <div class="admin-form-group">
+              <label for="edit-nombre-input">Nombre *</label>
+              <input type="text" id="edit-nombre-input" required>
+            </div>
+            <div class="admin-form-row">
+              <div class="admin-form-group">
+                <label for="edit-precio-input">Precio (S/) *</label>
+                <input type="number" id="edit-precio-input" step="0.01" min="0.01" required>
+              </div>
+              <div class="admin-form-group">
+                <label for="edit-url-input">URL de la imagen *</label>
+                <input type="url" id="edit-url-input" required>
+              </div>
+            </div>
+            <button type="submit" class="admin-btn-primary">Guardar Cambios</button>
+            <div id="msg-guardar-editar" class="admin-message"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Subpanel 3: ELIMINAR -->
+      <div id="sub-eliminar" class="admin-subview" style="display:none;">
+        <div class="admin-subcard">
+          <h3 class="admin-subcard-title">Buscar Producto para Eliminar</h3>
+          <form id="form-buscar-eliminar" style="display:flex; gap:12px; align-items:flex-end;">
+            <div class="admin-form-group" style="flex:1; margin-bottom:0;">
+              <label for="del-search-nombre">Nombre del producto *</label>
+              <input type="text" id="del-search-nombre" placeholder="Ingrese el nombre del producto" required>
+            </div>
+            <button type="submit" class="admin-btn-primary">Buscar</button>
+          </form>
+          <div id="msg-buscar-eliminar" class="admin-message"></div>
+
+          <!-- Vista Previa de la Card y Botón Eliminar -->
+          <div id="del-preview-container" class="admin-preview-area" style="display:none;">
+            <div id="del-card-wrapper" style="pointer-events:none; max-width:280px; width:100%;"></div>
+            <button type="button" id="btn-iniciar-eliminar" class="admin-btn-danger">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Módulo 2: Gestión de Asesorías -->
+    <section id="tab-asesoria" class="admin-panel">
+      <div class="admin-subcard">
+        <h3 class="admin-subcard-title">Registrar Especialidad y Perfil de Hardware</h3>
+        <p style="color:var(--muted); font-size:13px; margin-bottom:18px;">
+          Ingresa la profesión/especialidad, el campo ocupacional, su descripción explicativa y la jerarquía de prioridad única (1 a 7 sin repetir) para cada componente.
+        </p>
+        <form id="form-asesoria-especialidad">
+          <div class="admin-form-row">
+            <div class="admin-form-group">
+              <label for="esp-nombre">Nombre de la especialidad *</label>
+              <input type="text" id="esp-nombre" placeholder="Ej: Desarrollador Móvil, Científico de Datos..." required>
+            </div>
+            <div class="admin-form-group">
+              <label for="esp-campo">Campo *</label>
+              <input type="text" id="esp-campo" placeholder="Ej: Tecnología, Salud, Finanzas..." required>
+            </div>
+          </div>
+
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:10px; color:var(--text);">
+            Niveles de Prioridad por Componente (1 al 7, sin repetir) *
+          </label>
+          <div class="admin-priorities-grid">
+            <div class="admin-form-group">
+              <label for="prio-cpu">CPU (1-7)</label>
+              <select id="prio-cpu" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label for="prio-gpu">GPU (1-7)</label>
+              <select id="prio-gpu" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label for="prio-disco">Disco (1-7)</label>
+              <select id="prio-disco" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label for="prio-ram">RAM (1-7)</label>
+              <select id="prio-ram" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label for="prio-fuente">Fuente (1-7)</label>
+              <select id="prio-fuente" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label for="prio-placa">Placa (1-7)</label>
+              <select id="prio-placa" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label for="prio-case">Case (1-7)</label>
+              <select id="prio-case" required>
+                <option value="">-</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="admin-form-group">
+            <label for="esp-desc">Descripción de la especialidad *</label>
+            <textarea id="esp-desc" rows="3" placeholder="Describe los requerimientos técnicos y el porqué de la configuración..." required></textarea>
+          </div>
+
+          <button type="submit" class="admin-btn-primary">Registrar Especialidad</button>
+          <div id="msg-asesoria-especialidad" class="admin-message"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de Confirmación para Eliminar -->
+  <div id="modal-confirm-delete" class="admin-confirm-modal" role="dialog" aria-modal="true">
+    <div class="admin-modal-box">
+      <h3>¿Seguro que desea eliminar el producto?</h3>
+      <p id="modal-delete-product-name" style="color:var(--muted); font-size:14px; margin-bottom:16px;"></p>
+      <div class="admin-modal-actions">
+        <button type="button" id="btn-confirm-delete-yes" class="admin-btn-danger">Sí</button>
+        <button type="button" id="btn-confirm-delete-no" class="admin-btn-cancel">No</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/core/config.js"></script>
+  <script src="../js/core/api.js"></script>
+  <script src="../js/core/network-ui.js"></script>
+  <script src="../js/catalog/product-card.js"></script>
+  <script src="../js/pages/admin.js"></script>
+</body>
+</html>

@@ -8,14 +8,13 @@
   <link rel="icon" type="image/jpeg" href="../images/Logo%20RYA.jpeg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/header.css">
-  <link rel="stylesheet" href="../css/advisor.css">
-  <link rel="stylesheet" href="../css/cart.css">
+  <link rel="stylesheet" href="../css/core/base.css">
+  <link rel="stylesheet" href="../css/core/header.css">
+  <link rel="stylesheet" href="../css/pages/advisor.css">
+  <link rel="stylesheet" href="../css/commerce/cart.css">
 </head>
 <body>
 
-  <!-- HEADER GLOBAL -->
   <header>
     <a class="logo logo-link" href="inicio.html" aria-label="RYA, página de inicio">
       <img class="logo-image" src="../images/RYA.jpeg" alt="Logo de RYA Tech">
@@ -47,7 +46,6 @@
     </div>
   </header>
 
-  <!-- CONTENIDO PRINCIPAL: SISTEMA DE ASESORÍAS AUTOMÁTICAS -->
   <main class="page-content" style="gap: 40px; padding-top: 48px;">
     
     <div class="section-title-wrapper" style="margin-bottom: 8px;">
@@ -60,9 +58,8 @@
       </p>
     </div>
 
-    <!-- CONTENEDOR DEL ASESOR -->
     <section class="advisor-container" style="margin-top: 10px;">
-      <!-- Formulario: Profesión y Presupuesto -->
+      
       <form id="advisorForm" class="advisor-form-grid" novalidate>
         <div class="advisor-field-group">
           <label for="advisorProfessionSelect">Profesión u Ocupación</label>
@@ -103,15 +100,13 @@
         </button>
       </form>
 
-      <!-- Contenedor Dinámico del Gabinete, 4 Componentes y Cuadro de Texto -->
       <div id="advisorResultsArea" class="advisor-results-area" aria-live="polite">
-        <!-- Renderizado automáticamente por advisor.js -->
+        
       </div>
     </section>
 
   </main>
 
-  <!-- PIE DE PÁGINA -->
   <footer class="site-footer" id="contacto">
     <div class="footer-main">
       <div>
@@ -140,12 +135,9 @@
     </div>
   </footer>
 
-  <!-- SCRIPTS -->
-  <script src="../js/config.js"></script>
-  <script src="../js/data.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/network-ui.js"></script>
-  <script src="../js/cart.js"></script>
-  <script src="../js/advisor.js"></script>
+  <script src="../js/core/api.js"></script>
+  <script src="../js/core/network-ui.js"></script>
+  <script src="../js/commerce/cart.js"></script>
+  <script src="../js/pages/advisor.js"></script>
 </body>
 </html>

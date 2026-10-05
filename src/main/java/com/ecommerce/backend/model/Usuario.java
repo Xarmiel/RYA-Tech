@@ -1,10 +1,7 @@
-// src/main/java/com/ecommerce/backend/model/Usuario.java
 package com.ecommerce.backend.model;
 
-import com.ecommerce.backend.model.enums.RolUsuario;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -31,9 +28,9 @@ public class Usuario {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "rol", length = 20)
-    private RolUsuario rol = RolUsuario.CLIENTE;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "rol_id", nullable = false)
+    private Rol rol;
 
     @Column(name = "fecha_registro", updatable = false)
     private OffsetDateTime fechaRegistro;
@@ -42,9 +39,6 @@ public class Usuario {
     protected void onCreate() {
         if (this.fechaRegistro == null) {
             this.fechaRegistro = OffsetDateTime.now();
-        }
-        if (this.rol == null) {
-            this.rol = RolUsuario.CLIENTE;
         }
     }
 }

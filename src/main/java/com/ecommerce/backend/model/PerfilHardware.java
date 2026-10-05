@@ -41,7 +41,6 @@ public class PerfilHardware {
     @Column(name = "prio_case", nullable = false)
     private Short prioCase;
 
-    // Mapeo estándar y nativo de JSON/JSONB en Hibernate 6+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "requisitos_tecnicos", columnDefinition = "jsonb")
     private Map<String, Object> requisitosTecnicos;

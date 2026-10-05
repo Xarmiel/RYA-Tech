@@ -7,13 +7,13 @@
   <link rel="icon" type="image/jpeg" href="../images/Logo%20RYA.jpeg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/header.css">
-  <link rel="stylesheet" href="../css/carousel.css">
-  <link rel="stylesheet" href="../css/products.css">
-  <link rel="stylesheet" href="../css/filters.css">
-  <link rel="stylesheet" href="../css/responsive.css">
-  <link rel="stylesheet" href="../css/cart.css">
+  <link rel="stylesheet" href="../css/core/base.css">
+  <link rel="stylesheet" href="../css/core/header.css">
+  <link rel="stylesheet" href="../css/catalog/carousel.css">
+  <link rel="stylesheet" href="../css/catalog/products.css">
+  <link rel="stylesheet" href="../css/catalog/filters.css">
+  <link rel="stylesheet" href="../css/core/responsive.css">
+  <link rel="stylesheet" href="../css/commerce/cart.css">
 </head>
 <body>
 
@@ -29,18 +29,12 @@
   </nav>
   <div class="nav-icons">
     <div class="search-box">
-      <input id="catalogSearchInput" type="text" placeholder="Buscar productos..." aria-label="Buscar productos">
+      <input id="headerSearchInput" type="text" placeholder="Buscar productos..." aria-label="Buscar productos">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="7"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
     </div>
-    <button class="icon-btn" aria-label="Cuenta">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"></path>
-      </svg>
-    </button>
     <button class="cart-btn" id="header-cart-btn" aria-label="Ver carrito">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="9" cy="21" r="1"></circle>
@@ -53,8 +47,7 @@
 </header>
 
 <main class="page-content">
-  
-  <!-- BARRA DE HERRAMIENTAS (TOOLBAR) -->
+
   <div class="shop-toolbar">
     <button id="btnOpenFilters" class="filter-btn" type="button" aria-label="Abrir filtros">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -72,10 +65,8 @@
     </div>
   </div>
 
-  <!-- FONDO OSCURO DEL MENÚ LATERAL -->
   <div class="filter-overlay" id="filterOverlay"></div>
 
-  <!-- MENÚ LATERAL DE FILTROS -->
   <aside class="filter-sidebar" id="filterSidebar">
     <div class="filter-header">
       <h3>Filtros</h3>
@@ -88,7 +79,7 @@
     </div>
 
     <div class="filter-body" id="dynamicFilterContainer">
-      <!-- Los filtros se generarán dinámicamente aquí -->
+      
     </div>
 
     <div class="filter-footer">
@@ -97,11 +88,8 @@
     </div>
   </aside>
 
-  <!-- Catálogo dinámico: main.js crea automáticamente una sección de carrusel
-       por cada categoría con productos (Placas Madre, Procesadores, GPU, etc). -->
   <div id="carousels-container"></div>
 
-  <!-- MARCAS DESTACADAS -->
   <section class="section">
     <h2 class="section-title">Marcas destacadas</h2>
     <div class="brands-grid">
@@ -125,16 +113,15 @@
     <div class="footer-bottom"><span>© 2026 RYA Tech. Sitio demostrativo.</span><span>Contacto y correos simulados.</span></div>
   </footer>
 
-  <script src="../js/config.js"></script>
-  <script src="../js/data.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/network-ui.js"></script>
-  <script src="../js/product-card.js"></script>
-  <script src="../js/carousel.js"></script>
-  <script src="../js/sidebar.js"></script>
-  <script src="../js/filters.js"></script>
-  <script src="../js/cart.js"></script>
-  <script src="../js/main.js"></script>
+  <script src="../js/core/config.js"></script>
+  <script src="../js/core/data.js"></script>
+  <script src="../js/core/api.js"></script>
+  <script src="../js/core/network-ui.js"></script>
+  <script src="../js/catalog/product-card.js"></script>
+  <script src="../js/catalog/carousel.js"></script>
+  <script src="../js/catalog/filters.js"></script>
+  <script src="../js/commerce/cart.js"></script>
+  <script src="../js/catalog/main.js"></script>
 </body>
 </html>
 

@@ -3,7 +3,6 @@ package com.ecommerce.backend.mapper;
 import com.ecommerce.backend.dto.request.UsuarioCreateDto;
 import com.ecommerce.backend.dto.response.UsuarioResponseDto;
 import com.ecommerce.backend.model.Usuario;
-import com.ecommerce.backend.model.enums.RolUsuario;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,8 +13,7 @@ public class UsuarioMapper {
         usuario.setNombre(dto.nombre());
         usuario.setEmail(dto.email());
         usuario.setTelefono(dto.telefono());
-        usuario.setPasswordHash(dto.password()); 
-        usuario.setRol(dto.rol() != null ? dto.rol() : RolUsuario.CLIENTE);
+        usuario.setPasswordHash(dto.password());
         return usuario;
     }
 
@@ -25,7 +23,7 @@ public class UsuarioMapper {
             usuario.getNombre(),
             usuario.getEmail(),
             usuario.getTelefono(),
-            usuario.getRol(),
+            usuario.getRol() != null ? usuario.getRol().getNombre() : null,
             usuario.getFechaRegistro()
         );
     }

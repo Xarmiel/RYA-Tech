@@ -7,7 +7,9 @@ import com.ecommerce.backend.exception.BadRequestException;
 import com.ecommerce.backend.exception.ResourceNotFoundException;
 import com.ecommerce.backend.exception.UnauthorizedException;
 import com.ecommerce.backend.mapper.UsuarioMapper;
+import com.ecommerce.backend.model.Rol;
 import com.ecommerce.backend.model.Usuario;
+import com.ecommerce.backend.repository.RolRepository;
 import com.ecommerce.backend.repository.UsuarioRepository;
 import com.ecommerce.backend.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -32,8 +35,23 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (usuarioRepository.existsByEmail(dto.email())) {
             throw new BadRequestException("El email ya se encuentra registrado: " + dto.email());
         }
+
+        String rolNombre = (dto.rol() != null && !dto.rol().isBlank())
+                ? dto.rol().trim().toUpperCase()
+                : "CLIENT";
+
+        if ("CLIENTE".equals(rolNombre)) {
+            rolNombre = "CLIENT";
+        }
+
+        String finalRolNombre = rolNombre;
+        Rol rol = rolRepository.findByNombre(finalRolNombre)
+                .orElseThrow(() -> new BadRequestException("El rol '" + finalRolNombre + "' no existe. Roles válidos: CLIENT, ADMIN"));
+
         Usuario usuario = usuarioMapper.toEntity(dto);
         usuario.setPasswordHash(passwordEncoder.encode(dto.password()));
+        usuario.setRol(rol);
+
         return usuarioMapper.toResponseDto(usuarioRepository.save(usuario));
     }
 

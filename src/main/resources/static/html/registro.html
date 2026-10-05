@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Regístrate en RYA Tech y crea tu cuenta.">
+  <title>Registro de Usuario | RYA Tech</title>
+  <link rel="icon" type="image/jpeg" href="../images/Logo%20RYA.jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core/base.css">
+  <link rel="stylesheet" href="../css/auth/login.css">
+</head>
+<body class="login-page">
+  <main class="login-layout">
+    <section class="login-intro" aria-label="RYA Tech">
+      <a class="login-logo" href="inicio.html" aria-label="RYA Tech, inicio">
+        <img src="../images/RYA.jpeg" alt="RYA Tech">
+        <span>RYA<span class="logo-accent">TECH</span></span>
+      </a>
+      <div class="intro-copy">
+        <p class="eyebrow">CREA TU CUENTA</p>
+        <h1>Únete a la nueva era tecnológica.</h1>
+        <p>Crea tu cuenta en RYA Tech para personalizar tus pedidos, guardar tus componentes favoritos y acceder a soporte exclusivo.</p>
+      </div>
+      <p class="intro-footer">Componentes, periféricos y asesoría para ti.</p>
+    </section>
+
+    <section class="login-panel" aria-labelledby="register-title">
+      <div class="login-card">
+        <p class="eyebrow">NUEVO USUARIO</p>
+        <h2 id="register-title">Registro</h2>
+        <p class="login-subtitle">Completa tus datos para crear tu cuenta.</p>
+
+        <form id="register-form">
+          <label for="nombre">Nombre completo</label>
+          <input id="nombre" name="nombre" type="text" placeholder="Tu nombre completo" maxlength="120" required>
+
+          <label for="email">Correo electrónico</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="tu@correo.com" maxlength="150" required>
+
+          <label for="telefono">Teléfono (opcional)</label>
+          <input id="telefono" name="telefono" type="tel" autocomplete="tel" placeholder="Ej: +51 987654321" maxlength="25">
+
+          <label for="password">Contraseña (mínimo 6 caracteres)</label>
+          <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Tu contraseña segura" minlength="6" required>
+
+          <label for="confirm-password">Confirmar contraseña</label>
+          <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" placeholder="Repite tu contraseña" minlength="6" required>
+
+          <p id="register-message" class="login-message" role="alert" aria-live="polite"></p>
+          <button id="register-submit" type="submit">Crear cuenta</button>
+        </form>
+
+        <div class="login-divider"><span>o</span></div>
+        <a class="register-link-btn" href="login.html">¿Ya tienes cuenta? Inicia sesión</a>
+        <a class="guest-link" href="inicio.html">Continuar como invitado</a>
+        <p class="login-help">¿Necesitas ayuda? <a href="inicio.html#contacto">Contacta a nuestro equipo</a>.</p>
+      </div>
+    </section>
+  </main>
+  <script src="../js/core/api.js"></script>
+  <script src="../js/auth/registro.js"></script>
+</body>
+</html>
