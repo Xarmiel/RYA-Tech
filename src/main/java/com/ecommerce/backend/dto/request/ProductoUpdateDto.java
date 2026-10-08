@@ -1,6 +1,7 @@
 package com.ecommerce.backend.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,5 +18,11 @@ public record ProductoUpdateDto(
 
     @NotBlank(message = "La URL de la imagen es obligatoria")
     @Size(max = 500)
-    String imagenUrl
+    String imagenUrl,
+
+    String descripcion,
+
+    @Min(value = 0, message = "El stock no puede ser negativo")
+    Integer stock
 ) {}
+

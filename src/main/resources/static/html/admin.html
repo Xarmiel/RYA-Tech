@@ -93,6 +93,10 @@
                 <label for="cat-nombre-input">Nombre de la nueva subcategoría *</label>
                 <input type="text" id="cat-nombre-input" placeholder="Ej: Fuentes SFX, Monitores OLED..." required>
               </div>
+              <div class="admin-form-group" id="cat-prefijo-group" style="display:none;">
+                <label for="cat-prefijo-input">Prefijo SKU (máx. 3 letras) *</label>
+                <input type="text" id="cat-prefijo-input" maxlength="3" placeholder="Ej: DIS, FAN, RED" style="text-transform:uppercase;">
+              </div>
             </div>
             <button type="submit" class="admin-btn-primary">Guardar Subcategoría</button>
             <div id="msg-agregar-categoria" class="admin-message"></div>
@@ -127,11 +131,27 @@
                 <input type="number" id="prod-precio-input" step="0.01" min="0.01" placeholder="Ej: 890.00" required>
               </div>
               <div class="admin-form-group">
-                <label for="prod-url-input">URL de la imagen *</label>
-                <input type="url" id="prod-url-input" placeholder="https://..." required>
+                <label for="prod-stock-input">Stock disponible *</label>
+                <input type="number" id="prod-stock-input" min="0" value="25" placeholder="Ej: 25" required>
               </div>
             </div>
-            <button type="submit" class="admin-btn-primary">Guardar Producto</button>
+            <div class="admin-form-group">
+              <label for="prod-url-input">URL de la imagen *</label>
+              <input type="url" id="prod-url-input" placeholder="https://..." required>
+            </div>
+            <div class="admin-form-group">
+              <label for="prod-desc-input">Descripción del producto *</label>
+              <textarea id="prod-desc-input" rows="3" placeholder="Descripción detallada del producto, características o garantía..." required></textarea>
+            </div>
+
+            <!-- Contenedor dinámico de Especificaciones Técnicas Obligatorias -->
+            <div id="prod-specs-wrapper" style="display:none; margin-top:20px; padding-top:16px; border-top:1px dashed var(--line);">
+              <h4 style="font-size:15px; font-weight:700; color:var(--color-cyan); margin-bottom:6px;">Especificaciones Técnicas del Componente *</h4>
+              <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">Todos los siguientes parámetros son obligatorios para este componente y se almacenarán en la tabla de especificaciones técnicas.</p>
+              <div id="prod-specs-fields" class="admin-specs-grid"></div>
+            </div>
+
+            <button type="submit" class="admin-btn-primary" style="margin-top:20px;">Guardar Producto</button>
             <div id="msg-agregar-producto" class="admin-message"></div>
           </form>
         </div>
@@ -163,9 +183,17 @@
                 <input type="number" id="edit-precio-input" step="0.01" min="0.01" required>
               </div>
               <div class="admin-form-group">
-                <label for="edit-url-input">URL de la imagen *</label>
-                <input type="url" id="edit-url-input" required>
+                <label for="edit-stock-input">Stock *</label>
+                <input type="number" id="edit-stock-input" min="0" required>
               </div>
+            </div>
+            <div class="admin-form-group">
+              <label for="edit-url-input">URL de la imagen *</label>
+              <input type="url" id="edit-url-input" required>
+            </div>
+            <div class="admin-form-group">
+              <label for="edit-desc-input">Descripción *</label>
+              <textarea id="edit-desc-input" rows="3" required></textarea>
             </div>
             <button type="submit" class="admin-btn-primary">Guardar Cambios</button>
             <div id="msg-guardar-editar" class="admin-message"></div>

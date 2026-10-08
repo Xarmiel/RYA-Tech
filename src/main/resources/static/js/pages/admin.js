@@ -33,6 +33,190 @@
     }
   }
 
+  const ESPECIFICACIONES_COMPONENTES = {
+    "placas-madre": [
+      { clave: "Fabricante_placa", label: "Fabricante", tipo: "text", placeholder: "Ej: ASUS" },
+      { clave: "Chipset_placa", label: "Chipset", tipo: "text", placeholder: "Ej: AMD B650" },
+      { clave: "Socket_placa", label: "Socket", tipo: "text", placeholder: "Ej: AM5" },
+      { clave: "Tamaño_placa", label: "Tamaño", tipo: "radio", opciones: ["E-ATX", "ATX", "micro-ATX", "mini-ITX"] },
+      { clave: "Generacion_placa", label: "Generación de Memoria", tipo: "text", placeholder: "Ej: DDR5" },
+      { clave: "PuertosRAM_placa", label: "Puertos RAM", tipo: "text", placeholder: "Ej: 4" },
+      { clave: "PuertosM2_placa", label: "Puertos M.2", tipo: "text", placeholder: "Ej: 2" },
+      { clave: "Conectividad_placa", label: "Conectividad", tipo: "radio", opciones: ["WIFI", "ETHERNET"] }
+    ],
+    "procesadores": [
+      { clave: "Fabricante_cpu", label: "Fabricante", tipo: "text", placeholder: "Ej: AMD" },
+      { clave: "Nucleos_cpu", label: "Núcleos", tipo: "text", placeholder: "Ej: 8" },
+      { clave: "Hilos_cpu", label: "Hilos", tipo: "text", placeholder: "Ej: 16" },
+      { clave: "Frecuencia_cpu", label: "Frecuencia", tipo: "text", placeholder: "Ej: 4.2GHz" },
+      { clave: "Cache_cpu", label: "Memoria Caché", tipo: "text", placeholder: "Ej: L3 96MB" },
+      { clave: "Socket_cpu", label: "Socket", tipo: "text", placeholder: "Ej: AM5" },
+      { clave: "Graficos", label: "Gráficos Integrados", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "TDP_cpu", label: "TDP", tipo: "text", placeholder: "Ej: TDP 120W" },
+      { clave: "Consumo_cpu", label: "Consumo", tipo: "text", placeholder: "Ej: 162W" }
+    ],
+    "tarjetas-graficas": [
+      { clave: "Fabricante_tarjeta", label: "Fabricante", tipo: "text", placeholder: "Ej: NVIDIA" },
+      { clave: "GPU_tarjeta", label: "Chip GPU", tipo: "text", placeholder: "Ej: AD104" },
+      { clave: "CapacidadVRAM_tarjeta", label: "Capacidad VRAM", tipo: "text", placeholder: "Ej: 12GB" },
+      { clave: "TipoVRAM_tarjeta", label: "Tipo VRAM", tipo: "text", placeholder: "Ej: GDDR6" },
+      { clave: "HDMI_tarjeta", label: "Puerto HDMI", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "DisplayPort_tarjeta", label: "Puerto DisplayPort", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "Largo_tarjeta", label: "Largo", tipo: "text", placeholder: "Ej: 201mm" },
+      { clave: "Ancho_tarjeta", label: "Ancho", tipo: "text", placeholder: "Ej: 2.5 ranuras" },
+      { clave: "Consumo_tarjeta", label: "Consumo", tipo: "text", placeholder: "Ej: 170W" }
+    ],
+    "memoria-ram": [
+      { clave: "Fabricante_ram", label: "Fabricante", tipo: "text", placeholder: "Ej: KINGSTON" },
+      { clave: "Generacion_ram", label: "Generación", tipo: "text", placeholder: "Ej: DDR5" },
+      { clave: "Capacidad_ram", label: "Capacidad", tipo: "text", placeholder: "Ej: 32GB" },
+      { clave: "Consumo_ram", label: "Consumo", tipo: "text", placeholder: "Ej: 20W" }
+    ],
+    "almacenamiento": [
+      { clave: "Fabricante_almacenamiento", label: "Fabricante", tipo: "text", placeholder: "Ej: KINGSTON" },
+      { clave: "FactorForma_almacenamiento", label: "Factor de Forma", tipo: "text", placeholder: "Ej: M.2/SATA" },
+      { clave: "Capacidad_almacenamiento", label: "Capacidad", tipo: "text", placeholder: "Ej: 500GB" },
+      { clave: "VelocidadEscritura_almacenamiento", label: "Velocidad de Escritura", tipo: "text", placeholder: "Ej: 2100 MB/s" },
+      { clave: "VelocidadLectura_almacenamiento", label: "Velocidad de Lectura", tipo: "text", placeholder: "Ej: 3500 MB/s" },
+      { clave: "Consumo_almacenamiento", label: "Consumo", tipo: "text", placeholder: "Ej: 4W" }
+    ],
+    "fuente-de-poder": [
+      { clave: "Fabricante_fuente", label: "Fabricante", tipo: "text", placeholder: "Ej: Corsair" },
+      { clave: "Certificacion_fuente", label: "Certificación", tipo: "text", placeholder: "Ej: 80 PLUS GOLD" },
+      { clave: "Potencia_fuente", label: "Potencia", tipo: "text", placeholder: "Ej: 850W" },
+      { clave: "OVP_fuente", label: "Protección OVP", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "OTP_fuente", label: "Protección OTP", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "OCP_fuente", label: "Protección OCP", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "OPP_fuente", label: "Protección OPP", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "UVP_fuente", label: "Protección UVP", tipo: "radio", opciones: ["true", "false"] },
+      { clave: "SCP_fuente", label: "Protección SCP", tipo: "radio", opciones: ["true", "false"] }
+    ],
+    "gabinete": [
+      { clave: "Fabricante_case", label: "Fabricante", tipo: "text", placeholder: "Ej: Lian Li" },
+      { clave: "Tipo_case", label: "Tipo / Factor", tipo: "radio", opciones: ["Mini-ITX", "Micro-ATX", "Mid Tower", "Full Tower"] },
+      { clave: "Altura_case", label: "Altura", tipo: "text", placeholder: "Ej: 482mm" },
+      { clave: "Longitud_case", label: "Longitud", tipo: "text", placeholder: "Ej: 464mm" },
+      { clave: "Grosor_case", label: "Grosor", tipo: "text", placeholder: "Ej: 238mm" },
+      { clave: "Material_case", label: "Material", tipo: "text", placeholder: "Ej: Acero SPCC" },
+      { clave: "PlacaCompatible_case", label: "Placas Compatibles", tipo: "radio", opciones: ["E-ATX", "ATX", "micro-ATX", "mini-ITX"] }
+    ]
+  };
+
+  function normalizarClaveComponente(slugOTexto) {
+    if (!slugOTexto) return '';
+    const s = toSlug(slugOTexto);
+    if (s.includes('placa')) return 'placas-madre';
+    if (s.includes('procesador')) return 'procesadores';
+    if (s.includes('tarjeta') && (s.includes('grafica') || s.includes('video'))) return 'tarjetas-graficas';
+    if (s.includes('ram')) return 'memoria-ram';
+    if (s.includes('almacenamiento') || s.includes('disco')) return 'almacenamiento';
+    if (s.includes('fuente')) return 'fuente-de-poder';
+    if (s.includes('gabinete') || s.includes('case')) return 'gabinete';
+    return s;
+  }
+
+  function obtenerPrefijoSubcategoria(subcatNombre) {
+    if (!subcatNombre) return 'GEN';
+    const s = toSlug(subcatNombre);
+    if (s.includes('placa')) return 'MB';
+    if (s.includes('procesador') || s.includes('cpu')) return 'CPU';
+    if (s.includes('tarjeta') || s.includes('grafica') || s.includes('video') || s.includes('gpu')) return 'GPU';
+    if (s.includes('almacenamiento') || s.includes('disco')) return 'ALM';
+    if (s.includes('ram') || s.includes('memoria')) return 'RAM';
+    if (s.includes('fuente') || s.includes('poder') || s.includes('psu')) return 'PSU';
+    if (s.includes('gabinete') || s.includes('case')) return 'CAS';
+
+    // Si fue agregada dinámicamente con un prefijo guardado en localStorage o slug corto
+    try {
+      const prefijosGuardados = JSON.parse(localStorage.getItem('rya_prefijos_categorias') || '{}');
+      if (prefijosGuardados[s]) {
+        return prefijosGuardados[s].toUpperCase();
+      }
+    } catch (e) {}
+
+    // Fallback con las primeras 3 letras de la subcategoría
+    const limpia = subcatNombre.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return limpia.slice(0, 3) || 'GEN';
+  }
+
+  function renderizarCamposEspecificaciones() {
+    const selectMacro = document.getElementById('prod-macro-select');
+    const selectSub = document.getElementById('prod-subcat-select');
+    const wrapper = document.getElementById('prod-specs-wrapper');
+    const container = document.getElementById('prod-specs-fields');
+
+    if (!wrapper || !container) return;
+
+    container.innerHTML = '';
+
+    if (!selectMacro || selectMacro.value !== 'Componente') {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    const subcatId = selectSub?.value;
+    if (!subcatId) {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    const subcatNombre = selectSub.options[selectSub.selectedIndex]?.text || '';
+    const claveComponente = normalizarClaveComponente(subcatNombre);
+    const listaSpecs = ESPECIFICACIONES_COMPONENTES[claveComponente];
+
+    if (!listaSpecs || listaSpecs.length === 0) {
+      wrapper.style.display = 'none';
+      return;
+    }
+
+    listaSpecs.forEach(spec => {
+      const fieldDiv = document.createElement('div');
+      fieldDiv.className = 'admin-spec-field';
+
+      const label = document.createElement('label');
+      label.textContent = `${spec.label} (${spec.clave}) *`;
+      fieldDiv.appendChild(label);
+
+      if (spec.tipo === 'radio') {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'admin-spec-radio-group';
+        groupDiv.dataset.specKey = spec.clave;
+
+        spec.opciones.forEach((opt, idx) => {
+          const radioLabel = document.createElement('label');
+          radioLabel.className = 'admin-spec-radio-option';
+
+          const radioInput = document.createElement('input');
+          radioInput.type = 'radio';
+          radioInput.name = `spec_radio_${spec.clave}`;
+          radioInput.value = opt;
+          radioInput.required = true;
+          if (idx === 0) radioInput.checked = true;
+
+          radioLabel.appendChild(radioInput);
+          radioLabel.appendChild(document.createTextNode(` ${opt}`));
+          groupDiv.appendChild(radioLabel);
+        });
+
+        fieldDiv.appendChild(groupDiv);
+      } else {
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.className = 'admin-spec-text-input';
+        textInput.name = `spec_text_${spec.clave}`;
+        textInput.dataset.specKey = spec.clave;
+        textInput.placeholder = spec.placeholder || '';
+        textInput.required = true;
+
+        fieldDiv.appendChild(textInput);
+      }
+
+      container.appendChild(fieldDiv);
+    });
+
+    wrapper.style.display = 'block';
+  }
+
   function poblarSelectoresSubcategorias() {
     const selectMacro = document.getElementById('prod-macro-select');
     const selectSub = document.getElementById('prod-subcat-select');
@@ -41,7 +225,10 @@
     const macroSeleccionada = selectMacro.value;
     selectSub.innerHTML = '<option value="">Seleccione subcategoría</option>';
 
-    if (!macroSeleccionada) return;
+    if (!macroSeleccionada) {
+      renderizarCamposEspecificaciones();
+      return;
+    }
 
     const raiz = (categoriasCache || []).find(c => c.nombre.toLowerCase() === macroSeleccionada.toLowerCase());
     if (raiz && Array.isArray(raiz.subcategorias)) {
@@ -52,6 +239,8 @@
         selectSub.appendChild(opt);
       });
     }
+
+    renderizarCamposEspecificaciones();
   }
 
   function mostrarMensaje(elementId, texto, esExito) {
@@ -117,6 +306,7 @@
     });
 
     document.getElementById('prod-macro-select')?.addEventListener('change', poblarSelectoresSubcategorias);
+    document.getElementById('prod-subcat-select')?.addEventListener('change', renderizarCamposEspecificaciones);
   }
 
   function toSlug(texto) {
@@ -130,6 +320,24 @@
 
   function configurarModuloCatalogo() {
     // 1. AGREGAR CATEGORÍA
+    // Control de visibilidad del prefijo para subcategorías de Componente
+    const catPadreSelect = document.getElementById('cat-padre-select');
+    const catPrefijoGroup = document.getElementById('cat-prefijo-group');
+    const catPrefijoInput = document.getElementById('cat-prefijo-input');
+
+    catPadreSelect?.addEventListener('change', () => {
+      if (catPadreSelect.value === 'Componente') {
+        if (catPrefijoGroup) catPrefijoGroup.style.display = 'block';
+        if (catPrefijoInput) catPrefijoInput.required = true;
+      } else {
+        if (catPrefijoGroup) catPrefijoGroup.style.display = 'none';
+        if (catPrefijoInput) {
+          catPrefijoInput.required = false;
+          catPrefijoInput.value = '';
+        }
+      }
+    });
+
     const formCat = document.getElementById('form-agregar-categoria');
     formCat?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -137,10 +345,22 @@
 
       const padreNombre = document.getElementById('cat-padre-select').value;
       const subNombre = document.getElementById('cat-nombre-input').value.trim();
+      const prefijo = (document.getElementById('cat-prefijo-input')?.value || '').trim().toUpperCase();
 
       if (!padreNombre || !subNombre) {
         mostrarMensaje('msg-agregar-categoria', 'Todos los campos son obligatorios', false);
         return;
+      }
+
+      if (padreNombre === 'Componente') {
+        if (!prefijo) {
+          mostrarMensaje('msg-agregar-categoria', 'El prefijo de subcategoría es obligatorio para Componentes.', false);
+          return;
+        }
+        if (prefijo.length > 3) {
+          mostrarMensaje('msg-agregar-categoria', 'El prefijo debe tener un máximo de 3 letras.', false);
+          return;
+        }
       }
 
       const raiz = (categoriasCache || []).find(c => c.nombre.toLowerCase() === padreNombre.toLowerCase());
@@ -156,8 +376,17 @@
           slug: toSlug(subNombre)
         });
 
+        if (padreNombre === 'Componente' && prefijo) {
+          try {
+            const guardados = JSON.parse(localStorage.getItem('rya_prefijos_categorias') || '{}');
+            guardados[toSlug(subNombre)] = prefijo;
+            localStorage.setItem('rya_prefijos_categorias', JSON.stringify(guardados));
+          } catch (e) {}
+        }
+
         mostrarMensaje('msg-agregar-categoria', `¡Subcategoría "${subNombre}" agregada exitosamente!`, true);
         formCat.reset();
+        if (catPrefijoGroup) catPrefijoGroup.style.display = 'none';
         await cargarCategorias();
       } catch (err) {
         if (err.message && err.message.includes('Categoria existente')) {
@@ -178,31 +407,67 @@
       const subcatId = document.getElementById('prod-subcat-select').value;
       const nombre = document.getElementById('prod-nombre-input').value.trim();
       const precio = parseFloat(document.getElementById('prod-precio-input').value);
+      const stock = parseInt(document.getElementById('prod-stock-input').value, 10);
       const url = document.getElementById('prod-url-input').value.trim();
+      const descripcion = document.getElementById('prod-desc-input').value.trim();
 
-      if (!macro || !subcatId || !nombre || isNaN(precio) || !url) {
+      if (!macro || !subcatId || !nombre || isNaN(precio) || isNaN(stock) || stock < 0 || !url || !descripcion) {
         mostrarMensaje('msg-agregar-producto', 'Todos los campos son obligatorios', false);
         return;
       }
 
+      const selectSub = document.getElementById('prod-subcat-select');
+      const subcatNombre = selectSub?.options[selectSub.selectedIndex]?.text || '';
+
+      const especificaciones = [];
+      if (macro === 'Componente') {
+        const claveComponente = normalizarClaveComponente(subcatNombre);
+        const listaSpecs = ESPECIFICACIONES_COMPONENTES[claveComponente];
+
+        if (listaSpecs && listaSpecs.length > 0) {
+          for (const spec of listaSpecs) {
+            let valor = '';
+            if (spec.tipo === 'radio') {
+              const checkedRadio = formProd.querySelector(`input[name="spec_radio_${spec.clave}"]:checked`);
+              if (checkedRadio) valor = checkedRadio.value.trim();
+            } else {
+              const textInput = formProd.querySelector(`input[name="spec_text_${spec.clave}"]`);
+              if (textInput) valor = textInput.value.trim();
+            }
+
+            if (!valor) {
+              mostrarMensaje('msg-agregar-producto', `El parámetro "${spec.label} (${spec.clave})" es obligatorio para este componente.`, false);
+              return;
+            }
+
+            especificaciones.push({
+              clave: spec.clave,
+              valor: valor
+            });
+          }
+        }
+      }
+
       const tipoProducto = macro === 'Periféricos' ? 'PERIFERICO' : 'HARDWARE';
-      const skuRandom = 'RYA-ADMIN-' + Date.now().toString().slice(-6);
+      const prefijoSubcat = obtenerPrefijoSubcategoria(subcatNombre);
+      const timestamp6 = Date.now().toString().slice(-6);
+      const skuFormateado = `RYA-${prefijoSubcat}-${timestamp6}`;
 
       try {
         await window.api.crearProducto({
           subcategoriaId: parseInt(subcatId, 10),
-          sku: skuRandom,
+          sku: skuFormateado,
           nombre: nombre,
-          descripcion: `Producto agregado desde panel de administración (${macro})`,
+          descripcion: descripcion,
           precioBase: precio,
           imagenUrl: url,
           tipoProducto: tipoProducto,
-          stock: 50,
+          stock: stock,
           activo: true,
-          especificaciones: []
+          especificaciones: especificaciones
         });
 
-        mostrarMensaje('msg-agregar-producto', `¡Producto "${nombre}" creado con éxito!`, true);
+        mostrarMensaje('msg-agregar-producto', `¡Producto "${nombre}" creado con éxito con sus especificaciones técnicas!`, true);
         formProd.reset();
         poblarSelectoresSubcategorias();
       } catch (err) {
@@ -235,7 +500,9 @@
         productoEncontradoEditar = prod;
         document.getElementById('edit-nombre-input').value = prod.nombre;
         document.getElementById('edit-precio-input').value = prod.precio;
+        document.getElementById('edit-stock-input').value = prod.stock !== undefined ? prod.stock : 0;
         document.getElementById('edit-url-input').value = prod.imagenUrl || '';
+        document.getElementById('edit-desc-input').value = prod.descripcion || '';
 
         if (formGuardarEditar) formGuardarEditar.style.display = 'block';
       } catch (err) {
@@ -251,9 +518,11 @@
 
       const nuevoNombre = document.getElementById('edit-nombre-input').value.trim();
       const nuevoPrecio = parseFloat(document.getElementById('edit-precio-input').value);
+      const nuevoStock = parseInt(document.getElementById('edit-stock-input').value, 10);
       const nuevaUrl = document.getElementById('edit-url-input').value.trim();
+      const nuevaDesc = document.getElementById('edit-desc-input').value.trim();
 
-      if (!nuevoNombre || isNaN(nuevoPrecio) || !nuevaUrl) {
+      if (!nuevoNombre || isNaN(nuevoPrecio) || isNaN(nuevoStock) || nuevoStock < 0 || !nuevaUrl || !nuevaDesc) {
         mostrarMensaje('msg-guardar-editar', 'Todos los parámetros son obligatorios.', false);
         return;
       }
@@ -262,7 +531,9 @@
         await window.api.actualizarProducto(productoEncontradoEditar.id, {
           nombre: nuevoNombre,
           precioBase: nuevoPrecio,
-          imagenUrl: nuevaUrl
+          stock: nuevoStock,
+          imagenUrl: nuevaUrl,
+          descripcion: nuevaDesc
         });
 
         mostrarMensaje('msg-guardar-editar', '¡Producto actualizado correctamente!', true);

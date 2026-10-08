@@ -39,16 +39,6 @@ public class DatabaseMigrationConfig {
 
                 stmt.execute("""
                     DO $$ 
-                    BEGIN
-                        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'usuarios') THEN
-                            TRUNCATE TABLE public.usuarios CASCADE;
-                        END IF;
-                    END $$;
-                """);
-                log.info("Tabla 'usuarios' limpiada exitosamente mediante TRUNCATE CASCADE.");
-
-                stmt.execute("""
-                    DO $$ 
                     BEGIN 
                         -- Eliminar la columna 'rol' tipo varchar si existe
                         IF EXISTS (

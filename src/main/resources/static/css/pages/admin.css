@@ -115,23 +115,31 @@
 
 .admin-form-group input,
 .admin-form-group select,
-.admin-form-group textarea {
+.admin-form-group textarea,
+.admin-spec-text-input {
   width: 100%;
-  background: var(--color-black);
+  background: #000000 !important;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 14px;
-  color: var(--text);
+  color: var(--text) !important;
   font-family: inherit;
   font-size: 14px;
   outline: none;
-  transition: border-color .2s ease;
+  transition: border-color .2s ease, box-shadow .2s ease;
 }
 
 .admin-form-group input:focus,
 .admin-form-group select:focus,
-.admin-form-group textarea:focus {
+.admin-form-group textarea:focus,
+.admin-spec-text-input:focus {
   border-color: var(--color-cyan);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.25);
+}
+
+.admin-form-group input::placeholder,
+.admin-spec-text-input::placeholder {
+  color: rgba(194, 197, 204, 0.45);
 }
 
 .admin-form-row {
@@ -265,4 +273,77 @@
 
 .admin-btn-cancel:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.admin-spec-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-spec-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.admin-spec-text-input {
+  width: 100%;
+  background-color: #000000 !important;
+  color: #F5F7FA !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.admin-spec-text-input:focus {
+  border-color: var(--color-cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.25);
+}
+
+.admin-spec-text-input::placeholder {
+  color: #717682 !important;
+  opacity: 1;
+}
+
+.admin-spec-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  background-color: #000000 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-height: 42px;
+  align-items: center;
+}
+
+.admin-spec-radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.admin-spec-radio-option input[type="radio"] {
+  accent-color: var(--color-cyan);
+  cursor: pointer;
+  margin: 0;
+  width: auto;
 }

@@ -94,6 +94,12 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setNombre(dto.nombre().trim());
         producto.setPrecioBase(dto.precioBase());
         producto.setImagenUrl(dto.imagenUrl().trim());
+        if (dto.descripcion() != null) {
+            producto.setDescripcion(dto.descripcion().trim());
+        }
+        if (dto.stock() != null) {
+            producto.setStock(dto.stock());
+        }
 
         return productoMapper.toResponseDto(productoRepository.save(producto));
     }
