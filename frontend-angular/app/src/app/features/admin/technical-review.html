@@ -1,0 +1,44 @@
+<section aria-labelledby="technical-review-title">
+  <h2 id="technical-review-title">Ficha real y revisión administrativa</h2>
+  <p>Trabaja sobre la versión guardada. El vínculo queda en el documento y su historial; no cambia precios, stock ni especificaciones publicadas.</p>
+  @if(disabled()&&!busy()){<p>Guarda los cambios locales o recupera la versión del servidor antes de continuar.</p>}
+  <div class="actions">
+    <button type="button" (click)="compare()" [disabled]="!available()">Consultar ficha real por SKU</button>
+    <button type="button" (click)="history()" [disabled]="!available()">Consultar / reintentar historial</button>
+  </div>
+  @if(reading()){<p role="status">Consultando datos reales…</p>}
+  @if(busy()){<p role="status">Registrando operación…</p>}
+  @if(error()){<p role="alert">{{error()}}</p>}
+  @if(notice()){<p role="status">{{notice()}}</p>}
+  @if(ficha();as real){
+    <h3>{{real.name}} · {{real.sku}}</h3>
+    <p>{{real.linked?'Vinculado':'Coincidencia por SKU, aún sin vincular'}} · {{real.productId}}</p>
+    @if(real.sourceId){<p>Fuente técnica registrada: {{real.sourceId}} · Fecha de verificación en ficha: {{real.verifiedAt | date:'medium'}}</p>}
+    @if(sourceLink(real.sourceUrl);as url){<p><a [href]="url" target="_blank" rel="noopener noreferrer">Consultar fuente de la ficha real</a></p>}
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Comparación de ficha y borrador"><table><thead><tr><th>Campo</th><th>Ficha real</th><th>Borrador</th><th>Revisión</th></tr></thead><tbody>
+      @for(field of real.fields;track field.key){<tr><th>{{fieldLabel(field.key)}} {{field.unit||''}}</th><td>{{value(field.current)}}</td><td>{{value(field.proposed)}}</td><td>{{status(field.status)}}</td></tr>}
+    </tbody></table></div>
+    @for(warning of real.warnings;track $index){<p>{{warning}}</p>}
+    @if(owner()&&draft().state==='DRAFT'){<div class="actions">
+      <button type="button" (click)="link()" [disabled]="!available()||real.linked">Vincular este producto</button>
+    </div>}
+  }
+  @if(owner()&&draft().state==='DRAFT'&&draft().document['catalogProductId']){<button type="button" (click)="link(true)" [disabled]="!available()">Desvincular producto</button>}
+  @if(owner()&&draft().state==='DRAFT'){<button type="button" (click)="submit()" [disabled]="!available()">Enviar a revisión</button>}
+  @if(draft().state==='IN_REVIEW'){
+    @if(owner()){<p>La revisión exige otro administrador distinto del autor. No puedes aprobar tu propio borrador.</p>}
+    @else {<label>Motivo de la revisión<textarea [(ngModel)]="comment" maxlength="2000" [disabled]="!available()"></textarea></label>
+      <div class="actions"><button type="button" (click)="decide('APPROVED')" [disabled]="!available()||!comment.trim()">Aprobar contenido</button><button type="button" (click)="decide('REJECTED')" [disabled]="!available()||!comment.trim()">Rechazar con observaciones</button></div>}
+  }
+  @if(owner()&&(draft().state==='APPROVED'||draft().state==='REJECTED')){
+    <label>Motivo de reapertura<textarea [(ngModel)]="comment" maxlength="2000" [disabled]="!available()"></textarea></label>
+    <button type="button" (click)="reopen()" [disabled]="!available()">Reabrir para corregir</button>
+  }
+  @if(historyOpened()){
+    <h3>Historial de versiones</h3>
+    <ol>@for(event of events();track event.id){<li><strong>v{{event.version}} · {{event.action}} · {{event.state}}</strong><p>{{event.createdAt | date:'medium'}} · Administrador {{event.actor}}</p><p>{{event.comment}}</p><button type="button" (click)="version(event.version)" [disabled]="!available()">Ver documento v{{event.version}}</button></li>}</ol>
+    @if(!events().length){<p>No hay eventos en esta página.</p>}
+    <div class="actions"><button type="button" (click)="history(historyPage()-1)" [disabled]="!available()||historyPage()===0">Historial anterior</button><span>{{historyPages()?historyPage()+1:0}} / {{historyPages()}}</span><button type="button" (click)="history(historyPage()+1)" [disabled]="!available()||historyPage()+1>=historyPages()">Historial siguiente</button></div>
+  }
+  @if(snapshot()){<details open><summary>Documento histórico · solo lectura</summary><pre>{{snapshot() | json}}</pre></details>}
+</section>

@@ -1,0 +1,11 @@
+<section class="account-page page-shell">
+  <header><p class="eyebrow">CUENTA RYA TECH</p><h1>Mi perfil.</h1><p>Administra tus datos de contacto. El correo y la contraseña se protegen mediante Supabase Auth.</p></header>
+  @if (loading) { <app-loading-state label="Cargando perfil" layout="rows" /> }
+  @else if (loadError) { <app-request-error title="No pudimos cargar tu perfil" (retry)="load()" /> }
+  @else {
+    <div class="account-grid">
+      <aside><span class="material-symbols-rounded">account_circle</span><h2>{{ account.profile()?.nombre }}</h2><p>{{ account.profile()?.email }}</p><span class="status"><i></i>{{ account.profile()?.estado }}</span><nav><a routerLink="/favoritos"><span class="material-symbols-rounded">favorite</span>Favoritos</a><a routerLink="/compras"><span class="material-symbols-rounded">receipt_long</span>Mis compras</a><a routerLink="/checkout"><span class="material-symbols-rounded">shopping_cart</span>Mi carrito</a></nav><button type="button" (click)="logout()">Cerrar sesión</button></aside>
+      <form (ngSubmit)="save()"><div><p class="eyebrow">DATOS PERSONALES</p><h2>Información de la cuenta</h2></div><label>Nombre completo<input name="name" [(ngModel)]="name" maxlength="140" autocomplete="name" required></label><label>Correo electrónico<input [value]="account.profile()?.email" disabled><small>El cambio de correo se realizará mediante verificación de Supabase.</small></label><label>Teléfono<input name="phone" [(ngModel)]="phone" maxlength="30" autocomplete="tel"></label><div class="verified"><span class="material-symbols-rounded">{{ account.profile()?.emailVerificado ? 'verified' : 'mark_email_unread' }}</span><div><strong>{{ account.profile()?.emailVerificado ? 'Correo verificado' : 'Correo pendiente de verificación' }}</strong><p>La identidad se obtiene del token firmado, no de datos enviados manualmente.</p></div></div>@if(message){<p class="account-message" [class.is-success]="success">{{ message }}</p>}<button class="button button-primary" type="submit" [disabled]="saving">{{ saving ? 'Guardando…' : 'Guardar cambios' }}</button></form>
+    </div>
+  }
+</section>

@@ -1,0 +1,1025 @@
+<div class="admin-workspace">
+  <a class="admin-skip" [routerLink]="base + (section ? '/' + section : '')" fragment="admin-main">
+    Saltar al contenido
+  </a>
+
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside class="admin-sidebar">
+    <a class="brand" [routerLink]="base">RYA <span>CONTROL</span></a>
+    <p class="eyebrow">ADMINISTRACIÓN</p>
+
+    <nav aria-label="Secciones de administración">
+      <a [routerLink]="base" routerLinkActive="selected" [routerLinkActiveOptions]="{ exact: true }">
+        <span class="material-symbols-rounded" aria-hidden="true">space_dashboard</span>
+        Resumen
+      </a>
+      @for (module of modules; track module.id) {
+        <a [routerLink]="base + '/' + module.id" routerLinkActive="selected">
+          <span class="material-symbols-rounded" aria-hidden="true">{{ module.icon }}</span>
+          {{ module.name }}
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <a routerLink="/" class="back-link">
+        <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+        Volver a la tienda
+      </a>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="admin-body">
+    <!-- BARRA SUPERIOR -->
+    <header class="admin-topbar">
+      <div class="topbar-status">
+        <span class="status-indicator" [class.is-live]="!design"></span>
+        <span>{{ design ? 'VISTA DE DISEÑO · CAMBIOS SOLO EN MEMORIA' : 'ÁREA ADMINISTRATIVA' }}</span>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" class="theme-btn" (click)="theme()" aria-label="Cambiar tema">
+          <span class="material-symbols-rounded" aria-hidden="true">contrast</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="admin-main" tabindex="-1">
+
+      <!-- CASO 1: CARGA TÉCNICA RESERVADA -->
+      @if (section === 'carga-tecnica') {
+        <app-technical-editor [isDesignMode]="design" />
+      }
+
+      <!-- CASO 2: MÓDULO ADMINISTRATIVO SELECCIONADO -->
+      @else if (current) {
+        <div class="section-heading">
+          <div class="heading-meta">
+            <p class="eyebrow">{{ current.group }}</p>
+            <h1>{{ current.name }}</h1>
+            <p class="section-desc">{{ current.description }}</p>
+          </div>
+          <button type="button" class="admin-action-btn" (click)="section === 'inventario' ? openStockModal() : openCreateForm()" [disabled]="!design && section !== 'catalogo' && section !== 'inventario'">
+            <span class="material-symbols-rounded" aria-hidden="true">{{ section === 'inventario' ? 'swap_vert' : 'add' }}</span>
+            {{ current.action }}
+          </button>
+        </div>
+
+        @if (!design && section !== 'catalogo' && section !== 'inventario') {
+          <p class="admin-alert" role="status">{{ connected() ? 'Vista de consulta. La edición de esta sección se conectará en su fase respectiva.' : 'Sección pendiente de conexión. No se muestran registros ni se simulan guardados.' }}</p>
+        }
+        <!-- Alerta de servidor si ocurre error -->
+        @if (serverError()) {
+          <div class="admin-alert admin-alert-error" role="alert">
+            <span class="material-symbols-rounded" aria-hidden="true">error_outline</span>
+            <div>
+              <strong>Error de sincronización con el servidor</strong>
+              <p>{{ serverError() }} No se han sustituido los resultados por datos locales.</p>
+            </div>
+            <button type="button" class="alert-close" (click)="loadItems()" aria-label="Reintentar listado">
+              Reintentar
+            </button>
+          </div>
+        }
+
+        <!-- BARRA DE HERRAMIENTAS: BÚSQUEDA Y FILTROS -->
+        <div class="admin-toolbar">
+          <div class="search-box">
+            <span class="material-symbols-rounded search-icon" aria-hidden="true">search</span>
+            <input
+              type="search"
+              aria-label="Buscar registros" placeholder="Buscar en {{ current.name | lowercase }}"
+              [value]="searchTerm()"
+              (input)="onSearchInput($any($event.target).value)"
+            >
+            @if (searchTerm()) {
+              <button type="button" class="clear-btn" (click)="clearSearch()" aria-label="Limpiar búsqueda">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+            }
+          </div>
+
+          <div class="filter-pills" aria-label="Filtro de estado">
+            <button
+              type="button"
+              class="filter-pill"
+              [class.is-active]="statusFilter() === ''"
+              (click)="setStatusFilter('')"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              class="filter-pill"
+              [class.is-active]="statusFilter() === 'active'"
+              (click)="setStatusFilter('active')"
+            >
+              {{ section === 'inventario' ? 'Stock suficiente (>3)' : 'Activos' }}
+            </button>
+            <button
+              type="button"
+              class="filter-pill"
+              [class.is-active]="statusFilter() === 'alert'"
+              (click)="setStatusFilter('alert')"
+            >
+              Alertas / Stock bajo
+            </button>
+            <button
+              type="button"
+              class="filter-pill"
+              [class.is-active]="statusFilter() === (section === 'inventario' ? 'agotado' : 'draft')"
+              (click)="setStatusFilter(section === 'inventario' ? 'agotado' : 'draft')"
+            >
+              {{ section === 'inventario' ? 'Agotados' : 'No publicados' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- TABLA DE DATOS CONECTADA -->
+        <section class="editor-section">
+          <div class="table-scroll">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  @for (column of current.columns; track column) {
+                    <th>{{ column }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @if (isLoading()) {
+                  <!-- SKELETON LOADERS MIENTRAS CARGA -->
+                  @for (dummy of [1, 2, 3, 4, 5]; track dummy) {
+                    <tr class="skeleton-row">
+                      <td><div class="skeleton-bar" style="width: 70%"></div></td>
+                      <td><div class="skeleton-bar" style="width: 50%"></div></td>
+                      <td><div class="skeleton-bar" style="width: 60%"></div></td>
+                      <td><div class="skeleton-bar" style="width: 40%"></div></td>
+                      <td><div class="skeleton-bar" style="width: 80px"></div></td>
+                    </tr>
+                  }
+                } @else if (items().length > 0) {
+                  <!-- FILAS DE DATOS REALES -->
+                  @for (row of items(); track row.id) {
+                    <tr class="data-row">
+                      <!-- Columna 1: Título y Código/SKU -->
+                      <td class="cell-main">
+                        <div class="item-title-wrap">
+                          @if (row.thumbnail) {
+                            <img class="table-thumb" [src]="row.thumbnail" [alt]="row.title">
+                          }
+                          <div>
+                            <strong class="item-title">{{ row.title }}</strong>
+                            <div class="item-subinfo">
+                              <span class="sku-code">{{ row.code }}</span>
+                              @if (row.subtitle) {
+                                <span class="item-subtitle">· {{ row.subtitle }}</span>
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <!-- Columna 2: Etiqueta / Marca -->
+                      <td>
+                        <span class="info-badge">{{ row.subtitle || '—' }}</span>
+                      </td>
+
+                      <!-- Columna 3: Categoría o Detalle -->
+                      <td>
+                        <span class="info-tag">{{ row.tag || 'General' }}</span>
+                        @if (row.detail) {
+                          <small class="row-subdetail">{{ row.detail }}</small>
+                        }
+                      </td>
+
+                      <!-- Columna 4: Estado y Métricas -->
+                      <td>
+                        <div class="status-cell">
+                          <span
+                            class="status-pill"
+                            [class.status-active]="row.status === 'active'"
+                            [class.status-alert]="row.status === 'alert'"
+                            [class.status-draft]="row.status === 'draft' || row.status === 'pending'"
+                            [class.status-inactive]="row.status === 'inactive'"
+                          >
+                            {{ row.statusText }}
+                          </span>
+                          @if (row.metric) {
+                            <strong class="row-metric">{{ row.metric }}</strong>
+                          }
+                        </div>
+                      </td>
+
+                      <!-- Columna 5: Acciones de Fila -->
+                      <td class="cell-actions">
+                        @if (design || section === 'catalogo') {
+                        <fieldset class="row-actions" [disabled]="pendingRows().has(row.id)" [attr.aria-busy]="pendingRows().has(row.id)">
+                          <button
+                            type="button"
+                            class="row-action-btn"
+                            title="Editar registro"
+                            aria-label="Editar registro"
+                            (click)="openEditForm(row)"
+                          >
+                            <span class="material-symbols-rounded">edit</span>
+                          </button>
+
+                          @if (section === 'catalogo') {
+                            @if (row.status === 'active' || row.status === 'alert') {
+                              <button
+                                type="button"
+                                class="row-action-btn"
+                                title="Desactivar producto (ocultar de la tienda)"
+                                aria-label="Desactivar producto"
+                                (click)="deactivateProduct(row)"
+                              >
+                                <span class="material-symbols-rounded">visibility_off</span>
+                              </button>
+                            } @else {
+                              <button
+                                type="button"
+                                class="row-action-btn"
+                                title="Publicar producto en la tienda"
+                                aria-label="Publicar producto"
+                                (click)="publishProduct(row)"
+                              >
+                                <span class="material-symbols-rounded">publish</span>
+                              </button>
+                            }
+
+                            @if (row.status !== 'draft') {
+                              <button
+                                type="button"
+                                class="row-action-btn"
+                                title="Guardar sin publicar"
+                                aria-label="Guardar sin publicar"
+                                (click)="saveDraftProduct(row)"
+                              >
+                                <span class="material-symbols-rounded">edit_note</span>
+                              </button>
+                            }
+                          } @else {
+                            <button
+                              type="button"
+                              class="row-action-btn"
+                              [title]="row.status === 'active' ? 'Desactivar registro' : 'Activar registro'"
+                              [attr.aria-label]="row.status === 'active' ? 'Desactivar' : 'Activar'"
+                              (click)="toggleRowStatus(row)"
+                            >
+                              <span class="material-symbols-rounded">
+                                {{ row.status === 'active' ? 'toggle_on' : 'toggle_off' }}
+                              </span>
+                            </button>
+                          }
+
+                          @if (row.rawData?.slug) {
+                            <a
+                              class="row-action-btn"
+                              [routerLink]="'/producto/' + row.rawData.slug"
+                              target="_blank"
+                              title="Ver en tienda pública"
+                              aria-label="Ver en tienda"
+                            >
+                              <span class="material-symbols-rounded">open_in_new</span>
+                            </a>
+                          }
+
+                          @if (section === 'catalogo') {
+                            <button
+                              type="button"
+                              class="row-action-btn row-action-danger"
+                              title="Eliminar producto"
+                              aria-label="Eliminar producto"
+                              (click)="deleteProduct(row)"
+                            >
+                              <span class="material-symbols-rounded">delete_outline</span>
+                            </button>
+                          }
+                        </fieldset>
+                        } @else if (section === 'inventario') {
+                        <fieldset class="row-actions" [disabled]="pendingRows().has(row.id)">
+                          <button
+                            type="button"
+                            class="row-action-btn"
+                            title="Ajustar stock / Registrar movimiento"
+                            aria-label="Ajustar stock"
+                            (click)="openStockModal(row)"
+                          >
+                            <span class="material-symbols-rounded">tune</span>
+                          </button>
+                          <button
+                            type="button"
+                            class="row-action-btn"
+                            title="Historial de movimientos (Kardex)"
+                            aria-label="Ver movimientos"
+                            (click)="openKardexModal(row)"
+                          >
+                            <span class="material-symbols-rounded">history</span>
+                          </button>
+                          @if (row.rawData?.productoSlug) {
+                            <a
+                              class="row-action-btn"
+                              [routerLink]="'/producto/' + row.rawData.productoSlug"
+                              target="_blank"
+                              title="Ver en tienda pública"
+                              aria-label="Ver en tienda"
+                            >
+                              <span class="material-symbols-rounded">open_in_new</span>
+                            </a>
+                          }
+                        </fieldset>
+                        } @else { <span>Solo consulta</span> }
+                      </td>
+                    </tr>
+                  }
+                } @else {
+                  <!-- ESTADO SIN RESULTADOS -->
+                  <tr>
+                    <td [attr.colspan]="current.columns.length">
+                      <div class="empty-results">
+                        <span class="material-symbols-rounded" aria-hidden="true">search_off</span>
+                        <h3>{{ serverError() ? 'No se pudo cargar el listado' : (!design && !connected() ? 'Conexión pendiente' : 'No se encontraron registros') }}</h3>
+                        <p>{{ serverError() ? 'Reintenta la consulta. Un error no significa que no existan registros.' : 'Revisa la búsqueda y los filtros de esta sección.' }}</p>
+                        <button type="button" class="button button-secondary" (click)="resetFilters()">
+                          Restablecer filtros
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- BARRA DE PAGINACIÓN COMPLETA -->
+          <div class="admin-pagination">
+            <div class="pagination-info">
+              @if (totalItems() > 0) {
+                <span>Mostrando {{ currentPage() * pageSize() + 1 }} - {{ getEndIndex() }} de {{ totalItems() }} registros</span>
+              } @else {
+                <span>0 registros</span>
+              }
+            </div>
+
+            <div class="pagination-controls">
+              <label class="page-size-label">
+                <span>Por página:</span>
+                <select [value]="pageSize()" (change)="changePageSize($any($event.target).value)">
+                  <option [value]="5">5</option>
+                  <option [value]="10">10</option>
+                  <option [value]="20">20</option>
+                  <option [value]="50">50</option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                class="pagination-nav-btn"
+                [disabled]="currentPage() === 0"
+                (click)="goToPage(currentPage() - 1)"
+                aria-label="Página anterior"
+              >
+                <span class="material-symbols-rounded">chevron_left</span>
+              </button>
+
+              <span class="page-current">{{ totalPages() ? currentPage() + 1 : 0 }} / {{ totalPages() }}</span>
+
+              <button
+                type="button"
+                class="pagination-nav-btn"
+                [disabled]="currentPage() + 1 >= totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+                aria-label="Página siguiente"
+              >
+                <span class="material-symbols-rounded">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- CASO 3: RESUMEN / CENTRO DE CONTROL -->
+      @else {
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">CENTRO DE CONTROL</p>
+            <h1>Tu tienda, en perspectiva.</h1>
+            <p>Gestiona el catálogo, inventario, pedidos y parámetros que impulsan RYA Tech.</p>
+          </div>
+        </div>
+
+        <p class="notice">
+          {{ design ? 'Vista de diseño aislada: los borradores solo viven en memoria y no modifican la BD.' : 'Indicadores obtenidos del servidor. Un guion indica que el dato no está disponible.' }}
+        </p>
+
+        <!-- TARJETAS DE ESTADÍSTICAS EN TIEMPO REAL -->
+        @if (statsUnavailable()) { <p class="admin-alert" role="status">Algunos indicadores no están disponibles o aún no tienen endpoint. <button type="button" (click)="loadStats()">Reintentar indicadores</button></p> }
+        <div class="stats">
+          <article class="stat-card">
+            <small>Total Productos</small>
+            <strong>{{ stats().totalProductos !== null ? stats().totalProductos : '—' }}</strong>
+            <span class="stat-pill is-good">{{ stats().totalProductos !== null ? (design ? 'Borradores locales' : 'Total administrativo') : (statsLoading() ? 'Consultando…' : 'No disponible') }}</span>
+          </article>
+          <article class="stat-card">
+            <small>Pedidos Registrados</small>
+            <strong>{{ stats().pedidosPendientes !== null ? stats().pedidosPendientes : '—' }}</strong>
+            <span class="stat-pill is-info">{{ stats().pedidosPendientes !== null ? 'Compras recientes' : 'Próxima fase' }}</span>
+          </article>
+          <article class="stat-card">
+            <small>Alertas de Stock</small>
+            <strong>{{ stats().stockBajo !== null ? stats().stockBajo : '—' }}</strong>
+            <span class="stat-pill is-alert">{{ stats().stockBajo !== null ? 'Stock disponible bajo' : (statsLoading() ? 'Consultando…' : 'No disponible') }}</span>
+          </article>
+          <article class="stat-card">
+            <small>Categorías Activas</small>
+            <strong>{{ stats().categoriasActivas !== null ? stats().categoriasActivas : '—' }}</strong>
+            <span class="stat-pill is-neutral">{{ stats().categoriasActivas !== null ? 'Categorías consultadas' : (statsLoading() ? 'Consultando…' : 'No disponible') }}</span>
+          </article>
+        </div>
+
+        <h2>Espacios de trabajo</h2>
+        <div class="module-grid">
+          @for (module of modules; track module.id) {
+            <a [routerLink]="base + '/' + module.id" class="module-card">
+              <span class="material-symbols-rounded module-icon" aria-hidden="true">{{ module.icon }}</span>
+              <small>{{ module.group }}</small>
+              <h3>{{ module.name }}</h3>
+              <p>{{ module.description }}</p>
+              <span class="module-link">Abrir sección →</span>
+            </a>
+          }
+        </div>
+      }
+
+    </main>
+  </div>
+
+<!-- ========================================================== -->
+<!-- MODAL DE FORMULARIO: ALTA Y EDICIÓN DE REGISTROS           -->
+<!-- ========================================================== -->
+@if (showFormModal()) {
+  <div class="admin-modal-backdrop" (click)="!isSaving() && closeForm()" (keydown.escape)="!isSaving() && closeForm()">
+    <div class="admin-modal-card" appDialogFocus (dialogClose)="closeForm()" aria-labelledby="admin-form-title" [attr.aria-busy]="isSaving() || isLoadingDetail() || savingReference()" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">{{ current?.group || 'ADMINISTRACIÓN' }}</p>
+          <h2 id="admin-form-title">{{ isEditing() ? 'Editar registro' : (current?.action || 'Nuevo registro') }}</h2>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeForm()" [disabled]="isSaving() || savingReference()" aria-label="Cerrar ventana">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (metadataLoading()) { <p role="status">Cargando categorías y marcas…</p> }
+        @if (metadataError()) { <div class="admin-alert" role="alert">{{ metadataError() }} <button type="button" (click)="loadMetadata()">Reintentar categorías y marcas</button></div> }
+        @if (isLoadingDetail()) {
+          <div class="admin-alert admin-alert-info" role="status">
+            <span class="material-symbols-rounded spin">progress_activity</span>
+            <span>Cargando detalle completo y galería del producto desde el servidor…</span>
+          </div>
+        }
+
+        @if (detailLoadError()) {
+          <div class="admin-alert admin-alert-error" role="alert">
+            <span class="material-symbols-rounded">error</span>
+            <div style="flex: 1;">
+              <strong>Error al sincronizar ficha:</strong>
+              <p style="margin: 4px 0 0;">{{ detailLoadError() }}</p>
+            </div>
+            <button type="button" class="field-quick-add" (click)="retryLoadDetail()" style="margin-left: auto;">
+              <span class="material-symbols-rounded">refresh</span>
+              <span>Reintentar</span>
+            </button>
+          </div>
+        }
+
+        @if (formError()) {
+          <div class="admin-alert admin-alert-error" role="alert">
+            <span class="material-symbols-rounded">error</span>
+            <span>{{ formError() }}</span>
+          </div>
+        }
+
+        <form #adminForm="ngForm" (ngSubmit)="submitForm(adminForm)" class="modal-form">
+          <fieldset class="admin-form-fields" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" [attr.inert]="isLoadingDetail() || isSaving() || !!detailLoadError() ? '' : null">
+          <div class="form-grid">
+            <label>
+              <span>Nombre / Título principal *</span>
+              <input
+                type="text"
+                placeholder="Ej. AMD Ryzen 7 7800X3D o Asus ROG B650E"
+                [ngModel]="formData().nombre"
+                (ngModelChange)="onNombreChange($event)"
+                name="nombre"
+                maxlength="220"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Código o SKU *</span>
+              <input
+                type="text"
+                placeholder="Ej. AMD-7800X3D o RAM-32GB-DDR5"
+                [(ngModel)]="formData().sku"
+                name="sku"
+                maxlength="80"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Slug único en catálogo</span>
+              <input
+                type="text"
+                placeholder="ej. amd-ryzen-7-7800x3d"
+                [ngModel]="formData().slug"
+                (ngModelChange)="onSlugChange($event)"
+                name="slug"
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              >
+            </label>
+
+            <div class="form-field-group">
+              <div class="field-label-row">
+                <label for="product-category">Categoría *</label>
+                <button type="button" class="field-quick-add" (click)="toggleCreateCategory()" [disabled]="savingReference() || metadataLoading() || !!metadataError()" [attr.aria-expanded]="isCreatingCategory()">
+                  <span class="material-symbols-rounded">{{ isCreatingCategory() ? 'close' : 'add' }}</span>
+                  <span>{{ isCreatingCategory() ? 'Cancelar' : '+ Nueva' }}</span>
+                </button>
+              </div>
+
+              @if (isCreatingCategory()) {
+                <div class="inline-creation-box">
+                  <input
+                    type="text"
+                    placeholder="Nombre de categoría (ej. Monitores)"
+                    aria-label="Nombre de categoría nueva"
+                    maxlength="120"
+                    [disabled]="savingReference()"
+                    [value]="newCategoryName()"
+                    (input)="newCategoryName.set($any($event.target).value)"
+                  >
+                  <input
+                    type="text"
+                    placeholder="Acrónimo (opcional, ej. MON)"
+                    aria-label="Acrónimo de categoría"
+                    maxlength="20"
+                    [disabled]="savingReference()"
+                    [value]="newCategoryAcronym()"
+                    (input)="newCategoryAcronym.set($any($event.target).value)"
+                  >
+                  <select
+                    aria-label="Categoría superior"
+                    [disabled]="savingReference()"
+                    [value]="newCategoryParentId()"
+                    (change)="newCategoryParentId.set($any($event.target).value)"
+                  >
+                    <option value="">-- Sin categoría superior (categoría principal) --</option>
+                    @for (cat of categories(); track cat.id) {
+                      <option [value]="cat.id">{{ cat.nombre }}</option>
+                    }
+                  </select>
+                  @if (categoryError()) { <p role="alert">{{ categoryError() }}</p> }
+                  <p class="notice">{{ design ? 'Solo se crea en esta vista de diseño.' : 'Esta categoría se guarda de inmediato, aunque canceles el producto.' }}</p>
+                  <button type="button" class="button button-primary" (click)="submitNewCategory()" [disabled]="savingReference()">
+                    {{ savingCategory() ? 'Creando categoría…' : 'Crear y seleccionar categoría' }}
+                  </button>
+                </div>
+              } @else {
+                  <select id="product-category" [ngModel]="formData().categoriaId" (change)="onCategorySelect($event)" name="categoriaId" required [disabled]="metadataLoading() || !!metadataError()">
+                    <option value="">-- Seleccionar categoría existente --</option>
+                    @for (cat of categories(); track cat.id) {
+                      <option [value]="cat.id">{{ cat.nombre }}</option>
+                    }
+                    <option value="__NEW__">+ Registrar nueva categoría...</option>
+                  </select>
+                  @if (!categories().length && !metadataLoading() && !metadataError()) { <p role="status">No hay categorías. Crea una para continuar.</p> }
+              }
+            </div>
+
+            <div class="form-field-group">
+              <div class="field-label-row">
+                <label for="product-brand">Marca / Fabricante</label>
+                <button type="button" class="field-quick-add" (click)="toggleCreateBrand()" [disabled]="savingReference() || metadataLoading() || !!metadataError()" [attr.aria-expanded]="isCreatingBrand()">
+                  <span class="material-symbols-rounded">{{ isCreatingBrand() ? 'close' : 'add' }}</span>
+                  <span>{{ isCreatingBrand() ? 'Cancelar' : '+ Nueva' }}</span>
+                </button>
+              </div>
+
+              @if (isCreatingBrand()) {
+                <div class="inline-creation-box">
+                  <input
+                    type="text"
+                    placeholder="Nombre de marca (ej. Logitech G)"
+                    aria-label="Nombre de marca nueva"
+                    maxlength="130"
+                    [disabled]="savingReference()"
+                    [value]="newBrandName()"
+                    (input)="newBrandName.set($any($event.target).value)"
+                  >
+                  <input
+                    type="url"
+                    placeholder="URL del logo (opcional)"
+                    aria-label="Enlace HTTPS del logo de marca"
+                    [disabled]="savingReference()"
+                    [value]="newBrandLogoUrl()"
+                    (input)="newBrandLogoUrl.set($any($event.target).value)"
+                  >
+                  @if (brandError()) { <p role="alert">{{ brandError() }}</p> }
+                  <p class="notice">{{ design ? 'Solo se crea en esta vista de diseño.' : 'Esta marca se guarda de inmediato, aunque canceles el producto.' }}</p>
+                  <button type="button" class="button button-primary" (click)="submitNewBrand()" [disabled]="savingReference()">
+                    {{ savingBrand() ? 'Creando marca…' : 'Crear y seleccionar marca' }}
+                  </button>
+                </div>
+              } @else {
+                  <select id="product-brand" [ngModel]="formData().marcaId" (change)="onBrandSelect($event)" name="marcaId" [disabled]="metadataLoading() || !!metadataError()">
+                    <option value="" [disabled]="isEditing() && !!formData().marcaId">-- Sin marca seleccionada --</option>
+                    @for (b of brands(); track b.id) {
+                      <option [value]="b.id">{{ b.nombre }}</option>
+                    }
+                    <option value="__NEW__">+ Registrar nueva marca...</option>
+                  </select>
+              }
+            </div>
+
+            <label>
+              <span>Precio base (S/) *</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                [(ngModel)]="formData().precio"
+                name="precio"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Costo de referencia (S/)</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                [(ngModel)]="formData().costoReferencia"
+                name="costoReferencia"
+              >
+              @if (isEditing()) { <small>Para retirar un costo guardado se necesita ampliar el contrato del servidor; dejarlo vacío conserva el valor anterior.</small> }
+            </label>
+
+            @if (isEditing()) {
+              <div class="form-field-info">
+                <span>Existencias registradas</span>
+                <div class="stock-readonly-pill">
+                  <span class="material-symbols-rounded">inventory_2</span>
+                  <span>{{ formData().stockInicial ?? 0 }} un. disponibles</span>
+                </div>
+              </div>
+            } @else {
+              <label>
+                <span>Stock inicial disponible</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  [(ngModel)]="formData().stockInicial"
+                  name="stockInicial"
+                >
+              </label>
+            }
+
+            <label>
+              <span>Estado de publicación</span>
+              <select [(ngModel)]="formData().estado" name="estado">
+                <option value="active">Activo / Publicado en catálogo</option>
+                <option value="draft">{{ design ? 'Borrador (diseño)' : 'No publicado (borrador o inactivo)' }}</option>
+                @if (design) { <option value="inactive">Inactivo (diseño)</option> }
+              </select>
+            </label>
+            <label><span>Requiere número de serie</span><input type="checkbox" [(ngModel)]="formData().requiereSerie" name="requiereSerie"></label>
+            <label><span>Requiere envío físico</span><input type="checkbox" [(ngModel)]="formData().requiereEnvio" name="requiereEnvio"></label>
+            @if (isEditing()) { <div><strong>Tipo técnico:</strong> {{ formData().tipo || 'No informado' }}<p>La selección de tipos y la revisión técnica requieren ampliar el contrato del servidor.</p></div> }
+          </div>
+          <p class="notice">{{ design ? 'Los estados son una demostración local.' : 'El servidor todavía no distingue borrador de inactivo al recuperar un producto. No publicado no significa revisado ni compatible.' }} La edición de categorías y la solicitud de revisión están pendientes de backend.</p>
+
+          <label class="form-fullwidth">
+            <span>Descripción / Ficha técnica preliminar</span>
+            <textarea
+              rows="3"
+              placeholder="Detalles complementarios, especificaciones clave o notas administrativas del producto..."
+              [(ngModel)]="formData().descripcion"
+              name="descripcion"
+            ></textarea>
+          </label>
+
+          <div class="form-fullwidth product-media-wrapper">
+            <app-product-media [isDesignMode]="design" />
+          </div>
+
+          </fieldset>
+          <div class="modal-footer">
+            <button type="button" class="button button-secondary" (click)="closeForm()" [disabled]="isSaving() || savingReference()">
+              Cancelar
+            </button>
+            @if (!isEditing()) {
+              <button
+                type="button"
+                class="button button-secondary"
+                (click)="saveAsDraft(adminForm)"
+                [disabled]="isSaving() || savingReference() || metadataLoading() || !!metadataError() || isLoadingDetail() || !!detailLoadError()"
+              >
+                <span class="material-symbols-rounded">edit_note</span>
+                <span>{{ design ? 'Guardar borrador' : 'Guardar sin publicar' }}</span>
+              </button>
+            }
+            <button type="submit" class="button button-primary" [disabled]="isSaving() || savingReference() || metadataLoading() || !!metadataError() || isLoadingDetail() || !!detailLoadError()">
+              @if (isSaving()) {
+                <span class="material-symbols-rounded spin">progress_activity</span>
+                <span>Guardando…</span>
+              } @else if (isLoadingDetail()) {
+                <span class="material-symbols-rounded spin">progress_activity</span>
+                <span>Cargando detalle…</span>
+              } @else {
+                <span class="material-symbols-rounded">check</span>
+                <span>{{ isEditing() ? 'Guardar cambios' : (formData().estado === 'active' ? 'Publicar producto' : 'Guardar sin publicar') }}</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL DE INVENTARIO: REGISTRO DE MOVIMIENTOS Y AJUSTES     -->
+<!-- ========================================================== -->
+@if (showStockModal()) {
+  <div class="admin-modal-backdrop" (click)="!isSavingStock() && closeStockModal()" (keydown.escape)="!isSavingStock() && closeStockModal()">
+    <div class="admin-modal-card stock-modal-card" appDialogFocus (dialogClose)="closeStockModal()" aria-labelledby="stock-form-title" [attr.aria-busy]="isSavingStock()" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">INVENTARIO Y ALMACÉN</p>
+          <h2 id="stock-form-title">Registrar movimiento de existencias</h2>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeStockModal()" [disabled]="isSavingStock()" aria-label="Cerrar ventana">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (selectedStockRow(); as row) {
+          <div class="stock-item-context">
+            <div class="stock-item-info">
+              <strong>{{ row.title }}</strong>
+              <span>SKU: {{ row.code }}</span>
+              @if (row.rawData?.varianteId) { <span>Variante: {{ row.rawData.varianteId }}</span> }
+            </div>
+            <div class="stock-pills">
+              <span class="stock-pill-disponible">Disponible: {{ stockCurrent()?.disponible ?? '—' }} un.</span>
+              <span class="stock-pill-reservado">Reservado: {{ stockCurrent()?.reservado ?? '—' }} un.</span>
+              <span class="stock-pill-total">Físico: {{ stockCurrent()?.cantidad ?? '—' }} un.</span>
+            </div>
+          </div>
+        }
+
+        @if (stockError()) {
+          <div class="admin-alert admin-alert-error" role="alert">
+            <span class="material-symbols-rounded">error</span>
+            <span>{{ stockError() }}</span>
+          </div>
+        }
+
+        <form (ngSubmit)="submitStockAdjustment()" class="modal-form" #stockNgForm="ngForm">
+          <fieldset class="admin-form-fields" [disabled]="isSavingStock()">
+            <div class="form-grid" [attr.inert]="stockUncertain() ? '' : null">
+              @if (!selectedStockRow()) {
+                <label class="col-full">
+                  <span>Buscar producto por nombre o SKU</span>
+                  <input name="stockQuery" [ngModel]="stockProductQuery()" (ngModelChange)="stockProductQuery.set($event)">
+                </label>
+                <button type="button" class="button button-secondary" (click)="searchStockProducts()" [disabled]="stockProductsLoading()">Buscar productos</button>
+                @if (stockProductsError()) { <p role="alert">{{ stockProductsError() }}</p> }
+                <label class="col-full">
+                  <span>Seleccionar producto *</span>
+                  <select
+                    [ngModel]="stockForm().productoId"
+                    (ngModelChange)="onStockProductChange($event)"
+                    name="productoId"
+                    required
+                  >
+                    <option value="" disabled>Selecciona un producto del catálogo</option>
+                    @for (item of stockProducts(); track item.id) {
+                      <option [value]="item.rawData?.productoId || item.id">
+                        {{ item.title }} ({{ item.code }})
+                      </option>
+                    }
+                  </select>
+                </label>
+                <div class="col-full">
+                  <button type="button" (click)="searchStockProducts(stockProductPage() - 1)" [disabled]="stockProductsLoading() || stockProductPage() === 0">Anteriores</button>
+                  <button type="button" (click)="searchStockProducts(stockProductPage() + 1)" [disabled]="stockProductsLoading() || stockProductPage() + 1 >= stockProductPages()">Más productos</button>
+                </div>
+              }
+
+              <label>
+                <span>Almacén *</span>
+                <select
+                  [ngModel]="stockForm().almacenId"
+                  (ngModelChange)="onStockAlmacenChange($event)"
+                  name="almacenId"
+                  required
+                >
+                  <option value="" disabled>Selecciona un almacén</option>
+                  @for (alm of almacenes(); track alm.id) {
+                    <option [value]="alm.id">{{ alm.nombre }} ({{ alm.codigo }})</option>
+                  }
+                </select>
+              </label>
+              @if (almacenesError()) {
+                <p role="alert">{{ almacenesError() }}</p>
+                <button type="button" (click)="loadAlmacenes()">Reintentar almacenes</button>
+              }
+
+              <label>
+                <span>Tipo de operación *</span>
+                <select
+                  [ngModel]="stockForm().tipo"
+                  (ngModelChange)="onStockTipoChange($event)"
+                  name="tipo"
+                  required
+                >
+                  <option value="ENTRADA">Entrada (Recepción de compra o lote)</option>
+                  <option value="SALIDA">Salida (Retiro, merma o traslado)</option>
+                  <option value="AJUSTE">Ajuste físico (Recuento de inventario)</option>
+                </select>
+              </label>
+
+              <label>
+                <span>{{ stockForm().tipo === 'AJUSTE' ? 'Nuevo stock físico total *' : 'Cantidad a mover *' }}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  max="2147483647"
+                  [placeholder]="stockForm().tipo === 'AJUSTE' ? 'Ej. 15' : 'Ej. 5'"
+                  [ngModel]="stockForm().cantidad"
+                  (ngModelChange)="onStockCantidadChange($event)"
+                  name="cantidad"
+                  required
+                >
+              </label>
+
+              <label class="col-full">
+                <span>Motivo / Justificación obligatoria para auditoría *</span>
+                <input
+                  type="text"
+                  placeholder="Ej. Ingreso de nuevo lote proveedor según factura F001-892"
+                  [ngModel]="stockForm().nota"
+                  (ngModelChange)="onStockNotaChange($event)"
+                  name="nota"
+                  maxlength="255"
+                  required
+                >
+              </label>
+            </div>
+
+            <!-- Proyección del resultado -->
+            <button type="button" class="button button-secondary" (click)="refreshStock()" [disabled]="stockLoading() || stockUncertain()">Actualizar stock real</button>
+            <div class="stock-projection">
+              <span>Proyección tras confirmar: </span>
+              <strong>{{ getStockProjectionText() }}</strong>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="button button-secondary" (click)="closeStockModal()" [disabled]="isSavingStock()">
+                Cancelar
+              </button>
+              <button type="submit" class="button button-primary" [disabled]="isSavingStock() || !isStockFormValid()">
+                @if (isSavingStock()) {
+                  <span class="material-symbols-rounded spin">progress_activity</span>
+                  <span>Registrando…</span>
+                } @else {
+                  <span class="material-symbols-rounded">check</span>
+                  <span>Confirmar movimiento</span>
+                }
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================== -->
+<!-- MODAL DE HISTORIAL: KARDEX DE MOVIMIENTOS                  -->
+<!-- ========================================================== -->
+@if (showKardexModal()) {
+  <div class="admin-modal-backdrop" (click)="closeKardexModal()" (keydown.escape)="closeKardexModal()">
+    <div class="admin-modal-card kardex-modal-card" appDialogFocus (dialogClose)="closeKardexModal()" aria-labelledby="kardex-modal-title" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">AUDITORÍA Y TRAZABILIDAD</p>
+          <h2 id="kardex-modal-title">Historial de movimientos (Kardex)</h2>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeKardexModal()" aria-label="Cerrar ventana">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (selectedKardexRow(); as row) {
+          <div class="stock-item-context">
+            <div class="stock-item-info">
+              <strong>{{ row.title }}</strong>
+              <span>SKU: {{ row.code }} · {{ row.tag }}</span>
+            </div>
+          </div>
+        }
+
+        @if (kardexLoading()) {
+          <div class="admin-alert admin-alert-info" role="status">
+            <span class="material-symbols-rounded spin">progress_activity</span>
+            <span>Cargando movimientos desde el servidor…</span>
+          </div>
+        }
+
+        @if (kardexError()) {
+          <div class="admin-alert admin-alert-error" role="alert">
+            <span class="material-symbols-rounded">error</span>
+            <span>{{ kardexError() }}</span>
+          </div>
+        }
+
+        @if (!kardexLoading() && kardexItems().length === 0 && !kardexError()) {
+          <div class="empty-kardex">
+            <span class="material-symbols-rounded">receipt_long</span>
+            <p>No se registran movimientos para esta existencia aún.</p>
+          </div>
+        }
+
+        @if (kardexItems().length > 0) {
+          <div class="table-scroll">
+            <table class="admin-table kardex-table">
+              <thead>
+                <tr>
+                  <th>Fecha y hora</th>
+                  <th>Tipo</th>
+                  <th>Cantidad</th>
+                  <th>Motivo / Referencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (mov of kardexItems(); track mov.id) {
+                  <tr>
+                    <td>{{ mov.registradoAt | date:'short' }}</td>
+                    <td>
+                      <span
+                        class="status-pill"
+                        [class.status-active]="mov.tipo === 'ENTRADA' || mov.tipo === 'LIBERACION'"
+                        [class.status-alert]="mov.tipo === 'SALIDA' || mov.tipo === 'RESERVA'"
+                        [class.status-draft]="mov.tipo === 'AJUSTE'"
+                      >
+                        {{ mov.tipo }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (mov.delta != null) {
+                        <strong>{{ mov.delta > 0 ? '+' : '' }}{{ mov.delta }} un.</strong>
+                        <small class="row-subdetail">{{ mov.cantidadAnterior }} → {{ mov.cantidadNueva }}</small>
+                      } @else { <strong>{{ mov.tipo === 'SALIDA' ? '-' : (mov.tipo === 'ENTRADA' ? '+' : '') }}{{ mov.cantidad }} un.</strong> }
+                    </td>
+                    <td>
+                      <div>{{ mov.nota || 'Sin nota' }}</div>
+                      @if (mov.actor) { <small class="row-subdetail">Administrador: {{ mov.actor }}</small> }
+                      @if (mov.referenciaTipo) {
+                        <small class="row-subdetail">{{ mov.referenciaTipo }}</small>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <div class="modal-footer" style="margin-top: 16px;">
+          <button type="button" (click)="changeKardexPage(-1)" [disabled]="kardexLoading() || kardexPage() === 0">Anterior</button>
+          <span>Página {{ kardexPage() + 1 }}</span>
+          <button type="button" (click)="changeKardexPage(1)" [disabled]="kardexLoading() || kardexPage() + 1 >= kardexPages()">Siguiente</button>
+          @if (kardexError()) { <button type="button" (click)="changeKardexPage(0)">Reintentar</button> }
+          <button type="button" class="button button-secondary" (click)="closeKardexModal()">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+</div>

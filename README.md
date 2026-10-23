@@ -44,7 +44,7 @@ RYA_System/
 
 ## Un GitHub, dos despliegues
 
-Repositorio actual: https://github.com/Xarmiel/RYA_System · rama local actual: `main`.
+Repositorio actual: https://github.com/said-ssj/RYA-Tech · rama local actual: `main`.
 
 | Plataforma | Repositorio | Raíz de aplicación | Configuración |
 |---|---|---|---|

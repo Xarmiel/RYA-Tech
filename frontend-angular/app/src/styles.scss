@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+  --background: #000;
+  --surface-header: #02060d;
+  --surface: #030914;
+  --surface-raised: #081221;
+  --surface-active: #0a2b5e;
+  --text: #f5f7fa;
+  --muted: #98a3b7;
+  --cyan: #00d4ff;
+  --on-accent: #001017;
+  --danger: #ff4d6d;
+  --line: rgba(194, 197, 204, .18);
+  --shadow: 0 24px 70px rgba(0, 0, 0, .3);
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-card: 4px;
+  --radius-pill: 4px;
+  --radius-btn: 4px;
+  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f5f7fa;
+  --surface-header: #fff;
+  --surface: #fff;
+  --surface-raised: #fff;
+  --surface-active: #d9ecf4;
+  --text: #101827;
+  --muted: #586579;
+  --cyan: #007e99;
+  --on-accent: #fff;
+  --danger: #be2445;
+  --line: rgba(16, 24, 39, .16);
+  --shadow: 0 24px 70px rgba(16, 24, 39, .12);
+}
+* { box-sizing: border-box; }
+html { background: var(--background); scroll-behavior: smooth; }
+body { background: var(--background); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 0; min-width: 0; }
+h1, h2, h3, .brand { font-family: "Space Grotesk", Inter, sans-serif; }
+button, input, select, textarea { font: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.sr-only { clip: rect(0, 0, 0, 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+.page-shell { margin-inline: auto; max-width: 1400px; padding-inline: clamp(20px, 5vw, 72px); }
+.page-heading { padding-block: clamp(60px, 8vw, 110px) 48px; }
+.page-heading h1 { font-size: clamp(42px, 6vw, 72px); letter-spacing: -.05em; line-height: 1; margin: 12px 0 22px; }
+.page-heading > p, .page-heading > div > p { color: var(--muted); font-size: 18px; }
+.eyebrow { color: var(--cyan) !important; font-family: var(--font-mono); font-size: 12px !important; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.button { border: 1px solid transparent; border-radius: 4px; cursor: pointer; display: inline-flex; font-weight: 800; justify-content: center; padding: 13px 20px; text-decoration: none; }
+.button-primary { background: var(--cyan); color: var(--on-accent); }
+.button-secondary { background: transparent; border-color: var(--line); color: var(--text); }
+.button-secondary:hover { border-color: var(--cyan); }
+.button:disabled { cursor: not-allowed; opacity: .45; }
+.empty-state { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); margin-block: 28px; padding: clamp(42px, 7vw, 90px) 24px; text-align: center; }
+.empty-state > span { color: var(--cyan); display: block; font-size: 44px; }
+.empty-state h2 { font-size: 25px; margin: 16px 0 8px; }
+.empty-state p { color: var(--muted); margin: 0 auto 22px; max-width: 620px; }
+.empty-state code { color: var(--cyan); }
+
+/* Reglas compartidas para contenidos reales largos, zoom y pantallas pequeñas. */
+img, svg, video { max-width: 100%; }
+main, section, article, aside, form, fieldset { min-width: 0; }
+h1, h2, h3, p, dd, a, button { overflow-wrap: anywhere; }
+input, select, textarea { max-width: 100%; }
+button, .button { min-height: 44px; }
+button { touch-action: manipulation; }
+button:disabled { cursor: not-allowed; }
+#main-content:focus { outline: none; }
+@media (max-width: 480px) {
+  .page-heading h1 { font-size: clamp(32px, 10vw, 44px); }
+  .page-heading { padding-block: 40px 28px; }
+  input, select, textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

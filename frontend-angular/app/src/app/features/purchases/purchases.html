@@ -1,0 +1,48 @@
+<section class="page-shell page-heading">
+  <p class="eyebrow">TU CUENTA</p><h1>{{ detailId() ? 'Detalle del pedido' : 'Mis compras' }}</h1>
+  <p>{{ detailId() ? 'Consulta los productos y los importes registrados en tu compra.' : 'Revisa tus pedidos y el estado de cada compra.' }}</p>
+  @if (detailId()) { <a class="back-link" routerLink="/compras" [queryParams]="currentPage() ? { pagina: currentPage() + 1 } : {}"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>Volver a mis compras</a> }
+</section>
+<section class="page-shell purchases-content" aria-label="Historial de compras">
+  @switch (state()) {
+    @case ('loading') { <app-loading-state [label]="detailId() ? 'Cargando pedido' : 'Cargando tus compras'" layout="rows" /> }
+    @case ('error') { <app-request-error [title]="detailId() ? 'No pudimos cargar el pedido' : 'No pudimos cargar tus compras'" (retry)="load()" /> }
+    @case ('not-found') { <div class="empty-state"><span class="material-symbols-rounded" aria-hidden="true">receipt_long</span><h2>Pedido no encontrado</h2><p>No encontramos este pedido entre tus compras.</p><a class="button button-secondary" routerLink="/compras">Ver mis compras</a></div> }
+    @case ('unauthorized') { <div class="empty-state"><span class="material-symbols-rounded" aria-hidden="true">lock</span><h2>Vuelve a iniciar sesión</h2><p>Tu sesión ha terminado. Ingresa a tu cuenta para consultar tus compras.</p><a class="button button-primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">Iniciar sesión</a></div> }
+    @case ('ready') {
+      @if (detailId()) {
+        @if (order(); as order) {
+          <article class="order-detail">
+            <header class="order-heading"><div><p class="eyebrow">PEDIDO</p><h2>{{ order.codigo }}</h2><time [attr.datetime]="order.fecha">{{ order.fecha | date:'medium':'-0500':'es-PE' }} · hora Perú</time></div><span class="order-status" [attr.data-status]="statusStyle(order.estado)">{{ statusLabel(order.estado) }}</span></header>
+            <div class="detail-layout">
+              <section class="order-products" aria-label="Productos del pedido"><h3>Productos comprados</h3>
+                @for (item of order.productos; track item.id) {
+                  <article class="order-item">
+                    <div class="item-image">@if (item.imagen && !brokenImages().has(item.id)) { <img [src]="item.imagen" [alt]="item.nombre" loading="lazy" (error)="imageError(item.id)"> } @else { <span class="material-symbols-rounded" aria-hidden="true">inventory_2</span> }</div>
+                    <div class="item-info"><h4>@if (item.slug) { <a [routerLink]="['/producto',item.slug]">{{ item.nombre }}</a> } @else { {{ item.nombre }} }</h4>@if (item.sku) { <small>SKU {{ item.sku }}</small> }<p>Cantidad: {{ item.cantidad }}</p><p>Precio unitario: {{ item.precioUnitario | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</p>@if (item.descuentoUnitario > 0) { <p>Descuento por unidad: {{ item.descuentoUnitario | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</p> }@if (!item.slug) { <small>Este producto ya no está publicado en el catálogo.</small> }</div>
+                    <strong class="item-subtotal">{{ item.subtotal | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</strong>
+                  </article>
+                } @empty { <p class="muted">Este pedido no tiene productos detallados disponibles.</p> }
+              </section>
+              <aside class="order-totals" aria-label="Resumen de importes"><h3>Resumen de la compra</h3><dl><div><dt>Subtotal</dt><dd>{{ order.subtotal | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</dd></div>@if (order.descuento > 0) { <div><dt>Descuento del pedido</dt><dd>−{{ order.descuento | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</dd></div> }<div><dt>Envío</dt><dd>{{ order.envio | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</dd></div><div class="grand-total"><dt>Total</dt><dd>{{ order.total | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</dd></div></dl>@if (order.metodoPago) { <p class="payment"><span>Método de pago</span><strong>{{ order.metodoPago }}</strong></p> }<p class="muted">Los importes corresponden a tu compra y pueden diferir de los precios actuales.</p></aside>
+            </div>
+          </article>
+        }
+      } @else if (page()?.content?.length) {
+        <p class="results-count" role="status">{{ page()!.totalElements }} {{ page()!.totalElements === 1 ? 'pedido' : 'pedidos' }}</p>
+        <div class="orders-list">
+          @for (order of page()!.content; track order.id) {
+            <article class="order-card"><header class="order-heading"><div><h2><a [routerLink]="['/compras',order.id]" [queryParams]="currentPage() ? { pagina: currentPage() + 1 } : {}">{{ order.codigo }}</a></h2><time [attr.datetime]="order.fecha">{{ order.fecha | date:'mediumDate':'-0500':'es-PE' }}</time></div><span class="order-status" [attr.data-status]="statusStyle(order.estado)">{{ statusLabel(order.estado) }}</span></header>
+              <ul class="order-preview">@for (item of order.productos.slice(0,3); track item.id) { <li><span>{{ item.nombre }}</span><small>× {{ item.cantidad }}</small></li> } @empty { <li>Sin detalle de productos disponible</li> }</ul>
+              @if (order.productos.length > 3) { <p class="muted">Y {{ order.productos.length - 3 }} productos más</p> }
+              <footer><div><small>{{ units(order) }} {{ units(order) === 1 ? 'unidad' : 'unidades' }}</small><strong>{{ order.total | currency:order.moneda:'symbol':'1.2-2':'es-PE' }}</strong></div><a class="button button-secondary" [routerLink]="['/compras',order.id]" [queryParams]="currentPage() ? { pagina: currentPage() + 1 } : {}" [attr.aria-label]="'Ver pedido ' + order.codigo">Ver pedido<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></a></footer>
+            </article>
+          }
+        </div>
+        @if (page()!.totalPages > 1) { <nav class="pagination" aria-label="Páginas de compras"><button class="button button-secondary" type="button" (click)="goTo(currentPage() - 1)" [disabled]="currentPage() === 0">Anterior</button><span>Página {{ currentPage() + 1 }} de {{ page()!.totalPages }}</span><button class="button button-secondary" type="button" (click)="goTo(currentPage() + 1)" [disabled]="currentPage() + 1 >= page()!.totalPages">Siguiente</button></nav> }
+      } @else {
+        <div class="empty-state"><span class="material-symbols-rounded" aria-hidden="true">shopping_bag</span><h2>Aún no tienes compras</h2><p>Cuando realices tu primer pedido, podrás consultarlo aquí.</p><a class="button button-primary" routerLink="/catalogo">Explorar catálogo</a></div>
+      }
+    }
+  }
+</section>

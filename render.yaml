@@ -1,0 +1,41 @@
+# ============================================================================
+# Render Blueprint Specification (Raíz del Repositorio)
+# Documentación oficial: https://render.com/docs/blueprint-spec
+# ============================================================================
+services:
+  - type: web
+    name: rya-tech-backend
+    runtime: docker
+    autoDeployTrigger: checksPass
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    region: ohio
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DB_SCHEMA
+        value: rya
+      - key: DB_POOL_MAX_SIZE
+        value: "2"
+      - key: DB_POOL_MIN_IDLE
+        value: "0"
+      # Las credenciales de base de datos se introducen manualmente en el dashboard de Render
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # Configurar con el dominio exacto asignado por Vercel (ej. https://tu-proyecto.vercel.app)
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SUPABASE_JWT_ISSUER
+        value: https://rasudbiaxwyoojxxdutz.supabase.co/auth/v1
+      - key: SUPABASE_JWKS_URI
+        value: https://rasudbiaxwyoojxxdutz.supabase.co/auth/v1/.well-known/jwks.json
+      # Solo activar en "true" si la migración db/manual/borradores-tecnicos.sql fue aplicada
+      - key: APP_TECHNICAL_DRAFTS_ENABLED
+        value: "false"

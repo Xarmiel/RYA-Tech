@@ -1,0 +1,43 @@
+<section class="page-shell page-heading">
+  <p class="eyebrow">TU SELECCIÓN</p>
+  <h1>Mis favoritos</h1>
+  <p>{{ favorites.count() }} {{ favorites.count() === 1 ? 'producto guardado' : 'productos guardados' }} para tu próximo setup.</p>
+  @if (favorites.isGuest()) {
+    <p class="guest-note">Tus favoritos se guardan en este navegador. <a routerLink="/login" [queryParams]="{ returnUrl: '/favoritos' }">Inicia sesión</a> para vincularlos a tu cuenta.</p>
+  }
+  @if (favorites.syncing()) { <p role="status">Sincronizando tus favoritos…</p> }
+  @if (favorites.message()) { <div class="sync-message" role="status">{{ favorites.message() }} <button class="button button-secondary" type="button" (click)="retry()">Reintentar</button></div> }
+</section>
+
+<section class="page-shell favorites-content" aria-label="Productos favoritos" [attr.aria-busy]="loading()">
+  @if (loading()) {
+    <app-loading-state label="Cargando tus favoritos" />
+  } @else if (!rows().length) {
+    <div class="empty-state"><span class="material-symbols-rounded" aria-hidden="true">favorite</span><h2>Aún no tienes favoritos</h2><p>Presiona el corazón de un producto para guardarlo aquí.</p><a class="button button-primary" routerLink="/catalogo">Explorar catálogo</a></div>
+  } @else {
+    <div class="favorites-grid">
+      @for (row of rows(); track row.id) {
+        <article class="favorite-card">
+          @if (row.product; as product) {
+            <app-favorite-button [productId]="product.id" [productName]="product.name" />
+            <a class="favorite-image" [routerLink]="['/producto', product.slug]">
+              @if (product.images[0]; as image) { <img [src]="image.url" [alt]="image.alt ?? product.name"> }
+              @else { <span class="material-symbols-rounded" aria-hidden="true">image</span><small>Imagen no disponible</small> }
+            </a>
+            <p class="eyebrow">{{ product.brand ?? product.category }}</p>
+            <h2><a [routerLink]="['/producto', product.slug]">{{ product.name }}</a></h2>
+            <p class="price">{{ product.price | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</p>
+            <p class="stock">{{ product.availableStock > 0 ? 'Disponible' : 'Sin stock' }}</p>
+            <a class="button button-secondary" [routerLink]="['/producto', product.slug]">Ver producto</a>
+          } @else {
+            <span class="material-symbols-rounded missing-icon" aria-hidden="true">{{ row.unavailable ? 'inventory_2' : 'cloud_off' }}</span>
+            <h2>{{ row.unavailable ? 'Producto no disponible' : 'No pudimos cargar este producto' }}</h2>
+            <p>{{ row.unavailable ? 'Este producto fue retirado del catálogo.' : 'Tu favorito sigue guardado. Reintenta para consultar sus datos.' }}</p>
+            @if (!row.unavailable) { <button class="button button-secondary" type="button" (click)="retry()">Reintentar</button> }
+          }
+          <button class="remove-favorite" type="button" (click)="favorites.remove(row.id)" [attr.aria-label]="'Eliminar de favoritos: ' + (row.product?.name ?? 'producto no disponible')"><span class="material-symbols-rounded" aria-hidden="true">delete</span>Eliminar</button>
+        </article>
+      }
+    </div>
+  }
+</section>

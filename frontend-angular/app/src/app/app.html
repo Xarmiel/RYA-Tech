@@ -1,0 +1,118 @@
+@if (!isAuthRoute() && !isAdminRoute()) {
+<a class="skip-link" href="#main-content" (click)="skipToContent($event)">Ir al contenido</a>
+<header class="app-header">
+  <a class="brand-link" routerLink="/" aria-label="RYA Tech, volver al inicio"><img src="assets/brand/group-2.png" alt="Logo de RYA Tech"></a>
+  <button class="icon-button mobile-menu-toggle" type="button" aria-label="Abrir navegación" [attr.aria-expanded]="mobileMenuOpen()" (click)="mobileMenuOpen.set(!mobileMenuOpen())"><span class="material-symbols-rounded">menu</span></button>
+  <nav class="main-nav" [class.is-open]="mobileMenuOpen()" aria-label="Navegación principal">
+    <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }" (click)="mobileMenuOpen.set(false)">Inicio</a>
+    <div class="nav-mega-item">
+      <a routerLink="/catalogo" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Catálogo</a>
+      <section class="mega-menu" aria-label="Explorar catálogo">
+        <div><p class="mega-menu-title">Por categoría</p><div class="mega-menu-grid">
+          <a routerLink="/catalogo" [queryParams]="{ categoria: 'componentes' }"><span class="material-symbols-rounded">developer_board</span><span>Componentes</span></a>
+          <a routerLink="/catalogo" [queryParams]="{ categoria: 'procesadores-gpu' }"><span class="material-symbols-rounded">memory</span><span>Procesadores y GPU</span></a>
+          <a routerLink="/catalogo" [queryParams]="{ categoria: 'perifericos' }"><span class="material-symbols-rounded">keyboard</span><span>Periféricos</span></a>
+          <a routerLink="/catalogo" [queryParams]="{ categoria: 'monitores' }"><span class="material-symbols-rounded">monitor</span><span>Monitores</span></a>
+          <a routerLink="/catalogo" [queryParams]="{ categoria: 'audio-streaming' }"><span class="material-symbols-rounded">headphones</span><span>Audio y streaming</span></a>
+          <a routerLink="/asesorias"><span class="material-symbols-rounded">auto_awesome</span><span>Asesoría personalizada</span></a>
+        </div></div>
+        <div class="mega-menu-featured"><p class="mega-menu-title">Colecciones RYA</p>
+          <a class="mega-menu-story" routerLink="/experiencias"><span class="material-symbols-rounded">sports_esports</span><span><strong>Gaming</strong><small>Rendimiento para jugar sin límites</small></span></a>
+          <a class="mega-menu-story" routerLink="/experiencias"><span class="material-symbols-rounded">movie_edit</span><span><strong>Creadores</strong><small>Potencia para tus ideas</small></span></a>
+          <a class="mega-menu-story" routerLink="/experiencias"><span class="material-symbols-rounded">business_center</span><span><strong>Empresa</strong><small>Hardware que escala contigo</small></span></a>
+        </div>
+      </section>
+    </div>
+    <a routerLink="/asesorias" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Asesorías</a>
+    <a routerLink="/experiencias" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Experiencias</a>
+    <a routerLink="/ofertas" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Ofertas</a>
+    <a routerLink="/ayuda" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Ayuda</a>
+    <a routerLink="/compras" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Mis compras</a>
+  </nav>
+  <div class="header-discovery">
+    <form class="header-search" role="search" (ngSubmit)="search()"><label class="sr-only" for="site-search">Buscar productos</label><input id="site-search" name="search" type="search" placeholder="Buscar productos…" autocomplete="off" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)"><button type="submit" aria-label="Buscar"><span class="material-symbols-rounded">search</span></button></form>
+  </div>
+  <div class="appearance">
+    <button class="theme-toggle" type="button" [attr.aria-label]="themeButtonLabel()" [title]="themeButtonLabel()" (click)="cycleTheme()"><span class="material-symbols-rounded" aria-hidden="true">{{ themeModes[preferences.theme()].icon }}</span></button>
+  </div>
+  <a class="header-favorite" routerLink="/favoritos" [attr.aria-label]="'Mis favoritos (' + favorites.count() + ')'" [title]="'Mis favoritos (' + favorites.count() + ')'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg></a>
+  <div class="account-dropdown" [class.is-open]="accountMenuOpen()" (mouseenter)="accountMenuOpen.set(true)" (mouseleave)="accountMenuOpen.set(false)">
+    <button
+      type="button"
+      class="account-trigger"
+      aria-label="Cuenta de usuario"
+      [attr.aria-expanded]="accountMenuOpen()"
+      (click)="accountMenuOpen.set(!accountMenuOpen())"
+      (keydown.arrowdown)="openAccountMenu($event)"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="7" r="3.4"/><path d="M5.8 20a6.2 6.2 0 0 1 12.4 0"/></svg>
+    </button>
+    <div class="account-menu-anchor">
+    <div class="account-menu" appMenuKeyboard role="group" aria-label="Opciones de la cuenta">
+      @if (!auth.isAuthenticated()) {
+        <div class="account-menu-actions">
+          <a
+            class="account-btn account-btn-login"
+            routerLink="/login"
+            [queryParams]="{ returnUrl: loginReturnUrl() }"
+            (click)="accountMenuOpen.set(false)"
+          >
+            INICIAR SESIÓN
+          </a>
+          <a
+            class="account-btn account-btn-register"
+            routerLink="/registro"
+            [queryParams]="{ returnUrl: loginReturnUrl() }"
+            (click)="accountMenuOpen.set(false)"
+          >
+            CREAR UNA CUENTA
+          </a>
+        </div>
+      } @else {
+        <div class="account-menu-user">
+          <span class="material-symbols-rounded">person</span>
+          <div class="user-info">
+            <strong>{{ account.profile()?.nombre || 'Mi cuenta' }}</strong>
+            <small>{{ account.profile()?.email || '' }}</small>
+          </div>
+        </div>
+        <div class="account-menu-divider"></div>
+        <a class="account-menu-link" routerLink="/cuenta" (click)="accountMenuOpen.set(false)">
+          <span class="material-symbols-rounded">manage_accounts</span>
+          <span>Mi cuenta</span>
+        </a>
+        <a class="account-menu-link" routerLink="/compras" (click)="accountMenuOpen.set(false)">
+          <span class="material-symbols-rounded">receipt_long</span>
+          <span>Mis pedidos</span>
+        </a>
+        <a class="account-menu-link" routerLink="/favoritos" (click)="accountMenuOpen.set(false)">
+          <span class="material-symbols-rounded">favorite</span>
+          <span>Mis favoritos</span>
+        </a>
+        <div class="account-menu-divider"></div>
+        <button type="button" class="account-menu-link logout-btn" (click)="logout(); accountMenuOpen.set(false)">
+          <span class="material-symbols-rounded">logout</span>
+          <span>Cerrar sesión</span>
+        </button>
+      }
+    </div>
+  </div>
+  </div>
+  <a class="header-cart" routerLink="/checkout" aria-label="Ir al carrito"><span class="material-symbols-rounded">shopping_cart</span><span>Carrito</span><b>({{ cart.totalQuantity() }})</b></a>
+</header>
+
+<main id="main-content" tabindex="-1"><router-outlet (activate)="routeActivated()" /></main>
+
+<footer class="site-footer">
+  <div class="site-footer-grid">
+    <div class="site-footer-brand"><a routerLink="/" aria-label="RYA Tech, volver al inicio"><img src="assets/brand/group-2.png" alt="Logo de RYA Tech"></a><p>Tecnología seleccionada para que construyas tu mejor experiencia.</p></div>
+    <div><h3>Compra</h3><p><a routerLink="/ofertas">Ofertas</a></p><p><a routerLink="/favoritos">Favoritos</a></p><p><a routerLink="/compras">Historial de compras</a></p><p><a routerLink="/catalogo">Catálogo completo</a></p><p><a routerLink="/asesorias">Asesorías automáticas</a></p><p><a routerLink="/checkout">Garantías y checkout</a></p></div>
+    <div><h3>Atención</h3><p><a routerLink="/ayuda">Centro de ayuda y preguntas frecuentes</a></p><p><a routerLink="/ayuda" fragment="contacto">Soporte de ventas</a></p><p><a routerLink="/ayuda" fragment="contacto">Soporte técnico</a></p></div>
+  </div>
+  <div class="site-footer-bottom"><span>© 2026 RYA Tech.</span><span>Hardware real, decisiones informadas.</span></div>
+</footer>
+} @else {
+  <router-outlet (activate)="routeActivated()" />
+}
+<app-notifications />
+<app-admin-dock />

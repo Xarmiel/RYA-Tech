@@ -1,0 +1,69 @@
+@if(!isDesignMode()){
+  <section class="editor-section server-drafts" aria-labelledby="server-drafts-title">
+    <div class="section-title"><div><h2 id="server-drafts-title">Borradores de la cuenta</h2><p>Guardar aquí no publica productos ni modifica Inventario.</p></div>
+      <div class="draft-actions">
+        <button type="button" (click)="saveServer()" [disabled]="busy()||!canEdit()||uncertain()||conflict()">{{saving()?'Guardando…':serverDraft()?'Guardar cambios':'Guardar en servidor'}}</button>
+        <button type="button" (click)="newDraft()" [disabled]="busy()">Nuevo borrador</button>
+      </div>
+    </div>
+    @if(serverDraft();as saved){<p>ID: <span class="draft-id">{{saved.id}}</span> · Versión {{saved.version}} · {{stateLabel(saved.state)}}</p>
+      @if(!canEdit()){<p class="notice">Solo lectura: este documento está en revisión o pertenece a otro administrador. No puedes modificarlo desde esta cuenta.</p>}
+    }
+    @if(serverNotice()){<p role="status" class="notice">{{serverNotice()}}</p>}
+    @if(serverError()){<p role="alert" class="notice">{{serverError()}}</p>}
+    @if(conflict()||uncertain()){<p class="notice">Los datos locales no se reemplazaron. Puedes descargar una copia JSON antes de abrir un borrador del servidor.</p><button type="button" (click)="download()" [disabled]="busy()">Descargar copia local</button>}
+    <div class="form-grid">
+      <label>Buscar borradores por nombre o SKU<input name="serverDraftQuery" [(ngModel)]="serverQuery" maxlength="220" (keydown.enter)="listServer()"></label>
+      <label>Estado<select name="serverDraftState" [(ngModel)]="serverState"><option value="">Todos</option><option value="DRAFT">Borrador</option><option value="IN_REVIEW">En revisión</option><option value="APPROVED">Contenido aprobado</option><option value="REJECTED">Rechazado</option></select></label>
+    </div>
+    <button type="button" (click)="listServer()" [disabled]="busy()||listing()">{{listing()?'Consultando…':'Consultar / reintentar listado'}}</button>
+    @if(listing()){<p role="status">Cargando borradores del servidor…</p>}
+    @if(listOpened()&&!listing()){
+      <p role="status">{{serverTotal()}} borradores encontrados.</p>
+      <ul class="saved-drafts">@for(row of serverRows();track row.id){<li><div><strong>{{row.name}}</strong><span>{{row.sku}} · {{stateLabel(row.state)}} · v{{row.version}}</span><small class="draft-id">{{row.id}}</small></div><button type="button" (click)="loadServer(row.id)" [disabled]="busy()">Abrir {{row.sku}}</button></li>}</ul>
+      @if(!serverRows().length&&!serverError()){<p>No se encontraron borradores con estos filtros.</p>}
+      <div class="draft-actions"><button type="button" (click)="listServer(serverPage()-1)" [disabled]="busy()||serverPage()===0">Anterior</button><span>{{serverPages()?serverPage()+1:0}} / {{serverPages()}}</span><button type="button" (click)="listServer(serverPage()+1)" [disabled]="busy()||serverPage()+1>=serverPages()">Siguiente</button></div>
+    }
+    @if(loadingDraft()){<p role="status">Recuperando documento… Se conservarán los datos actuales si la consulta falla.</p>}
+    @if(serverDraft();as saved){<app-technical-review [draft]="saved" [disabled]="busy()||isDirty()||uncertain()||conflict()" (working)="reviewBusy.set($event)" (changed)="reviewChanged($event)" (unresolved)="reviewUnresolved($event)" />}
+  </section>
+}
+<form (submit)="$event.preventDefault();review()" (input)="invalidate()" (change)="invalidate()">
+  <fieldset class="technical-fields" [disabled]="busy()||!canEdit()" [attr.aria-busy]="busy()" [attr.inert]="busy()||!canEdit()?'':null">
+  <div class="section-title"><div><p class="eyebrow">CARGA TÉCNICA</p><h1>Un producto, todos sus datos.</h1><p>Ficha guiada para carga manual o asistida. Nada se publica desde este formulario.</p></div><button type="submit">Revisar borrador</button></div>
+  <p class="notice">{{isDesignMode()?'Vista de diseño: el borrador permanece local y no se guarda en la base de datos.':'Guarda el tipo seleccionado con «Guardar en servidor». Los campos técnicos desconocidos pueden permanecer pendientes; nombre, SKU y marca son obligatorios.'}} Ninguna acción de este editor publica productos ni confirma compatibilidad.</p>
+  <label class="import-draft">Recuperar borrador JSON local (máximo 1 MB)<input type="file" accept=".json,application/json" (change)="importFile($event)"></label>
+  @if(recoveryNotice()){<p class="notice" role="status">{{recoveryNotice()}}</p>}
+  <section class="editor-section"><h2>Información comercial</h2><div class="form-grid">
+    @for(field of commercialFields;track field.key){<label>{{field.label}}{{field.required?' *':''}}<input [id]="'commercial-'+field.key" [name]="field.key" [(ngModel)]="product[field.key]" [type]="field.type" [required]="field.required" min="0" [step]="field.key==='stock'?'1':'any'" maxlength="220"></label>}
+    <label>Tipo de producto<select name="type" [(ngModel)]="type" (ngModelChange)="changeType()">@for(entry of types;track entry.key){<option [value]="entry.key">{{entry.value.name}}</option>}</select></label>
+    <label>Uso solicitado<select name="use" [(ngModel)]="use"><option value="catalog">Solo catálogo</option><option value="pending">Pendiente de clasificación</option><option value="evaluate" [disabled]="catalogOnly">Solicitar revisión para asesorías</option></select></label>
+    <label>Categoría<input name="category" [(ngModel)]="category" maxlength="120" placeholder="Nombre de categoría"></label>
+    <label>Sección<select name="section" [(ngModel)]="section"><option value="hardware">Hardware</option><option value="software">Software</option></select></label>
+  </div><details class="record"><summary>Nueva categoría · preparar propuesta</summary><div class="form-grid"><label>Identificador URL (slug)<input name="categorySlug" [(ngModel)]="categorySlug" placeholder="Se genera desde el nombre si lo dejas vacío"></label><label>Categoría superior (slug, opcional)<input name="categoryParent" [(ngModel)]="categoryParent" placeholder="Sin categoría superior"></label></div></details><p>La categoría se incluye como propuesta. No crea registros en la BD.</p></section>
+  <!-- Draft Storage ownership/cleanup is not integrated yet: keep file bytes local. -->
+  <p class="notice">Para guardar imágenes con el borrador usa hasta ocho enlaces HTTPS. Los archivos arrastrados solo se previsualizan localmente y no se subirán desde este editor todavía.</p>
+  <app-product-media [isDesignMode]="true" (changed)="invalidate()" />
+  <section class="editor-section"><h2>Ficha de {{definition.name}}</h2><p>Deja sin completar lo desconocido. Los campos con * se necesitan para solicitar revisión técnica. Cero, No y Sin verificar son valores distintos.</p>
+    @if(catalogOnly){<p class="notice">Este tipo se carga para catálogo; no se tratará como componente compatible de PC.</p>}
+    <div class="form-grid">@for(field of definition.fields;track field.id){<label>{{field.label}}{{field.required?' *':''}} {{field.unit ? '('+field.unit+')':''}}
+      @if(field.type==='boolean'){<select [name]="field.id" [(ngModel)]="values[field.id]"><option value="">Sin verificar</option><option value="true">Sí</option><option value="false">No</option></select>}
+      @else{<input [name]="field.id" [(ngModel)]="values[field.id]" [type]="field.type" [required]="use==='evaluate' && field.required" [min]="field.integer?1:0" [step]="field.integer?1:'any'" maxlength="2000">}
+    </label>}</div>
+  </section>
+  @for(group of definition.groups;track group){<section class="editor-section"><div class="section-title"><h2>{{groups[group].name}}</h2><button type="button" (click)="addRow(group)" [disabled]="(records[group]?.length || 0)>=20">Añadir registro</button></div><p>{{groups[group].note}} Los registros son propuestas sin vincular ni verificar.</p>
+    @for(row of records[group] || [];track row;let index=$index){<fieldset class="record"><legend>Registro {{index+1}}</legend><div class="form-grid">
+      @for(field of groups[group].fields;track field.id){<label>{{field.label}} {{field.unit}}<input [name]="group+index+field.id" [(ngModel)]="row[field.id]" [type]="field.type" [min]="field.integer?1:0" [step]="field.integer?1:'any'" maxlength="2000"></label>}
+    </div><button type="button" (click)="removeRow(group,index)" [attr.aria-label]="'Quitar registro '+(index+1)+' de '+groups[group].name">Quitar registro</button></fieldset>}
+  </section>}
+  <section class="editor-section"><h2>Evidencia técnica</h2><p>Usa la ficha oficial para el modelo y revisión exactos. Compartir socket no verifica compatibilidad. Una URL HTTPS no demuestra por sí sola que la fuente sea oficial.</p>
+    <div class="form-grid"><label>Fuente oficial HTTPS<input name="source" [(ngModel)]="source" type="url" [required]="use==='evaluate'"></label><label>Fecha de consulta<input name="date" [(ngModel)]="date" type="date" [required]="use==='evaluate'"></label></div>
+    <label>Observaciones y datos pendientes<textarea name="notes" [(ngModel)]="notes" rows="3" maxlength="5000"></textarea></label>
+  </section>
+  @if(issues().length){<section class="validation-summary" role="alert" tabindex="-1"><h2>Corrige estos datos</h2><ul>@for(issue of issues();track $index){<li>{{issue}}</li>}</ul></section>}
+  @else if(error()){<p role="alert" class="notice">{{error()}}</p>}
+  @if(warnings().length){<section class="notice" role="status"><h2>Datos pendientes de verificación</h2><ul>@for(warning of warnings();track $index){<li>{{warning}}</li>}</ul></section>}
+  @if(reviewed()){<section class="editor-section review-summary" tabindex="-1"><h2>Revisión local del borrador</h2><p>Esta revisión no guarda, publica ni confirma compatibilidad por sí sola. El resultado del guardado se muestra en «Borradores de la cuenta».</p><details><summary>Ver JSON del tipo seleccionado</summary><pre>{{reviewed()}}</pre></details><button type="button" (click)="download()">Descargar JSON</button><p>La descarga incluye solo el tipo seleccionado. Los archivos locales no viajan dentro del JSON.</p></section>}
+  <button type="submit">Revisar borrador</button>
+  </fieldset>
+</form>

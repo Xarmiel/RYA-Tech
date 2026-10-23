@@ -1,0 +1,50 @@
+<section class="page-shell page-heading">
+  <p class="eyebrow">PRECIOS PARA APROVECHAR</p><h1>Ofertas vigentes</h1>
+  <p>Encuentra tu próximo componente con descuento y consulta hasta cuándo está disponible la promoción.</p>
+</section>
+<section class="page-shell offers-content" aria-label="Ofertas de productos">
+  <form class="offers-filters" (ngSubmit)="apply()" aria-label="Filtrar ofertas">
+    <label class="search-field">Buscar<input type="search" name="q" [(ngModel)]="draft.q" placeholder="Nombre del producto" maxlength="200"></label>
+    <label>Categoría<select name="categoria" [(ngModel)]="draft.categoria"><option value="">Todas</option>@for (option of data()?.categorias ?? []; track option.slug) { <option [value]="option.slug">{{ option.nombre }}</option> }</select></label>
+    <label>Marca<select name="marca" [(ngModel)]="draft.marca"><option value="">Todas</option>@for (option of data()?.marcas ?? []; track option.slug) { <option [value]="option.slug">{{ option.nombre }}</option> }</select></label>
+    <label>Descuento mínimo<select name="descuentoMin" [(ngModel)]="draft.descuentoMin"><option value="">Cualquiera</option><option value="10">10 %</option><option value="20">20 %</option><option value="30">30 %</option><option value="50">50 %</option></select></label>
+    <label>Ordenar por<select name="orden" [(ngModel)]="draft.orden">@for (order of orders; track order.value) { <option [value]="order.value">{{ order.label }}</option> }</select></label>
+    <label class="stock-filter"><input type="checkbox" name="enStock" [(ngModel)]="draft.enStock">Solo con stock</label>
+    <button class="button button-primary" type="submit">Aplicar filtros</button>
+    @if (filtered()) { <button class="button button-secondary" type="button" (click)="clear()">Limpiar filtros</button> }
+  </form>
+
+  @switch (state()) {
+    @case ('loading') { <app-loading-state label="Consultando ofertas" /> }
+    @case ('error') { <app-request-error title="No pudimos cargar las ofertas" (retry)="load()" /> }
+    @case ('ready') {
+      @if (data()?.content?.length) {
+        <p class="results-count" role="status">{{ data()!.totalElements }} {{ data()!.totalElements === 1 ? 'producto en oferta' : 'productos en oferta' }}</p>
+        <div class="offers-grid">
+          @for (offer of data()!.content; track offer.productoId) {
+            <article class="offer-card">
+              <span class="discount-badge">−{{ offer.descuentoPorcentaje | number:'1.0-2':'es-PE' }} %</span>
+              <app-favorite-button [productId]="offer.productoId" [productName]="offer.nombre" />
+              <a class="offer-image" [class.no-image]="!offer.imagen || brokenImages().has(offer.productoId)" [routerLink]="['/producto', offer.slug]" [attr.aria-label]="'Ver ' + offer.nombre">
+                @if (offer.imagen && !brokenImages().has(offer.productoId)) { <img [src]="offer.imagen" [alt]="offer.nombre" loading="lazy" (error)="imageError(offer.productoId)"> }
+                @else { <span class="material-symbols-rounded" aria-hidden="true">inventory_2</span><small>Imagen no disponible</small> }
+              </a>
+              <p class="eyebrow">{{ offer.marca ?? offer.categoria }}</p><h2><a [routerLink]="['/producto', offer.slug]">{{ offer.nombre }}</a></h2>
+              <p class="campaign">{{ offer.promocion }}</p>
+              <div class="prices"><span class="sr-only">Precio anterior</span><del>{{ offer.precioAnterior | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</del><span class="sr-only">Precio de oferta</span><strong>{{ offer.precioActual | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong></div>
+              <p class="savings">Ahorras {{ offer.ahorro | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</p>
+              <p class="validity"><span class="material-symbols-rounded" aria-hidden="true">schedule</span>@if (offer.finAt) { Hasta {{ offer.finAt | date:'medium':'-0500':'es-PE' }} (hora Perú) } @else { Vigente · Sin fecha de cierre anunciada }</p>
+              <p class="stock">{{ offer.stockDisponible > 0 ? 'Disponible' : 'Sin stock' }}</p>
+              <a class="button button-primary" [routerLink]="['/producto', offer.slug]">Ver producto</a>
+            </article>
+          }
+        </div>
+        @if (data()!.totalPages > 1) {
+          <nav class="pagination" aria-label="Páginas de ofertas"><button class="button button-secondary" type="button" [disabled]="currentPage() === 0" (click)="goTo(currentPage() - 1)">Anterior</button><span>Página {{ currentPage() + 1 }} de {{ data()!.totalPages }}</span><button class="button button-secondary" type="button" [disabled]="currentPage() + 1 >= data()!.totalPages" (click)="goTo(currentPage() + 1)">Siguiente</button></nav>
+        }
+      } @else {
+        <div class="empty-state"><span class="material-symbols-rounded" aria-hidden="true">local_offer</span><h2>{{ filtered() ? 'No encontramos ofertas con estos filtros' : 'No hay ofertas vigentes por ahora' }}</h2><p>{{ filtered() ? 'Prueba con otra categoría, marca o descuento.' : 'Vuelve pronto para conocer las próximas promociones.' }}</p>@if (filtered()) { <button class="button button-secondary" type="button" (click)="clear()">Limpiar filtros</button> } @else { <a class="button button-primary" routerLink="/catalogo">Explorar catálogo</a> }</div>
+      }
+    }
+  }
+</section>

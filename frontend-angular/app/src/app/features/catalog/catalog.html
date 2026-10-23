@@ -1,0 +1,149 @@
+<section class="page-shell page-heading catalog-heading">
+  <div>
+    <p class="eyebrow">CATÁLOGO RYA TECH</p>
+    <h1>{{ query() ? 'Resultados para “' + query() + '”' : 'Hardware para tu próxima PC.' }}</h1>
+    <p>Encuentra los componentes para tu próximo setup. Explora, filtra y compara las opciones disponibles.</p>
+  </div>
+</section>
+
+@if (filtersOpen()) {
+  <div class="filter-backdrop" (click)="filtersOpen.set(false)" aria-hidden="true"></div>
+  <aside class="filter-drawer" appDialogFocus (dialogClose)="filtersOpen.set(false)" aria-label="Filtros del catálogo">
+    <header><div><p class="eyebrow">CATÁLOGO</p><h2>Filtros</h2></div><button type="button" aria-label="Cerrar filtros" (click)="filtersOpen.set(false)">×</button></header>
+    <div class="filter-content">
+      @if (filtersState() === 'loading') { <p class="filter-message">Cargando filtros disponibles desde la base de datos…</p> }
+      @if (filtersState() === 'error') { <div class="filter-message" role="alert"><strong>No se pudieron cargar los filtros.</strong><span>Comprueba tu conexión e inténtalo nuevamente.</span><button class="button button-secondary" type="button" (click)="retryFilters()">Reintentar</button></div> }
+      @if (filtersState() === 'ready' && !facets()?.groups?.length) { <p class="filter-message">No hay filtros disponibles para estos productos.</p> }
+      <p class="filter-step">1. Elige una sección y un tipo de producto</p>
+      <label><input type="checkbox" [checked]="isSelected('__stock', 'true')" (change)="toggleFilter('__stock', 'true', $any($event.target).checked)"><span>Solo productos con stock</span></label>
+      @for (group of facets()?.groups ?? []; track group.code) {
+        @if (group.kind === 'section') {
+          <details class="filter-accordion" [open]="group.code === '__hardware'">
+            <summary>{{ group.label }} <span>{{ group.options.length }}</span></summary>
+            <div class="filter-options">
+              @if (!group.options.length) { <p class="empty-filter-section">Aún no hay categorías disponibles en la base de datos.</p> }
+              @for (option of group.options; track option.value) {
+                <label><input type="checkbox" [checked]="isSelected(group.code, option.value)" (change)="toggleFilter(group.code, option.value, $any($event.target).checked)"><span>{{ option.label }}</span>@if (option.count > 0) { <small>{{ option.count }}</small> }</label>
+              }
+            </div>
+          </details>
+        }
+      }
+      @if (selectedCategoryLabel()) {
+        <div class="technical-filters"><p class="filter-step">2. Filtros de {{ selectedCategoryLabel() }}</p>
+          @for (group of facets()?.groups ?? []; track group.code) {
+            @if (group.kind === 'filter') {
+              <details class="filter-accordion">
+                <summary>{{ group.label }}</summary>
+                <div class="filter-options">
+                  @for (option of visibleFilterOptions(group); track option.value) {
+                    <label><input type="checkbox" [checked]="isSelected(group.code, option.value)" (change)="toggleFilter(group.code, option.value, $any($event.target).checked)"><span>{{ option.label }}</span>@if (option.count > 0) { <small>{{ option.count }}</small> }</label>
+                  }
+                </div>
+              </details>
+            }
+          }
+        </div>
+      }
+    </div>
+    <footer><button class="button button-secondary" type="button" (click)="clearFilters()">Limpiar filtros</button><button class="button button-primary" type="button" (click)="applyFilters()" [disabled]="filtersState() !== 'ready'">Ver resultados</button></footer>
+  </aside>
+}
+
+<section class="page-shell">
+  <!-- Sección de categorías rápidas destacadas estilo RYA Tech -->
+  <section class="category-bubbles-section" aria-label="Categorías de gaming y accesorios">
+    <div class="category-bubbles-nav" role="group" aria-label="Filtrar por categoría">
+      @for (cat of categoryBubbles; track cat.id) {
+        <button
+          type="button"
+          class="category-bubble-item"
+          [class.is-active]="isCategoryActive(cat.slug)"
+          [attr.aria-pressed]="isCategoryActive(cat.slug)"
+          (click)="toggleCategory(cat.slug)">
+          <div class="bubble-circle">
+            @if (cat.imageUrl) {
+              <img [src]="cat.imageUrl" [alt]="cat.name" class="bubble-image" />
+            } @else {
+              <span class="material-symbols-rounded bubble-icon">{{ cat.icon }}</span>
+            }
+          </div>
+          <span class="bubble-label">{{ cat.name }}</span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <div class="catalog-filter-actions">
+    <button class="button button-secondary filter-trigger" type="button" (click)="openFilters()" [attr.aria-expanded]="filtersOpen()">Filtros @if (activeFilters().length) { <span class="filter-count">{{ activeFilters().length }}</span> }</button>
+  </div>
+
+  @if (activeFilters().length) {
+    <div class="active-filters" aria-label="Filtros activos">
+      @for (filter of activeFilters(); track filter.code + ':' + filter.value) {
+        <button type="button" class="filter-chip" (click)="removeFilter(filter.code, filter.value)" [attr.aria-label]="'Quitar filtro ' + filter.label">{{ filter.label }}<span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+      }
+      <button class="clear-all" type="button" (click)="clearFilters()">Limpiar todos</button>
+    </div>
+  }
+
+  <div class="catalog-toolbar" id="catalog-results">
+    <p role="status" aria-live="polite">@if (state() === 'loading') { Cargando productos… } @else if (page()) { {{ resultStart() }}–{{ resultEnd() }} de {{ page()!.totalItems }} productos } @else { Catálogo de productos }</p>
+    <div class="sort-control"><label for="catalog-sort">Ordenar por</label>
+      <select id="catalog-sort" (change)="changeSort($any($event.target).value)">
+        @for (option of sortOptions; track option.value) { <option [value]="option.value" [selected]="sort() === option.value">{{ option.label }}</option> }
+      </select>
+    </div>
+  </div>
+
+  @if (cartMessage()) { <p class="cart-feedback" role="status">{{ cartMessage() }}</p> }
+  @switch (state()) {
+    @case ('loading') {
+      <app-loading-state label="Cargando catálogo" />
+    }
+    @case ('error') {
+      <app-request-error title="No pudimos consultar el catálogo" (retry)="load()" />
+    }
+    @case ('empty') {
+      <div class="empty-state">
+        <span class="material-symbols-rounded" aria-hidden="true">search_off</span>
+        <h2>{{ activeFilters().length ? 'No encontramos resultados' : 'Aún no hay productos disponibles' }}</h2>
+        <p>{{ activeFilters().length ? 'Prueba con otra búsqueda o quita algunos filtros para encontrar más opciones.' : 'Vuelve pronto para descubrir nuevos productos.' }}</p>
+        @if (activeFilters().length) {
+          <button class="button button-secondary" type="button" (click)="clearFilters()">Limpiar búsqueda y filtros</button>
+        }
+      </div>
+    }
+    @case ('ready') {
+      <div class="catalog-grid">
+        @for (product of page()?.items; track product.id) {
+          <article class="product-card">
+            <app-favorite-button [productId]="product.id" [productName]="product.name" />
+            <a class="product-image" [class.image-unavailable]="!product.primaryImage || failedImages().has(product.id)" [routerLink]="['/producto', product.slug]" [attr.aria-label]="'Ver ' + product.name">
+              @if (product.primaryImage && !failedImages().has(product.id)) { <img [src]="product.primaryImage.url" [alt]="product.primaryImage.alt ?? product.name" loading="lazy" decoding="async" (error)="imageFailed(product.id)" /> }
+              @else { <span class="material-symbols-rounded placeholder-icon" aria-hidden="true">{{ categoryIcon(product.category) }}</span><strong>{{ product.category }}</strong><small>Imagen no disponible</small> }
+            </a>
+            <p class="product-meta">{{ product.brand ?? 'Sin marca' }} · {{ product.category }}</p>
+            <h2><a [routerLink]="['/producto', product.slug]">{{ product.name }}</a></h2>
+            <div class="product-footer"><strong>{{ product.price | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong><span>{{ product.availableStock > 0 ? 'Disponible' : 'Sin stock' }}</span></div>
+            <button class="button button-primary add-cart-button" type="button"
+              [disabled]="product.availableStock < 1 || addingProducts().has(product.id)"
+              (click)="addToCart(product)">
+              <span class="material-symbols-rounded">add_shopping_cart</span>
+              {{ addingProducts().has(product.id) ? 'Añadiendo…' : 'Añadir al carrito' }}
+            </button>
+          </article>
+        }
+      </div>
+      @if ((page()?.totalPages ?? 0) > 1) {
+        <nav class="pagination" aria-label="Páginas del catálogo">
+          <button type="button" class="button button-secondary" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0">Anterior</button>
+          @if (pageNumbers()[0] > 0) { <button class="page-number" type="button" (click)="goToPage(0)" aria-label="Ir a la página 1">1</button><span aria-hidden="true">…</span> }
+          @for (number of pageNumbers(); track number) { <button class="page-number" type="button" (click)="goToPage(number)" [class.is-current]="number === currentPage()" [attr.aria-current]="number === currentPage() ? 'page' : null" [attr.aria-label]="'Ir a la página ' + (number + 1)">{{ number + 1 }}</button> }
+          @if (pageNumbers()[pageNumbers().length - 1] < page()!.totalPages - 1) { <span aria-hidden="true">…</span><button class="page-number" type="button" (click)="goToPage(page()!.totalPages - 1)" [attr.aria-label]="'Ir a la página ' + page()!.totalPages">{{ page()!.totalPages }}</button> }
+          <button type="button" class="button button-secondary" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() + 1 >= page()!.totalPages">Siguiente</button>
+        </nav>
+      }
+    }
+  }
+</section>

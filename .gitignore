@@ -1,41 +1,75 @@
-HELP.md
+# ==========================================
+# Build outputs y dependencias
+# ==========================================
 target/
+**/target/
+build/
+**/build/
+dist/
+**/dist/
+node_modules/
+**/node_modules/
+.angular/
+**/.angular/
+coverage/
+**/coverage/
+.vercel/
+**/.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# Maven wrapper jar
 .mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
-# STS #
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-# IDEs
+# ==========================================
+# IDEs y editores
+# ==========================================
 .idea/
 *.iml
+*.iws
+*.ipr
 .vscode/
 .settings/
 .project
 .classpath
-
-# NetBeans #
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-# Archivos de entorno y logs
+# ==========================================
+# Archivos de entorno y credenciales sensibles
+# ==========================================
 *.log
 .env
+.env.*
+!.env.example
+*.env
+application-local.properties
+**/application-local.properties
+application-secret*.properties
+**/application-secret*.properties
+backend/src/main/resources/static/js/auth/supabase-config.js
 
-# Documentación y configuraciones sensibles
-application.properties
-**/application.properties
-docs/
+# MCP y herramientas locales
+.vscode/mcp.json
+mcp.json
+mcp_config.json
+.agents/
+.github/modernize/
+
+# Claves privadas y almacenes de credenciales locales
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

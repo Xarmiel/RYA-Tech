@@ -1,0 +1,28 @@
+name: Backend Java 21
+"on":
+  push:
+    paths: ['backend/**', 'render.yaml', '.github/workflows/backend.yml', '.gitattributes']
+  pull_request:
+    paths: ['backend/**', 'render.yaml', '.github/workflows/backend.yml', '.gitattributes']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Tests and executable package (H2, no production credentials)
+        working-directory: backend
+        run: sh ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Build production image (does not deploy)
+        run: docker build --tag rya-backend-ci ./backend

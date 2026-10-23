@@ -1,0 +1,41 @@
+<section class="page-shell editorial-hero" aria-labelledby="experiences-title">
+  <div class="hero-copy">
+    <p class="eyebrow">EXPERIENCIAS RYA · PLAY / CREATE / SCALE</p>
+    <h1 id="experiences-title">No solo es tu equipo.<br><span>Es lo que haces con él.</span></h1>
+    <p class="hero-description">La próxima partida, la idea que quieres crear, el proyecto que te mueve. Hay una forma de vivir la tecnología que empieza contigo.</p>
+    <div class="hero-actions"><button class="button button-primary" type="button" (click)="explore()">Encuentra tu experiencia<span class="material-symbols-rounded" aria-hidden="true">south</span></button><a class="hero-link" routerLink="/catalogo">Explorar catálogo<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></a></div>
+  </div>
+  <div class="editorial-art" aria-hidden="true">
+    <div class="art-plane plane-back"></div><div class="art-plane plane-front"></div>
+    <div class="art-word word-play">PLAY<span>01 / JUGAR</span></div>
+    <div class="art-word word-create">CREATE<span>02 / CREAR</span></div>
+    <div class="art-word word-scale">SCALE<span>03 / AVANZAR</span></div>
+    <span class="art-caption">TU SIGUIENTE NIVEL EMPIEZA AQUÍ</span>
+  </div>
+</section>
+
+<section class="page-shell profiles-section" id="explora-experiencias" aria-labelledby="profiles-title">
+  <div class="section-heading"><div><p class="eyebrow">TRES PUNTOS DE PARTIDA</p><h2 id="profiles-title">Tu forma de usarla<br>marca la diferencia.</h2></div><p>No todos los setups cuentan la misma historia. Explora el enfoque que más se parece al tuyo.</p></div>
+  <div class="profile-tabs" role="tablist" aria-label="Elige una experiencia">
+    @for (profile of profiles; track profile.id; let index = $index) {
+      <button type="button" role="tab" [id]="'experience-tab-' + profile.id" [attr.aria-controls]="'experience-panel-' + profile.id" [attr.aria-selected]="selectedIndex() === index" [tabIndex]="selectedIndex() === index ? 0 : -1" (click)="select(index)" (keydown)="tabKey($event,index)"><span class="material-symbols-rounded" aria-hidden="true">{{ profile.icon }}</span>{{ profile.label }}<span class="tab-number" aria-hidden="true">{{ profile.number }}</span></button>
+    }
+  </div>
+  @for (profile of profiles; track profile.id; let index = $index) {
+    <article class="profile-panel" role="tabpanel" [id]="'experience-panel-' + profile.id" [attr.aria-labelledby]="'experience-tab-' + profile.id" [hidden]="selectedIndex() !== index" tabindex="0">
+      <div class="profile-intro"><span class="profile-word" aria-hidden="true">{{ profile.word }}</span><span class="material-symbols-rounded profile-icon" aria-hidden="true">{{ profile.icon }}</span><p class="eyebrow">EXPERIENCIA {{ profile.number }}</p><h3>{{ profile.title }}</h3><p>{{ profile.description }}</p><p class="profile-prompt">{{ profile.prompt }}</p><a class="hero-link" routerLink="/asesorias" [queryParams]="{ modo:'manual' }">Empezar mi configuración<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></a></div>
+      <div class="profile-priorities"><p class="priority-label">ANTES DE ELEGIR TUS COMPONENTES</p><ol>@for (priority of profile.priorities; track priority.title) { <li><h4>{{ priority.title }}</h4><p>{{ priority.text }}</p></li> }</ol></div>
+    </article>
+  }
+</section>
+
+<section class="page-shell editorial-notes" aria-labelledby="notes-title">
+  <div class="section-heading"><div><p class="eyebrow">MÁS ALLÁ DE LAS PIEZAS</p><h2 id="notes-title">Los detalles también<br>hacen la experiencia.</h2></div><p>Piensa en cómo será usar tu equipo todos los días, además de en los componentes que llevará dentro.</p></div>
+  <div class="notes-grid">
+    <article><span class="material-symbols-rounded" aria-hidden="true">desk</span><p class="eyebrow">TU ESPACIO</p><h3>Hazlo tuyo.</h3><p>El espacio disponible, la iluminación y la distribución de tus periféricos forman parte de tu rutina. Inclúyelos cuando imagines tu próximo setup.</p></article>
+    <article><span class="material-symbols-rounded" aria-hidden="true">headset_mic</span><p class="eyebrow">TU CONEXIÓN</p><h3>También se comparte.</h3><p>Una reunión, una partida en equipo o una transmisión. Piensa cómo quieres escuchar, comunicarte y conectar con las personas al otro lado.</p></article>
+    <article><span class="material-symbols-rounded" aria-hidden="true">extension</span><p class="eyebrow">TU SIGUIENTE PASO</p><h3>Deja espacio para crecer.</h3><p>Tus intereses pueden cambiar. Distingue lo que necesitas desde el primer día de lo que podrías sumar en una próxima etapa.</p></article>
+  </div>
+</section>
+
+<section class="journey-band" aria-labelledby="journey-title"><div class="page-shell journey-content"><div><p class="eyebrow">DE LA IDEA A TU CONFIGURACIÓN</p><h2 id="journey-title">Ahora, dale forma.</h2><p>Explora el catálogo, reúne tus piezas y revisa la información de compatibilidad en el configurador.</p></div><div class="journey-actions"><a class="button button-primary" routerLink="/asesorias">Encontrar mi setup<span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></a><a class="button button-secondary" routerLink="/ayuda">Resolver mis dudas</a></div></div></section>

@@ -1,0 +1,39 @@
+# Maven target
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# Entornos y credenciales
+.env
+.env.*
+!.env.example
+*.env
+application-local.properties
+application-secret*.properties
+legacy-static/js/auth/supabase-config.js
+
+# Logs
+*.log

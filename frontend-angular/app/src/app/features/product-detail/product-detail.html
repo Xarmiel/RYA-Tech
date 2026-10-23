@@ -1,0 +1,78 @@
+@switch (state()) {
+  @case ('loading') {
+    <section class="page-shell"><app-loading-state label="Cargando producto" /></section>
+  }
+  @case ('error') {
+    <section class="page-shell">@if (notFound()) { <div class="empty-state"><h2>No encontramos este producto</h2><p>Puede haber sido retirado o la dirección no es válida.</p><a class="button button-secondary" routerLink="/catalogo">Volver al catálogo</a></div> } @else { <app-request-error title="No pudimos cargar el producto" (retry)="retry()" /> }</section>
+  }
+  @case ('ready') {
+    @if (product(); as item) {
+      <div class="product-page">
+        <nav class="page-shell breadcrumbs" aria-label="Migas de pan"><a routerLink="/catalogo">Catálogo</a><span>/</span><a routerLink="/catalogo" [queryParams]="{ categoria: item.categorySlug }">{{ item.category }}</a><span>/</span><b>{{ item.name }}</b></nav>
+
+        <section class="page-shell product-hero">
+          <div class="product-gallery">
+            <div class="main-image" [class.no-image]="!activeImage()">
+              @if (activeImage()) { <img [src]="activeImage()!" [alt]="item.name"><button type="button" class="zoom-button" (click)="zoomOpen.set(true)" aria-label="Ampliar imagen"><span class="material-symbols-rounded">zoom_in</span></button> }
+              @else { <span class="material-symbols-rounded">memory</span><small>Imagen no disponible</small> }
+            </div>
+            @if (item.images.length > 1) { <div class="image-thumbnails" aria-label="Imágenes del producto">@for (image of item.images; track image.id) { <button type="button" [class.is-active]="activeImage() === image.url" (click)="activeImage.set(image.url)"><img [src]="image.url" [alt]="image.alt ?? item.name"></button> }</div> }
+          </div>
+
+          <article class="product-purchase">
+            <p class="eyebrow">{{ item.brand ?? 'SIN MARCA' }} · {{ item.category }}</p>
+            <h1>{{ item.name }}</h1>
+            <div class="detail-favorite"><app-favorite-button [productId]="item.id" [productName]="item.name" /><span>Favoritos</span></div>
+            <p class="sku">SKU {{ item.sku }}</p>
+            @if (reviews().total > 0) { <a class="rating-link" href="#resenas"><span class="stars" aria-label="Calificación promedio">@for (star of stars; track star) { <span [class.is-filled]="star <= reviews().average">★</span> }</span><b>{{ reviews().average }}</b><small>{{ reviews().total }} {{ reviews().total === 1 ? 'reseña' : 'reseñas' }}</small></a> }
+            <p class="description">{{ item.description || 'La descripción comercial aún no está disponible. Consulta la ficha técnica para conocer sus características.' }}</p>
+            <strong class="price">{{ item.price | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong>
+            <p class="stock" [class.is-available]="item.availableStock > 0"><span></span>{{ formattedStock() }}</p>
+            @if (item.availableStock > 0) {
+              <div class="purchase-actions"><div class="quantity-control" aria-label="Cantidad"><button type="button" (click)="changeQuantity(-1)" [disabled]="quantity() <= 1">−</button><b>{{ quantity() }}</b><button type="button" (click)="changeQuantity(1)" [disabled]="quantity() >= item.availableStock">+</button></div><button class="button button-primary add-button" type="button" (click)="addToCart()" [disabled]="adding()"><span class="material-symbols-rounded">add_shopping_cart</span>{{ adding() ? 'Añadiendo…' : 'Añadir al carrito' }}</button></div>
+            } @else { <button class="button button-primary add-button" type="button" disabled><span class="material-symbols-rounded">remove_shopping_cart</span>No disponible</button> }
+            @if (cartMessage()) { <p class="cart-message" role="status">{{ cartMessage() }} <a routerLink="/checkout">Ver carrito</a></p> }
+            <div class="purchase-notes"><span><i class="material-symbols-rounded">database</i>Precio y stock obtenidos de la base de datos</span><span><i class="material-symbols-rounded">local_shipping</i>{{ item.shippable ? 'Producto disponible para envío' : 'Producto sin envío requerido' }}</span></div>
+          </article>
+        </section>
+
+        <section class="page-shell detail-sections">
+          <article class="specifications"><p class="eyebrow">INFORMACIÓN TÉCNICA</p><h2>Ficha técnica</h2>
+            @if (item.attributes.length) { <dl>@for (attribute of item.attributes; track attribute.code) { <div><dt>{{ attribute.name }}</dt><dd>{{ attributeValue(attribute.value, attribute.unit) }}</dd></div> }</dl> }
+            @else { <div class="section-empty"><span class="material-symbols-rounded">description</span><p>Este producto todavía no tiene atributos técnicos publicados.</p></div> }
+          </article>
+          <aside class="compatibility-card"><span class="material-symbols-rounded">hub</span><p class="eyebrow">COMPATIBILIDAD</p><h2>Comprueba tu configuración</h2><p>La compatibilidad depende del conjunto completo: placa, memoria, refrigeración, fuente y gabinete. El motor del backend revalidará todas las piezas.</p><a class="button button-secondary" routerLink="/asesorias">Abrir configurador</a></aside>
+        </section>
+
+        <section class="page-shell reviews-section" id="resenas"><div class="section-heading"><div><p class="eyebrow">OPINIONES VERIFICADAS</p><h2>Reseñas del producto</h2></div>@if (reviews().total > 0) { <div class="review-score"><strong>{{ reviews().average }}</strong><span><span class="stars">@for (star of stars; track star) { <i [class.is-filled]="star <= reviews().average">★</i> }</span><small>{{ reviews().total }} publicadas</small></span></div> }</div>
+          @if (reviewsError()) { <app-request-error title="No pudimos cargar las reseñas" (retry)="retry()" /> }
+          @else if (reviews().items.length) { <div class="reviews-list">@for (review of reviews().items; track review.id) { <article><header><div><strong>{{ review.author }}</strong><small>Compra verificada · {{ review.date | date:'mediumDate':'':'es-PE' }}</small></div><span class="stars" [attr.aria-label]="review.rating + ' de 5 estrellas'">@for (star of stars; track star) { <i [class.is-filled]="star <= review.rating">★</i> }</span></header><p>{{ review.comment || 'El cliente dejó una calificación sin comentario.' }}</p></article> }</div> }
+          @else { <div class="section-empty reviews-empty"><span class="material-symbols-rounded">reviews</span><h3>Aún no hay reseñas publicadas</h3><p>Las opiniones aparecerán aquí después de ser verificadas y aprobadas.</p></div> }
+        </section>
+
+        @if (relatedError()) { <section class="page-shell"><app-request-error title="No pudimos cargar los productos relacionados" (retry)="retry()" /></section> }
+        @if (related().length) {
+          <section class="page-shell related-section">
+            <p class="eyebrow">TAMBIÉN PODRÍA INTERESARTE</p><h2>Productos relacionados</h2>
+            <div class="related-grid">
+              @for (relatedItem of related(); track relatedItem.id) {
+                <article>
+                  <app-favorite-button [productId]="relatedItem.id" [productName]="relatedItem.name" />
+                  <a class="related-image" [routerLink]="['/producto', relatedItem.slug]" [attr.aria-label]="'Ver ' + relatedItem.name">
+                    @if (relatedItem.primaryImage) { <img [src]="relatedItem.primaryImage.url" [alt]="relatedItem.primaryImage.alt ?? relatedItem.name"> }
+                    @else { <span class="material-symbols-rounded">memory</span> }
+                  </a>
+                  <small>{{ relatedItem.brand ?? 'Sin marca' }}</small>
+                  <h3><a [routerLink]="['/producto', relatedItem.slug]">{{ relatedItem.name }}</a></h3>
+                  <div><strong>{{ relatedItem.price | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong><span>{{ relatedItem.availableStock > 0 ? 'Disponible' : 'Sin stock' }}</span></div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+      </div>
+
+      @if (zoomOpen() && activeImage()) { <div class="image-zoom" appDialogFocus aria-label="Imagen ampliada del producto" (dialogClose)="zoomOpen.set(false)" (click)="zoomOpen.set(false)"><button type="button" aria-label="Cerrar imagen" (click)="zoomOpen.set(false)"><span class="material-symbols-rounded">close</span></button><img [src]="activeImage()!" [alt]="item.name" (click)="$event.stopPropagation()"></div> }
+    }
+  }
+}

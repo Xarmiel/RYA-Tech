@@ -1,0 +1,281 @@
+<section class="page-shell page-heading help-heading">
+  <p class="eyebrow">CENTRO DE AYUDA Y SOPORTE RYA TECH</p>
+  <h1>¿En qué podemos ayudarte?</h1>
+  <p>Encuentra respuestas inmediatas a las dudas más comunes sobre componentes, compatibilidad, compras y garantías.</p>
+  <div class="help-search">
+    <span class="material-symbols-rounded" aria-hidden="true">search</span>
+    <label for="help-search" class="sr-only">Buscar preguntas frecuentes</label>
+    <input
+      id="help-search"
+      type="search"
+      maxlength="200"
+      placeholder="Busca por pregunta o palabra clave (ej. BIOS, garantía, envíos, boleta...)"
+      [value]="searchTerm()"
+      (input)="search($any($event.target).value)"
+    >
+    @if (query() || searchTerm()) {
+      <button type="button" aria-label="Limpiar búsqueda" (click)="clearSearch()">
+        <span class="material-symbols-rounded" aria-hidden="true">close</span>
+      </button>
+    }
+  </div>
+</section>
+
+<section class="page-shell help-content">
+
+  <!-- ========================================== -->
+  <!-- SECCIÓN SUPERIOR: PREGUNTAS FRECUENTES     -->
+  <!-- ========================================== -->
+  <section class="faq-section" aria-labelledby="faq-heading" [attr.aria-busy]="state() === 'loading'">
+    <div class="faq-header">
+      <div>
+        <p class="eyebrow">BASE DE CONOCIMIENTO</p>
+        <h2 id="faq-heading">Preguntas frecuentes</h2>
+      </div>
+      @if (data()?.content?.length) {
+        <p class="results-count" role="status" aria-live="polite">
+          {{ data()!.totalElements }} {{ data()!.totalElements === 1 ? 'pregunta' : 'preguntas' }}
+        </p>
+      }
+    </div>
+
+    <!-- Filtro de Categorías en Píldoras -->
+    @if (data()?.categorias?.length) {
+      <div class="faq-categories" aria-label="Categorías de preguntas">
+        <button
+          type="button"
+          class="category-pill"
+          [class.selected]="!category()"
+          [attr.aria-pressed]="!category()"
+          (click)="chooseCategory('')"
+        >
+          <span class="material-symbols-rounded pill-icon" aria-hidden="true">apps</span>
+          <span>Todas</span>
+        </button>
+        @for (option of data()!.categorias; track option.id) {
+          <button
+            type="button"
+            class="category-pill"
+            [class.selected]="category() === option.id"
+            [attr.aria-pressed]="category() === option.id"
+            (click)="chooseCategory(option.id)"
+          >
+            {{ option.nombre }}
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Estado de carga / error / acordeón de preguntas -->
+    @if (fallback()) { <div class="faq-message error" role="alert"><p>No pudimos cargar las preguntas actualizadas. Mostramos las respuestas generales disponibles.</p><button class="button button-secondary" type="button" (click)="load()">Reintentar</button></div> }
+    @switch (state()) {
+      @case ('loading') {
+        <app-loading-state label="Buscando respuestas…" layout="rows" />
+      }
+      @case ('error') {
+        <div class="faq-message error" role="alert">
+          <span class="material-symbols-rounded" aria-hidden="true">error_outline</span>
+          <h3>No pudimos cargar las preguntas</h3>
+          <p>Puedes reintentar o consultar directamente con nuestro equipo de soporte en la sección inferior.</p>
+          <button class="button button-secondary" type="button" (click)="load()">Reintentar</button>
+        </div>
+      }
+      @case ('ready') {
+        @if (data()?.content?.length) {
+          <div class="faq-list">
+            @for (item of data()!.content; track item.id) {
+              <details class="faq-item">
+                <summary>
+                  <div class="faq-question-text">
+                    <strong class="faq-question-title">{{ item.pregunta }}</strong>
+                  </div>
+                  <span class="material-symbols-rounded toggle-icon" aria-hidden="true">add</span>
+                </summary>
+                <div class="faq-answer">
+                  <p>{{ item.respuesta }}</p>
+                </div>
+              </details>
+            }
+          </div>
+
+          @if (data()!.totalPages > 1) {
+            <nav class="pagination" aria-label="Páginas de preguntas">
+              <button
+                type="button"
+                class="button button-secondary"
+                [disabled]="currentPage() === 0"
+                (click)="goTo(currentPage() - 1)"
+              >
+                Anterior
+              </button>
+              <span>{{ currentPage() + 1 }} de {{ data()!.totalPages }}</span>
+              <button
+                type="button"
+                class="button button-secondary"
+                [disabled]="currentPage() + 1 >= data()!.totalPages"
+                (click)="goTo(currentPage() + 1)"
+              >
+                Siguiente
+              </button>
+            </nav>
+          }
+        } @else {
+          <div class="faq-message" role="status">
+            <span class="material-symbols-rounded" aria-hidden="true">help_outline</span>
+            <h3>{{ query() || category() ? 'No encontramos preguntas con estos filtros' : 'Aún no hay preguntas publicadas' }}</h3>
+            <p>{{ query() || category() ? 'Prueba con otras palabras o selecciona otra categoría.' : 'Las respuestas aparecerán aquí cuando estén disponibles.' }}</p>
+            @if (query() || category()) {
+              <button class="button button-secondary" type="button" (click)="clear()">Ver todas las preguntas</button>
+            }
+          </div>
+        }
+      }
+    }
+  </section>
+
+  <!-- ========================================== -->
+  <!-- SECCIÓN INFERIOR: HAZNOS TU PREGUNTA       -->
+  <!-- ========================================== -->
+  <section class="direct-support-section" aria-labelledby="direct-heading">
+    <div class="direct-section-banner">
+      <div class="direct-banner-header">
+        <p class="eyebrow">ASISTENCIA DIRECTA Y CANALES PERSONALIZADOS</p>
+        <h2 id="direct-heading">Haznos tu pregunta</h2>
+        <p class="direct-subtitle">
+          ¿No encontraste lo que buscabas o tienes una consulta puntual? Nuestro equipo técnico y comercial está listo para atenderte al instante a través de nuestros canales especializados.
+        </p>
+      </div>
+
+      <div class="direct-cards-grid">
+        <!-- Tarjeta 1: Soporte de Pedidos -->
+        <article class="direct-card">
+          <div class="card-top">
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">local_shipping</span>
+            <span class="card-pill">Pedidos y Envíos</span>
+          </div>
+          <h3>Soporte de Pedidos</h3>
+          <p>Consulta el estado de tu compra en tiempo real, número de tracking de agencia (Olva/Shalom) o cambio de dirección de despacho.</p>
+          <div class="card-actions">
+            <a
+              class="direct-btn direct-btn-whatsapp"
+              [href]="getWhatsappLink('Hola RYA Tech, quisiera consultar sobre el estado de mi pedido:')"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="material-symbols-rounded" aria-hidden="true">chat</span>
+              <span>Consultar Pedido</span>
+            </a>
+            <a class="direct-btn direct-btn-secondary" routerLink="/compras">
+              <span class="material-symbols-rounded" aria-hidden="true">receipt_long</span>
+              <span>Mis compras</span>
+            </a>
+          </div>
+        </article>
+
+        <!-- Tarjeta 2: Garantía RMA -->
+        <article class="direct-card">
+          <div class="card-top">
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">verified_user</span>
+            <span class="card-pill">Garantía Oficial</span>
+          </div>
+          <h3>Garantía y RMA</h3>
+          <p>Reporta fallas de fábrica, tramita el cambio de piezas defectuosas o solicita asistencia técnica con respaldo oficial de marca.</p>
+          <div class="card-actions">
+            <a
+              class="direct-btn direct-btn-whatsapp"
+              [href]="getWhatsappLink('Hola RYA Tech, necesito ayuda con la garantía o trámite RMA de mi producto:')"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="material-symbols-rounded" aria-hidden="true">chat</span>
+              <span>Trámite RMA</span>
+            </a>
+            <a class="direct-btn direct-btn-secondary" [href]="getEmailLink('Solicitud de Garantía / RMA - RYA Tech')">
+              <span class="material-symbols-rounded" aria-hidden="true">mail</span>
+              <span>Enviar correo</span>
+            </a>
+          </div>
+        </article>
+
+        <!-- Tarjeta 3: Asesoría Técnica y Ensamblaje -->
+        <article class="direct-card">
+          <div class="card-top">
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">developer_board</span>
+            <span class="card-pill">Hardware y Setup</span>
+          </div>
+          <h3>Asesoría y Ensamblaje</h3>
+          <p>¿Dudas de compatibilidad, cuello de botella o actualización de BIOS? Te recomendamos los componentes ideales según tu presupuesto.</p>
+          <div class="card-actions">
+            <a
+              class="direct-btn direct-btn-whatsapp"
+              [href]="getWhatsappLink('Hola RYA Tech, solicito asesoría técnica para la configuración de mi PC:')"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="material-symbols-rounded" aria-hidden="true">chat</span>
+              <span>Asesoría Técnica</span>
+            </a>
+            <a class="direct-btn direct-btn-secondary" routerLink="/asesorias">
+              <span class="material-symbols-rounded" aria-hidden="true">hub</span>
+              <span>Asesor online</span>
+            </a>
+          </div>
+        </article>
+
+        <!-- Tarjeta 4: Ventas Corporativas y B2B -->
+        <article class="direct-card">
+          <div class="card-top">
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">business_center</span>
+            <span class="card-pill">Empresas y B2B</span>
+          </div>
+          <h3>Ventas Corporativas</h3>
+          <p>Cotizaciones formales con Factura con RUC, compras por volumen para empresas, colegios, oficinas y licitaciones comerciales.</p>
+          <div class="card-actions">
+            <a
+              class="direct-btn direct-btn-whatsapp"
+              [href]="getWhatsappLink('Hola RYA Tech, deseo solicitar una cotización corporativa para mi empresa:')"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span class="material-symbols-rounded" aria-hidden="true">chat</span>
+              <span>Cotizar B2B</span>
+            </a>
+            <a class="direct-btn direct-btn-secondary" [href]="getEmailLink('Cotización Corporativa B2B - RYA Tech')">
+              <span class="material-symbols-rounded" aria-hidden="true">mail</span>
+              <span>Escribir correo</span>
+            </a>
+          </div>
+        </article>
+      </div>
+
+      <!-- Tira de Contacto / Horarios -->
+      @if (contactState() === 'error') { <div class="faq-message error" role="alert"><p>No pudimos actualizar los canales de contacto.</p><button class="button button-secondary" type="button" (click)="loadContact()">Reintentar</button></div> }
+      <div class="direct-footer-strip">
+        <div class="strip-item">
+          <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+          <div>
+            <strong>Horario de atención</strong>
+            <small class="contact-hours">{{ contact()?.horario || 'Lunes a viernes: 9:00 a. m. a 10:00 p. m. | Sábados: 9:00 a. m. a 12:00 p. m. | Domingos: cerrado.' }}</small>
+          </div>
+        </div>
+        <div class="strip-item">
+          <span class="material-symbols-rounded" aria-hidden="true">mail</span>
+          <div>
+            <strong>Correo central</strong>
+            <small>{{ contact()?.email || 'Correo no configurado' }}</small>
+            @if (contact()?.telefono) { <small class="provisional-phone">{{ contact()?.telefono }}</small> }
+          </div>
+        </div>
+        <div class="strip-item">
+          <span class="material-symbols-rounded" aria-hidden="true">bolt</span>
+          <div>
+            <strong>Tiempo de respuesta</strong>
+            <small>Atención en menos de 15 min en horario comercial</small>
+          </div>
+        </div>
+      </div>
+      @if (!contact()?.email && !contact()?.whatsappUrl) { <p class="contact-pending" role="status">Los canales de contacto todavía no se han publicado.</p> }
+    </div>
+  </section>
+
+</section>
