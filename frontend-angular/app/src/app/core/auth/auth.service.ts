@@ -1,13 +1,19 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
 import { Session, User, createClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 
+export const SUPABASE_AUTH_CLIENT = new InjectionToken<ReturnType<typeof createClient>>('Supabase auth client', {
+  providedIn: 'root',
+  factory: () => createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  }),
+});
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly client = createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-  });
+  private readonly client = inject(SUPABASE_AUTH_CLIENT);
   private initialization?: Promise<Session | null>;
+  private sessionRevision = 0;
 
   readonly session = signal<Session | null>(null);
   readonly ready = signal(false);
@@ -16,27 +22,39 @@ export class AuthService {
 
   constructor() {
     this.client.auth.onAuthStateChange((_event, session) => {
-      this.session.set(session);
-      this.ready.set(true);
+      this.acceptSession(session);
     });
   }
 
   initialize(): Promise<Session | null> {
+    if (this.ready()) return Promise.resolve(this.session());
     if (!this.initialization) {
+      const revision = this.sessionRevision;
       this.initialization = this.client.auth.getSession().then(({ data, error }) => {
         if (error) throw error;
-        this.session.set(data.session);
-        this.ready.set(true);
-        return data.session;
+        // A late bootstrap response must not overwrite a newer login/logout event.
+        if (this.sessionRevision === revision) this.acceptSession(data.session);
+        return this.session();
+      }).catch(error => {
+        this.initialization = undefined;
+        if (this.ready()) return this.session();
+        throw error;
       });
     }
-    return this.initialization;
+    // Cache only the bootstrap work, never the old session value returned by it.
+    return this.initialization.then(() => this.session());
+  }
+
+  private acceptSession(session: Session | null): void {
+    this.sessionRevision++;
+    this.session.set(session);
+    this.ready.set(true);
   }
 
   async signIn(email: string, password: string): Promise<void> {
     const { data, error } = await this.client.auth.signInWithPassword({ email: email.trim(), password });
     if (error) throw error;
-    this.session.set(data.session);
+    this.acceptSession(data.session);
   }
 
   async signUp(name: string, phone: string, email: string, password: string): Promise<boolean> {
@@ -48,7 +66,7 @@ export class AuthService {
       },
     });
     if (error) throw error;
-    this.session.set(data.session);
+    this.acceptSession(data.session);
     return !!data.session;
   }
 
@@ -67,7 +85,7 @@ export class AuthService {
   async signOut(): Promise<void> {
     const { error } = await this.client.auth.signOut();
     if (error) throw error;
-    this.session.set(null);
+    this.acceptSession(null);
   }
 
   accessToken(): string | null { return this.session()?.access_token ?? null; }

@@ -1,0 +1,25 @@
+:host { display: block; margin-block: 1.5rem; }
+.product-import { padding: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); }
+h2 { font-size: 1.4rem; margin-block: 1rem; }
+p, small { line-height: 1.5; }
+fieldset { border: 1px solid var(--line); padding: 1rem; display: grid; gap: 1rem; min-width: 0; }
+label, small, td a { display: block; }
+small { color: var(--muted); margin-block: .4rem; }
+input, textarea, select, button { font: inherit; }
+textarea, select, input[type=file] { width: 100%; box-sizing: border-box; color: var(--text); background: var(--surface-raised); border: 1px solid var(--line); padding: .6rem; border-radius: 4px; }
+textarea { resize: vertical; }
+.import-button { min-height: 44px; padding: .65rem 1rem; border: 1px solid var(--cyan); color: var(--text); background: var(--surface-raised); cursor: pointer; border-radius: 4px; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.import-error { color: var(--danger, #d02d45); overflow-wrap: anywhere; }
+.import-scroll { overflow-x: auto; margin-block: 1rem; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+caption { text-align: left; margin-bottom: .75rem; }
+th, td { padding: .75rem; border-bottom: 1px solid var(--line); vertical-align: top; min-width: 160px; font-weight: normal; }
+th:first-child, td:first-child { min-width: 50px; }
+thead th { font-weight: 700; }
+td select { min-width: 180px; margin-bottom: .75rem; }
+td a { color: var(--cyan); margin-top: .4rem; }
+code { overflow-wrap: anywhere; }
+.import-confirm { margin-block: 1rem; line-height: 1.6; }
+:is(button, input, select, textarea, a, .import-scroll):focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+@media (max-width: 600px) { .product-import { padding: .75rem; } }

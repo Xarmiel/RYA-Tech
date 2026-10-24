@@ -19,6 +19,13 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponseDto> handleConflict(ConflictException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponseDto.builder()
+                .timestamp(LocalDateTime.now()).status(409).error("Conflict")
+                .message(ex.getMessage()).path(request.getRequestURI()).build());
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         ErrorResponseDto error = ErrorResponseDto.builder()

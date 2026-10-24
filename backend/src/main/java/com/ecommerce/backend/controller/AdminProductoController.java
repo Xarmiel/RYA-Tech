@@ -28,17 +28,17 @@ public class AdminProductoController {
     private final com.ecommerce.backend.repository.CategoriaRepository categoriaRepository;
     private final com.ecommerce.backend.repository.MarcaRepository marcaRepository;
 
-    public record MetadataItemDto(UUID id, String nombre, String slug) {}
+    public record MetadataItemDto(UUID id, String nombre, String slug, com.ecommerce.backend.service.ProductTechnicalData.Schema fichaEsquema) {}
     public record AdminProductMetadataDto(java.util.List<MetadataItemDto> categorias, java.util.List<MetadataItemDto> marcas) {}
 
     @GetMapping("/metadata")
     @Operation(summary = "Obtener metadatos para formularios de producto (categorías y marcas)")
     public ResponseEntity<AdminProductMetadataDto> obtenerMetadata() {
         var categorias = categoriaRepository.findByIsDeletedFalseOrderByPosicionAsc().stream()
-                .map(c -> new MetadataItemDto(c.getId(), c.getNombre(), c.getSlug()))
+                .map(c -> new MetadataItemDto(c.getId(), c.getNombre(), c.getSlug(), com.ecommerce.backend.service.ProductTechnicalData.schema(c,categoriaRepository)))
                 .toList();
         var marcas = marcaRepository.findByIsDeletedFalseOrderByNombreAsc().stream()
-                .map(m -> new MetadataItemDto(m.getId(), m.getNombre(), m.getSlug()))
+                .map(m -> new MetadataItemDto(m.getId(), m.getNombre(), m.getSlug(), null))
                 .toList();
         return ResponseEntity.ok(new AdminProductMetadataDto(categorias, marcas));
     }
@@ -47,12 +47,19 @@ public class AdminProductoController {
     @Operation(summary = "Crear nueva categoría desde el panel de productos")
     public ResponseEntity<MetadataItemDto> crearCategoria(@Valid @RequestBody com.ecommerce.backend.dto.CrearCategoriaDto dto) {
         var cat = categoriaService.crearCategoria(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new MetadataItemDto(cat.getId(), cat.getNombre(), cat.getSlug()));
+        var category = com.ecommerce.backend.entity.Categoria.builder().id(cat.getId()).nombre(cat.getNombre()).slug(cat.getSlug()).parentId(dto.getParentId()).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(new MetadataItemDto(cat.getId(), cat.getNombre(), cat.getSlug(), com.ecommerce.backend.service.ProductTechnicalData.schema(category,categoriaRepository)));
     }
 
     @PostMapping("/marcas")
     @Operation(summary = "Crear nueva marca desde el panel de productos")
     public ResponseEntity<MetadataItemDto> crearMarca(@Valid @RequestBody com.ecommerce.backend.dto.CrearMarcaDto dto) {
+        if (marcaRepository.existsByNombreIgnoreCaseAndIsDeletedFalse(dto.getNombre().trim())) {
+            throw new com.ecommerce.backend.exception.BadRequestException("Ya existe una marca con ese nombre");
+        }
+        if (marcaRepository.existsByNombreIgnoreCase(dto.getNombre().trim())) {
+            throw new com.ecommerce.backend.exception.BadRequestException("Esa marca está eliminada. Activa Mostrar eliminadas y restáurala en Marcas y categorías.");
+        }
         String slug = dto.getSlug();
         if (slug == null || slug.isBlank()) {
             slug = dto.getNombre().toLowerCase(java.util.Locale.ROOT)
@@ -62,6 +69,9 @@ public class AdminProductoController {
         if (marcaRepository.existsBySlugAndIsDeletedFalse(slug)) {
             slug = slug + "-" + UUID.randomUUID().toString().substring(0, 4);
         }
+        if (marcaRepository.existsBySlug(slug)) {
+            throw new com.ecommerce.backend.exception.BadRequestException("El slug de la marca ya está reservado. Revisa las marcas eliminadas antes de crear otra.");
+        }
         var m = marcaRepository.save(com.ecommerce.backend.entity.Marca.builder()
                 .nombre(dto.getNombre().trim())
                 .slug(slug)
@@ -69,7 +79,7 @@ public class AdminProductoController {
                 .descripcion(dto.getDescripcion())
                 .isDeleted(false)
                 .build());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new MetadataItemDto(m.getId(), m.getNombre(), m.getSlug()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new MetadataItemDto(m.getId(), m.getNombre(), m.getSlug(), null));
     }
 
     @GetMapping
@@ -109,6 +119,23 @@ public class AdminProductoController {
             @Valid @RequestBody AdminProductoDto dto
     ) {
         return ResponseEntity.ok(productoService.actualizarProducto(id, dto));
+    }
+
+    // Technical-only updates deliberately do not accept prices, stock, images or publication state.
+    public record FichaUpdate(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=80) String sku,
+                              @jakarta.validation.constraints.NotNull com.ecommerce.backend.dto.FichaProductoDto fichaTecnica) {}
+    @PatchMapping("/{id}/ficha-tecnica")
+    @Operation(summary = "Actualizar solo la ficha comercial, sin alterar inventario ni datos certificados")
+    public ResponseEntity<AdminProductoDetalleDto> actualizarFicha(@PathVariable UUID id,@Valid @RequestBody FichaUpdate dto) {
+        return ResponseEntity.ok(productoService.actualizarFichaProducto(id,dto.sku(),dto.fichaTecnica()));
+    }
+
+    public record ImagenesUpdate(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=80) String sku,
+                                 @jakarta.validation.constraints.NotEmpty @jakarta.validation.constraints.Size(max=8) java.util.List<com.ecommerce.backend.dto.ImagenProductoDto> imagenes) {}
+    @PatchMapping("/{id}/imagenes")
+    @Operation(summary = "Agregar imágenes sin borrar las existentes ni modificar el resto del producto")
+    public ResponseEntity<AdminProductoDetalleDto> agregarImagenes(@PathVariable UUID id,@Valid @RequestBody ImagenesUpdate dto) {
+        return ResponseEntity.ok(productoService.agregarImagenesProducto(id,dto.sku(),dto.imagenes()));
     }
 
     @PatchMapping("/{id}/estado")

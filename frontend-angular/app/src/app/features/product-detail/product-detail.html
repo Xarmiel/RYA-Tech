@@ -38,8 +38,10 @@
 
         <section class="page-shell detail-sections">
           <article class="specifications"><p class="eyebrow">INFORMACIÓN TÉCNICA</p><h2>Ficha técnica</h2>
-            @if (item.attributes.length) { <dl>@for (attribute of item.attributes; track attribute.code) { <div><dt>{{ attribute.name }}</dt><dd>{{ attributeValue(attribute.value, attribute.unit) }}</dd></div> }</dl> }
+            @if (hasCommercialSpecs()) {<p class="spec-review-note">* Especificación comercial pendiente de revisión. No certifica compatibilidad; comprueba tu configuración en el asesor.</p>}
+            @if (specifications().length) { <dl>@for (attribute of specifications(); track attribute.code) { <div><dt>{{ attribute.name }}@if(attribute.pendingReview){<span class="spec-pending" role="img" aria-label="Pendiente de revisión">*</span>}</dt><dd>{{ attributeValue(attribute.value, attribute.unit) }}</dd></div> }</dl> }
             @else { <div class="section-empty"><span class="material-symbols-rounded">description</span><p>Este producto todavía no tiene atributos técnicos publicados.</p></div> }
+            @if(specSource();as source){<p class="spec-source"><a [href]="source" target="_blank" rel="noopener noreferrer">Consultar fuente de especificaciones <span aria-hidden="true">↗</span><span class="visually-hidden"> (se abre en una pestaña nueva)</span></a></p>}
           </article>
           <aside class="compatibility-card"><span class="material-symbols-rounded">hub</span><p class="eyebrow">COMPATIBILIDAD</p><h2>Comprueba tu configuración</h2><p>La compatibilidad depende del conjunto completo: placa, memoria, refrigeración, fuente y gabinete. El motor del backend revalidará todas las piezas.</p><a class="button button-secondary" routerLink="/asesorias">Abrir configurador</a></aside>
         </section>

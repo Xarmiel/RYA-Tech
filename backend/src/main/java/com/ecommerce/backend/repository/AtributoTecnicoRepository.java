@@ -12,4 +12,5 @@ import java.util.UUID;
 public interface AtributoTecnicoRepository extends JpaRepository<AtributoTecnico, UUID> {
     List<AtributoTecnico> findByFiltrableTrueAndIsDeletedFalseOrderByNombreAsc();
     Optional<AtributoTecnico> findByCodigoAndIsDeletedFalse(String codigo);
+    Optional<AtributoTecnico> findByCodigo(String codigo);
 }

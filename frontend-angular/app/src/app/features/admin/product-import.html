@@ -1,0 +1,64 @@
+<section class="product-import" aria-label="Importar productos">
+  <button type="button" class="import-button" [attr.aria-expanded]="open()" [disabled]="busy() || referencesBusy()" (click)="open.set(!open())">{{ open() ? 'Ocultar importador' : 'Importar productos · JSON / CSV' }}</button>
+  @if (open()) {
+    <h2>Crear borradores, actualizar fichas o agregar imágenes</h2>
+    <p>Hasta 100 productos y 2 MB. Datos comerciales, imágenes y ficha técnica mediante el objeto JSON fichaTecnica (tipo, fuenteUrl y valores). Las fichas se guardan pendientes de revisión y no se aplican al configurador. Por defecto se crean borradores y se bloquean duplicados. Solo la acción explícita actualizar-ficha modifica una ficha existente por SKU exacto, sin cambiar precio, stock, imágenes ni publicación. No se crean marcas/categorías automáticamente.</p>
+    <p>JSON: admite el archivo <code>lote-01.json</code> preparado. CSV UTF-8 separado por comas: <code>sku,nombre,marca,categoria,precio,stock,descripcion,mpn,imagen1,...,imagen8</code>. Precio en PEN con punto decimal; stock explícito. SKU y nombre obligatorios.</p>
+    <p>La acción agregar-imagenes agrega enlaces al SKU exacto sin borrar imágenes existentes ni cambiar la principal actual. Si la galería está vacía, el primer enlace será la principal. Los enlaces repetidos se omiten; el límite es de ocho imágenes totales. No modifica precio, stock, publicación ni ficha técnica.</p>
+    <button type="button" class="import-button" [disabled]="busy() || referencesBusy()" [attr.aria-expanded]="referencesOpen()" (click)="referencesOpen.set(!referencesOpen())">{{referencesOpen()?'Ocultar marcas y categorías':'Crear o consultar marcas y categorías sin perder este lote'}}</button>
+    @if(referencesOpen()) {<app-catalog-references [disabled]="busy()" (busyChange)="setReferencesBusy($event)" (changed)="referencesChanged($event)" />}
+    <fieldset [disabled]="busy() || referencesBusy() || uncertain()">
+      <legend>Archivo y contenido</legend>
+      <label>Archivo JSON o CSV <input type="file" accept=".json,.csv,application/json,text/csv" (change)="file($event)"></label>
+      <label>Formato <select [(ngModel)]="format" (ngModelChange)="invalidate()"><option value="json">JSON</option><option value="csv">CSV</option></select></label>
+      <label>Contenido editable <textarea rows="7" [(ngModel)]="source" (ngModelChange)="invalidate()" spellcheck="false" placeholder="Selecciona un archivo o pega su contenido"></textarea></label>
+      <button type="button" class="import-button" (click)="preview()" [disabled]="!source.trim()">Validar y consultar duplicados</button>
+    </fieldset>
+    @if (busy()) { <p role="status">Procesando… No cierres esta página.</p> }
+    @if (error()) { <p class="import-error" role="alert">{{ error() }}</p> }
+    @if (rows().length) {
+      <p role="status">{{ rows().length }} filas · {{ selectedCount() }} listas y seleccionadas. Desmarca las que no quieras cargar. El primer enlace de cada galería será la imagen principal.</p>
+      <div class="import-scroll" tabindex="0" aria-label="Vista previa de importación">
+        <table>
+          <caption>Revisión del lote antes de guardar</caption>
+          <thead><tr><th scope="col">Incluir</th><th scope="col">Producto / validación</th><th scope="col">Categoría / marca reales</th><th scope="col">Precio / stock / imágenes</th></tr></thead>
+          <tbody>
+            @for (row of rows(); track $index; let i = $index) {
+              <tr>
+                <td><input type="checkbox" [(ngModel)]="row.selected" [attr.aria-label]="'Incluir ' + row.product.nombre" [disabled]="busy() || uncertain() || row.state !== 'ready' || !!row.product.errors.length"></td>
+                <th scope="row"><strong>{{ row.product.nombre || 'Sin nombre' }}</strong><br><code>{{ row.product.sku }}</code>
+                  <small>Acción: {{row.product.accion==='actualizar-ficha'?'Actualizar solo ficha existente':row.product.accion==='agregar-imagenes'?'Agregar solo imágenes':'Crear borrador nuevo'}}</small>
+                  @if (row.product.mpn) { <small>MPN: {{ row.product.mpn }}</small> }
+                  @for (error of row.product.errors; track $index) { <p class="import-error">{{ error }}</p> }
+                  @for (error of technicalErrors(row); track $index) { <p class="import-error">{{error}}</p> }
+                  @if(row.product.fichaTecnica){<small>Incluye ficha técnica · {{row.product.fichaTecnica.tipo}} · pendiente de revisión</small>}
+                  @for (warning of row.product.warnings; track $index) { <small>{{ warning }}</small> }
+                  <p [class.import-error]="row.state === 'error' || row.state === 'uncertain'" role="status">{{ row.message }}</p>
+                </th>
+                <td>
+                  @if(row.product.accion==='agregar-imagenes'){<p>Vínculo por SKU exacto. No se cambian categoría ni marca.</p>}@else{
+                  <label [for]="'import-category-' + i">Categoría (archivo: {{ row.product.categoria || 'sin indicar' }})</label>
+                  <select [id]="'import-category-' + i" [(ngModel)]="row.categoriaId" [disabled]="busy() || uncertain() || row.state !== 'ready'">
+                    <option value="">Selecciona una categoría</option>
+                    @for (category of metadata().categorias; track category.id) { <option [value]="category.id">{{ category.nombre }}</option> }
+                  </select>
+                  <label [for]="'import-brand-' + i">Marca (archivo: {{ row.product.marca || 'sin indicar' }})</label>
+                  <select [id]="'import-brand-' + i" [(ngModel)]="row.marcaId" [disabled]="busy() || uncertain() || row.state !== 'ready'">
+                    <option value="">Selecciona una marca</option>
+                    @for (brand of metadata().marcas; track brand.id) { <option [value]="brand.id">{{ brand.nombre }}</option> }
+                  </select>
+                  }
+                </td>
+                <td>@if(row.product.accion==='actualizar-ficha'){<strong>Precio, stock e imágenes actuales: sin cambios</strong>}@else if(row.product.accion==='agregar-imagenes'){<strong>{{row.product.imagenes.length}} enlaces para agregar</strong><p>Precio, stock y ficha: sin cambios.</p>}@else{S/ {{ row.product.precio }}<br>{{ row.product.stockInicial }} unidades<br>{{ row.product.imagenes.length }} imágenes}
+                  @for (url of row.product.imagenes; track $index) { <a [href]="row.product.errors.length ? null : url" target="_blank" rel="noopener noreferrer">Imagen {{ $index + 1 }}{{ $index === 0 && row.product.accion==='crear' ? ' · principal' : '' }}</a> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <label class="import-confirm"><input type="checkbox" [(ngModel)]="confirmed" [disabled]="busy() || uncertain()"> He revisado las acciones seleccionadas, modelos, imágenes y su permiso de uso, precios, stock, categorías y fichas. Se guardan en la BD conectada aunque trabaje localmente. Crear guarda sin publicar; actualizar-ficha reemplaza solo la ficha comercial; agregar-imagenes conserva las existentes sin modificar la ficha ni los datos comerciales. Las fichas no certifican compatibilidad.</label>
+      <button type="button" class="import-button" [disabled]="!canSave()" (click)="save()">Aplicar {{ selectedCount() }} acciones revisadas (altas sin publicar)</button>
+    }
+  }
+</section>

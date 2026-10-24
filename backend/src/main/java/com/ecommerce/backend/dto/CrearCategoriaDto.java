@@ -19,6 +19,7 @@ public class CrearCategoriaDto {
     @Size(max = 120, message = "El nombre no puede exceder 120 caracteres")
     private String nombre;
 
+    @Size(max = 150, message = "El slug no puede exceder 150 caracteres")
     private String slug;
 
     @Size(max = 20, message = "El acrónimo no puede exceder 20 caracteres")

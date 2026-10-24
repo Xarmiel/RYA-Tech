@@ -44,6 +44,12 @@ public class CategoriaServiceImpl implements CategoriaService {
             throw new BadRequestException("El nombre de la categoría es obligatorio");
         }
         String nombre = dto.getNombre().trim();
+        if (categoriaRepository.existsByNombreIgnoreCaseAndIsDeletedFalse(nombre)) {
+            throw new BadRequestException("Ya existe una categoría con ese nombre");
+        }
+        if (categoriaRepository.existsByNombreIgnoreCase(nombre)) {
+            throw new BadRequestException("Esa categoría está eliminada. Activa Mostrar eliminadas y restáurala en Marcas y categorías.");
+        }
 
         String slug = dto.getSlug();
         if (slug == null || slug.isBlank()) {
@@ -65,6 +71,9 @@ public class CategoriaServiceImpl implements CategoriaService {
         }
         if (categoriaRepository.existsBySlugAndIsDeletedFalse(slug)) {
             slug = slug + "-" + UUID.randomUUID().toString().substring(0, 4);
+        }
+        if (categoriaRepository.existsBySlug(slug)) {
+            throw new BadRequestException("El slug ya está reservado por una categoría. Revisa las eliminadas o elige otro texto de enlace.");
         }
 
         UUID parentId = dto.getParentId();

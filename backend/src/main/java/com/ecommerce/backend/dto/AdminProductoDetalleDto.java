@@ -15,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdminProductoDetalleDto {
+    private FichaProductoDto fichaTecnica;
     private UUID id;
     private String sku;
     private String nombre;

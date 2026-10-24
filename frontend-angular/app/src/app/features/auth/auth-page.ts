@@ -2,10 +2,8 @@ import { Location } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { AccountService } from '../../core/auth/account.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { CartService } from '../../core/cart/cart.service';
+import { PostLoginSync } from '../../core/auth/post-login-sync.service';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'reset';
 
@@ -20,8 +18,7 @@ export class AuthPage implements OnInit {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly auth = inject(AuthService);
-  private readonly account = inject(AccountService);
-  private readonly cart = inject(CartService);
+  private readonly postLogin = inject(PostLoginSync);
 
   protected mode: AuthMode = 'login';
   protected name = '';
@@ -47,22 +44,18 @@ export class AuthPage implements OnInit {
   }
 
   protected async submit(): Promise<void> {
+    if (this.busy) return;
     this.message = ''; this.success = false;
     if (!this.valid()) return;
     this.busy = true;
     try {
       if (this.mode === 'login') {
         await this.auth.signIn(this.email, this.password);
-        await Promise.allSettled([
-          firstValueFrom(this.account.load()),
-          firstValueFrom(this.cart.linkToAccount()),
-        ]);
-        await this.router.navigateByUrl(this.returnUrl());
+        await this.continueAfterAuth();
       } else if (this.mode === 'register') {
         const sessionCreated = await this.auth.signUp(this.name, this.phone, this.email, this.password);
         if (sessionCreated) {
-          await Promise.allSettled([firstValueFrom(this.account.load()), firstValueFrom(this.cart.linkToAccount())]);
-          await this.router.navigate(['/cuenta']);
+          await this.continueAfterAuth();
         } else {
           this.success = true;
           this.message = 'Cuenta creada. Revisa tu correo para confirmar el acceso.';
@@ -86,6 +79,14 @@ export class AuthPage implements OnInit {
 
   protected title(): string {
     return { login: 'Inicia sesión', register: 'Crea tu cuenta', recover: 'Recupera tu acceso', reset: 'Define una nueva contraseña' }[this.mode];
+  }
+
+  private async continueAfterAuth(): Promise<void> {
+    this.postLogin.start();
+    if (!await this.router.navigateByUrl(this.returnUrl())) {
+      this.success = true;
+      this.message = 'La sesión está iniciada, pero se canceló la navegación. Puedes continuar desde el menú de tu cuenta.';
+    }
   }
 
   protected subtitle(): string {
@@ -140,7 +141,14 @@ export class AuthPage implements OnInit {
 
   private requestedReturnUrl(): string | null {
     const value = this.route.snapshot.queryParamMap.get('returnUrl');
-    return value?.startsWith('/') && !value.startsWith('//') ? value : null;
+    if (!value?.startsWith('/')) return null;
+    try {
+      const decoded = decodeURIComponent(value);
+      if (decoded.startsWith('//') || /[\\\u0000-\u001f\u007f]/.test(decoded)) return null;
+      const path = decoded.split(/[?#]/, 1)[0];
+      if (['/login', '/registro', '/recuperar-clave', '/restablecer-clave'].includes(path)) return null;
+      return value;
+    } catch { return null; }
   }
 
   private friendlyError(message?: string): string {

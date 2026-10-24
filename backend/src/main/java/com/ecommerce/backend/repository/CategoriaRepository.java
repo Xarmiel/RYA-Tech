@@ -15,5 +15,8 @@ public interface CategoriaRepository extends JpaRepository<Categoria, UUID> {
     Optional<Categoria> findByAcronimoIgnoreCaseAndIsDeletedFalse(String acronimo);
     boolean existsBySlugAndIsDeletedFalse(String slug);
     boolean existsByNombreIgnoreCaseAndIsDeletedFalse(String nombre);
+    boolean existsByParentIdAndIsDeletedFalse(UUID parentId);
+    boolean existsByNombreIgnoreCase(String nombre);
+    boolean existsBySlug(String slug);
     boolean existsByAcronimoIgnoreCaseAndIsDeletedFalse(String acronimo);
 }

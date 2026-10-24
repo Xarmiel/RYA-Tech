@@ -57,6 +57,10 @@ class ProductoServiceTest {
     private MarcaRepository marcaRepository;
     @Mock
     private TipoProductoRepository tipoProductoRepository;
+    @Mock
+    private LegacyProductTechnicalReader technicalReader;
+    @Mock
+    private CatalogAttributeRestorer attributeRestorer;
 
     private final ProductoMapper productoMapper = new ProductoMapper();
 
@@ -76,7 +80,9 @@ class ProductoServiceTest {
                 categoriaRepository,
                 marcaRepository,
                 tipoProductoRepository,
-                productoMapper
+                productoMapper,
+                technicalReader,
+                attributeRestorer
         );
 
         productoId = UUID.randomUUID();

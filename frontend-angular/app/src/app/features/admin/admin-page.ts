@@ -13,15 +13,24 @@ import { NotificationService } from '../../core/notifications/notification.servi
 import { DialogFocus } from '../../shared/dialog-focus/dialog-focus';
 import { TechnicalEntry } from './technical-entry';
 import { AuthService } from '../../core/auth/auth.service';
+import { ProductImport } from './product-import';
+import { CatalogReferences } from './catalog-references';
+import { ProductTechnicalForm } from './product-technical-form';
+import { ProductTechnicalFicha } from './product-technical.models';
+import { AdminReferenceItem } from './admin.service';
 
 @Component({
   selector: 'app-admin-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus, ProductImport, CatalogReferences, ProductTechnicalForm],
   styleUrl: './admin.scss',
   templateUrl: './admin-page.html',
 })
 export class AdminPage implements OnInit {
+  @ViewChild(ProductTechnicalForm) technicalForm?: ProductTechnicalForm;
+  protected technicalSchema(){return this.categories().find(category=>category.id===this.formData().categoriaId)?.fichaEsquema??null;}
+  protected setTechnical(value:ProductTechnicalFicha){this.formData.update(data=>({...data,fichaTecnica:value}));}
+  protected readonly importBusy = signal(false);
   @ViewChild(ProductMedia) productMediaComponent?: ProductMedia;
   @ViewChild(TechnicalEditor) technicalEditor?: TechnicalEditor;
   private readonly technicalEntry = inject(TechnicalEntry);
@@ -79,7 +88,7 @@ export class AdminPage implements OnInit {
   protected readonly serverError = signal<string | null>(null);
 
   // Metadata para selectores dinámicos
-  protected readonly categories = signal<Array<{ id: string; nombre: string; slug: string }>>([]);
+  protected readonly categories = signal<AdminReferenceItem[]>([]);
   protected readonly brands = signal<Array<{ id: string; nombre: string; slug: string }>>([]);
 
   // Estado para creación rápida de Categorías y Marcas
@@ -164,6 +173,7 @@ export class AdminPage implements OnInit {
     requiereSerie?: boolean;
     requiereEnvio?: boolean;
     tipo?: string;
+    fichaTecnica?: ProductTechnicalFicha|null;
   }>({
     nombre: '',
     sku: '',
@@ -390,6 +400,7 @@ export class AdminPage implements OnInit {
       requiereSerie: raw.requiereSerie,
       requiereEnvio: raw.requiereEnvio,
       tipo: raw.tipo,
+      fichaTecnica: raw.fichaTecnica,
     });
     this.showFormModal.set(true);
 
@@ -435,6 +446,7 @@ export class AdminPage implements OnInit {
               requiereSerie: detail.requiereSerie,
               requiereEnvio: detail.requiereEnvio,
               tipo: detail.tipo,
+              fichaTecnica: detail.fichaTecnica,
               estado: detail.activo && detail.vendible ? 'active' : 'draft',
             }));
 
@@ -486,6 +498,7 @@ export class AdminPage implements OnInit {
             requiereSerie: detail.requiereSerie,
             requiereEnvio: detail.requiereEnvio,
             tipo: detail.tipo,
+            fichaTecnica: detail.fichaTecnica,
             estado: detail.activo && detail.vendible ? 'active' : 'draft',
           }));
 
@@ -541,6 +554,10 @@ export class AdminPage implements OnInit {
       return;
     }
     const cat = this.categories().find(c => c.id === val || c.nombre === val);
+    if(this.formData().fichaTecnica && this.formData().fichaTecnica?.tipo!==cat?.fichaEsquema?.tipo){
+      if(!window.confirm('La categoría nueva usa otros campos técnicos. ¿Descartar la ficha técnica de este formulario? Los datos certificados del configurador no se modificarán.')){(event.target as HTMLSelectElement).value=this.formData().categoriaId??'';return;}
+      this.formData.update(data=>({...data,fichaTecnica:undefined}));
+    }
     this.formData.update(data => ({
       ...data,
       categoriaId: cat ? cat.id : '',
@@ -576,6 +593,7 @@ export class AdminPage implements OnInit {
     if (!this.design && (this.metadataLoading() || this.metadataError())) {
       this.categoryError.set('Carga las categorías antes de crear una nueva.'); return;
     }
+    if(this.formData().fichaTecnica && !window.confirm('Crear y seleccionar otra categoría reiniciará la ficha técnica del formulario. ¿Continuar?'))return;
 
     if (this.design) {
       const slug = this.slugify(nombre);
@@ -585,6 +603,7 @@ export class AdminPage implements OnInit {
         ...data,
         categoriaId: localCat.id,
         categoria: localCat.nombre,
+        fichaTecnica: undefined,
       }));
       this.isCreatingCategory.set(false);
       this.newCategoryParentId.set('');
@@ -603,6 +622,7 @@ export class AdminPage implements OnInit {
             ...data,
             categoriaId: created.id,
             categoria: created.nombre,
+            fichaTecnica: undefined,
           }));
           this.isCreatingCategory.set(false);
           this.newCategoryParentId.set('');
@@ -701,6 +721,7 @@ export class AdminPage implements OnInit {
   }
 
   canLeave(): boolean {
+    if (this.importBusy()) { this.notifications.show('Espera a que termine la importación.', 'info'); return false; }
     if (this.stockUncertain()) { this.notifications.show('Reintenta el movimiento pendiente antes de salir para no duplicarlo.', 'info'); return false; }
     if (this.isSaving() || this.savingReference() || this.isSavingStock() || this.pendingRows().size > 0) { this.notifications.show('Espera a que termine el guardado.', 'info'); return false; }
     if (this.technicalEditor && !this.technicalEditor.canLeave()) return false;
@@ -736,6 +757,7 @@ export class AdminPage implements OnInit {
     if (this.isSaving() || this.savingReference()) return;
     if (!this.design && this.section !== 'catalogo') return;
     if (form?.invalid) { form.control.markAllAsTouched(); this.formError.set('Revisa los campos obligatorios y los valores numéricos.'); return; }
+    if (this.technicalForm && !this.technicalForm.canSave()) {this.formError.set('Revisa los valores de la ficha técnica del componente.');return;}
     if (this.isLoadingDetail()) {
       this.notifications.show('Espera a que termine de cargarse el detalle del producto antes de guardar.', 'info');
       return;

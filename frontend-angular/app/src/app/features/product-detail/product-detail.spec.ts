@@ -7,6 +7,10 @@ import { ProductDetailService } from './product-detail.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { CartService } from '../../core/cart/cart.service';
 import { FavoritesService } from '../../core/favorites/favorites.service';
+import { registerLocaleData } from '@angular/common';
+import localeEsPe from '@angular/common/locales/es-PE';
+
+registerLocaleData(localeEsPe);
 
 describe('Recuperación del detalle de producto', () => {
   const params = new BehaviorSubject(convertToParamMap({ slug: 'cpu' }));
@@ -34,5 +38,22 @@ describe('Recuperación del detalle de producto', () => {
     getBySlug.mockReturnValue(new Subject()); params.next(convertToParamMap({ slug: 'otro' })); fixture.detectChanges();
     expect(getBySlug).toHaveBeenLastCalledWith('otro');
     expect(fixture.nativeElement.querySelector('app-loading-state [role=status]')).toBeTruthy();
+  });
+  it('renders one customer-facing value per feature and a separate safe source link',()=>{
+    const fixture=TestBed.createComponent(ProductDetailComponent);fixture.detectChanges();const component=fixture.componentInstance as any;
+    const attr=(code:string,name:string,value:string,unit:string|null=null)=>({code,name,value,unit,dataType:'TEXTO'});
+    component.product.set({id:'cpu',sku:'CPU-1',name:'Ryzen 5',slug:'ryzen-5',category:'Procesadores',categorySlug:'procesadores',price:100,availableStock:0,shippable:true,images:[],attributes:[
+      attr('socket_cpu','Socket','AM4'),attr('CATALOG_TECH_CPU_SOCKET','Ficha · Socket','AM4'),
+      attr('cache_l3_kb','Caché L3 Total','8192','KB'),attr('CATALOG_TECH_CPU_L3_MB','Ficha · Caché L3','8','MB'),
+      attr('CATALOG_TECH_TYPE','Ficha · Familia técnica','cpu'),attr('CATALOG_TECH_STATUS','Ficha · Estado de revisión técnica','Pendiente de revisión; no certifica compatibilidad'),
+      attr('CATALOG_TECH_CPU_POWER_NOTES','Ficha · Criterio de potencia','Dato heredado potencia_base_w'),
+      attr('CATALOG_TECH_SOURCE','Ficha · Fuente de especificaciones','https://example.com/cpu')
+    ]});component.state.set('ready');fixture.detectChanges();
+    const section=fixture.nativeElement.querySelector('.specifications');expect(section.querySelectorAll('dl > div')).toHaveLength(2);
+    expect(section.textContent).toContain('8 MB');expect(section.textContent).not.toContain('8192');expect(section.textContent).not.toContain('Dato heredado');
+    expect(section.textContent).not.toContain('Familia técnica');expect(section.textContent).not.toContain('Ficha ·');
+    expect(section.querySelector('.spec-pending').getAttribute('aria-label')).toBe('Pendiente de revisión');
+    expect(section.querySelector('.spec-source a').getAttribute('href')).toBe('https://example.com/cpu');
+    expect(component.product().attributes).toHaveLength(8);
   });
 });

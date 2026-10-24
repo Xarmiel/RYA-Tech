@@ -22,6 +22,13 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CategoriaServiceTest {
+    @Test
+    void rechazaNombreExistenteSinCrearOtraCategoria() {
+        when(categoriaRepository.existsByNombreIgnoreCaseAndIsDeletedFalse("Procesadores")).thenReturn(true);
+        var dto = com.ecommerce.backend.dto.CrearCategoriaDto.builder().nombre(" Procesadores ").build();
+        assertThrows(com.ecommerce.backend.exception.BadRequestException.class, () -> categoriaService.crearCategoria(dto));
+        verify(categoriaRepository, never()).save(any());
+    }
 
     @Mock
     private CategoriaRepository categoriaRepository;

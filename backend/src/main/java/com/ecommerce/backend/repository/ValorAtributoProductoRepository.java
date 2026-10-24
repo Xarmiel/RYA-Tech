@@ -11,6 +11,8 @@ import java.util.UUID;
 
 @Repository
 public interface ValorAtributoProductoRepository extends JpaRepository<ValorAtributoProducto, UUID> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "atributo")
+    List<ValorAtributoProducto> findAllByProducto_Id(UUID productoId);
 
     @Query("SELECT v FROM ValorAtributoProducto v LEFT JOIN FETCH v.atributo WHERE v.producto.id = :productoId AND v.isDeleted = false")
     List<ValorAtributoProducto> findConAtributoPorProductoId(@Param("productoId") UUID productoId);

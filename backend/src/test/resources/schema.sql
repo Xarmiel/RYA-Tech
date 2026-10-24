@@ -1,5 +1,22 @@
 CREATE SCHEMA IF NOT EXISTS rya;
 
+-- Normalized technical records are read by the administrative product detail.
+CREATE TABLE IF NOT EXISTS rya.fuentes_tecnicas (
+ id uuid PRIMARY KEY, titulo text, url text
+);
+CREATE TABLE IF NOT EXISTS rya.especificaciones_cpu (
+ producto_id uuid PRIMARY KEY, modelo text, socket text, familia text, generacion text,
+ nucleos integer, hilos integer, frecuencia_base_mhz integer, frecuencia_maxima_mhz integer,
+ cache_l1_kb numeric, cache_l2_kb numeric, cache_l3_kb numeric,
+ potencia_base_w numeric, potencia_maxima_w numeric, tiene_graficos_integrados boolean,
+ modelo_graficos text, fuente_id uuid, verificada_at timestamp with time zone,
+ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS rya.revisiones_placa (
+ id uuid PRIMARY KEY, producto_id uuid, modelo text, revision text, socket text, chipset text,
+ fuente_id uuid, verificada_at timestamp with time zone
+);
+
 CREATE TABLE IF NOT EXISTS rya.categorias_soporte (
   id uuid PRIMARY KEY, nombre varchar(120) NOT NULL, descripcion text,
   is_deleted boolean NOT NULL DEFAULT false

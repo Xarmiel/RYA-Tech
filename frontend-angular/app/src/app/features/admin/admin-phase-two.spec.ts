@@ -47,6 +47,20 @@ describe('Phase two product and reference forms', () => {
     const {page}=open();page.onNombreChange('Procesador rápido');expect(page.formData().slug).toBe('procesador-rapido');
     page.onSlugChange('mi-url');page.onNombreChange('Otro nombre');expect(page.formData().slug).toBe('mi-url');
   });
+  it('validates the technical child before saving the complete product',()=>{
+    const {page,fixture}=open();
+    page.categories.set([{...category,fichaEsquema:{tipo:'cpu',nombre:'Procesador',campos:[
+      {key:'tdp_w',label:'TDP',type:'number',unit:'W',integer:false,positive:false}
+    ]}}]);
+    page.formData.update((d:any)=>({...d,nombre:'CPU',sku:'CPU-1',precio:20,categoriaId:'cat',
+      fichaTecnica:{tipo:'cpu',valores:{tdp_w:-1}}}));fixture.detectChanges();
+    page.submitForm();expect(service.saveItem).not.toHaveBeenCalled();
+    expect(page.formError()).toContain('ficha técnica');
+    page.setTechnical({tipo:'cpu',fuenteUrl:'https://example.com/specs',valores:{tdp_w:65}});fixture.detectChanges();
+    page.submitForm();expect(service.saveItem).toHaveBeenCalledWith('catalogo',expect.objectContaining({
+      fichaTecnica:{tipo:'cpu',fuenteUrl:'https://example.com/specs',valores:{tdp_w:65}}
+    }),false);
+  });
   it('rejects duplicate category names and invalid parent IDs before a request',()=>{
     const {page}=open();page.newCategoryName.set('  Procesadores ');page.submitNewCategory();
     expect(page.categoryError()).toContain('ya existe');expect(service.createCategory).not.toHaveBeenCalled();
@@ -110,9 +124,29 @@ describe('Phase two product and reference forms', () => {
 describe('Phase two product payload safety',()=>{
   beforeEach(()=>TestBed.configureTestingModule({providers:[provideHttpClient(),provideHttpClientTesting()]}));
   afterEach(()=>TestBed.inject(HttpTestingController).verify());
+  it('uses an image-only endpoint without sending commercial fields or specifications',()=>{
+    TestBed.inject(AdminService).addProductImages('1','CPU-1',['https://example.com/cpu.webp']).subscribe();
+    const request=TestBed.inject(HttpTestingController).expectOne('/api/v1/admin/productos/1/imagenes');
+    expect(request.request.method).toBe('PATCH');expect(request.request.body).toEqual({sku:'CPU-1',imagenes:[{url:'https://example.com/cpu.webp'}]});request.flush({id:'1'});
+  });
+  it('sends technical-only updates without price, stock, publication or image fields',()=>{
+    const ficha={tipo:'cpu',valores:{igpu:false}};TestBed.inject(AdminService).updateProductTechnical('1','CPU-1',ficha).subscribe();
+    const request=TestBed.inject(HttpTestingController).expectOne('/api/v1/admin/productos/1/ficha-tecnica');
+    expect(request.request.method).toBe('PATCH');expect(request.request.body).toEqual({sku:'CPU-1',fichaTecnica:ficha});request.flush({id:'1'});
+  });
   it('does not silently create a new product when an edit has no ID',()=>{
     let message='';TestBed.inject(AdminService).saveItem('catalogo',{precio:10},true).subscribe({error:e=>message=e.message});
     expect(message).toContain('identificador');TestBed.inject(HttpTestingController).expectNone('/api/v1/admin/productos');
+  });
+  it('sends technical numbers and false without coercion and preserves omission on ordinary edits',()=>{
+    const service=TestBed.inject(AdminService),http=TestBed.inject(HttpTestingController);
+    const fichaTecnica={tipo:'cpu',fuenteUrl:'https://example.com/specs',valores:{tdp_w:65,igpu:false}};
+    service.saveItem('catalogo',{id:'1',nombre:'CPU',sku:'CPU',precio:20,fichaTecnica},true).subscribe();
+    const technical=http.expectOne('/api/v1/admin/productos/1');
+    expect(technical.request.body.fichaTecnica).toEqual(fichaTecnica);technical.flush({id:'1'});
+    service.saveItem('catalogo',{id:'1',nombre:'CPU',sku:'CPU',precio:21},true).subscribe();
+    const commercial=http.expectOne('/api/v1/admin/productos/1');
+    expect(Object.hasOwn(commercial.request.body,'fichaTecnica')).toBe(false);commercial.flush({id:'1'});
   });
   it('roundtrips shipping and serial flags without leaking real saves into design data',()=>{
     const service=TestBed.inject(AdminService);service.saveItem('catalogo',{id:'1',nombre:'Licencia',sku:'SW',precio:10,requiereSerie:true,requiereEnvio:false},true).subscribe();

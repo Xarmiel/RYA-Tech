@@ -32,11 +32,17 @@ public interface ProductoRepository extends JpaRepository<Producto, UUID>, JpaSp
 
     Optional<Producto> findByIdAndIsDeletedFalse(UUID id);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Producto p WHERE p.id = :id AND p.isDeleted = false")
+    Optional<Producto> findForGalleryUpdate(@Param("id") UUID id);
+
     Optional<Producto> findBySlugAndIsDeletedFalse(String slug);
 
     Optional<Producto> findBySkuAndIsDeletedFalse(String sku);
 
     boolean existsBySkuAndIsDeletedFalse(String sku);
+    boolean existsByMarca_Id(UUID marcaId);
+    boolean existsByCategoria_Id(UUID categoriaId);
 
     boolean existsBySlugAndIsDeletedFalse(String slug);
 

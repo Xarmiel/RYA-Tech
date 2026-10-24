@@ -14,4 +14,6 @@ public interface MarcaRepository extends JpaRepository<Marca, UUID> {
     Optional<Marca> findBySlugAndIsDeletedFalse(String slug);
     boolean existsBySlugAndIsDeletedFalse(String slug);
     boolean existsByNombreIgnoreCaseAndIsDeletedFalse(String nombre);
+    boolean existsByNombreIgnoreCase(String nombre);
+    boolean existsBySlug(String slug);
 }

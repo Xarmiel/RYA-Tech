@@ -13,6 +13,11 @@
         <span class="material-symbols-rounded" aria-hidden="true">space_dashboard</span>
         Resumen
       </a>
+      @if (!design) {
+        <a [routerLink]="base + '/referencias'" routerLinkActive="selected">
+          <span class="material-symbols-rounded" aria-hidden="true">category</span>Marcas y categorías
+        </a>
+      }
       @for (module of modules; track module.id) {
         <a [routerLink]="base + '/' + module.id" routerLinkActive="selected">
           <span class="material-symbols-rounded" aria-hidden="true">{{ module.icon }}</span>
@@ -51,6 +56,10 @@
         <app-technical-editor [isDesignMode]="design" />
       }
 
+      @else if (section === 'referencias' && !design) {
+        <h1>Marcas y categorías</h1>
+        <app-catalog-references (busyChange)="importBusy.set($event)" (changed)="loadMetadata(); loadStats()" />
+      }
       <!-- CASO 2: MÓDULO ADMINISTRATIVO SELECCIONADO -->
       @else if (current) {
         <div class="section-heading">
@@ -65,6 +74,9 @@
           </button>
         </div>
 
+        @if (!design && section === 'catalogo') {
+          <app-product-import (busyChange)="importBusy.set($event)" (saved)="loadItems(); loadStats()" />
+        }
         @if (!design && section !== 'catalogo' && section !== 'inventario') {
           <p class="admin-alert" role="status">{{ connected() ? 'Vista de consulta. La edición de esta sección se conectará en su fase respectiva.' : 'Sección pendiente de conexión. No se muestran registros ni se simulan guardados.' }}</p>
         }
@@ -703,12 +715,14 @@
             </label>
             <label><span>Requiere número de serie</span><input type="checkbox" [(ngModel)]="formData().requiereSerie" name="requiereSerie"></label>
             <label><span>Requiere envío físico</span><input type="checkbox" [(ngModel)]="formData().requiereEnvio" name="requiereEnvio"></label>
-            @if (isEditing()) { <div><strong>Tipo técnico:</strong> {{ formData().tipo || 'No informado' }}<p>La selección de tipos y la revisión técnica requieren ampliar el contrato del servidor.</p></div> }
+            @if (isEditing()) { <div><strong>Tipo comercial:</strong> {{ formData().tipo || 'No informado' }}</div> }
           </div>
-          <p class="notice">{{ design ? 'Los estados son una demostración local.' : 'El servidor todavía no distingue borrador de inactivo al recuperar un producto. No publicado no significa revisado ni compatible.' }} La edición de categorías y la solicitud de revisión están pendientes de backend.</p>
+          <p class="notice">{{ design ? 'Los estados son una demostración local.' : 'No publicado no significa revisado ni compatible. La ficha comercial no reemplaza la revisión técnica del configurador.' }}</p>
+
+          <div class="form-fullwidth"><app-product-technical-form [schema]="technicalSchema()" [value]="formData().fichaTecnica??null" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" (valueChange)="setTechnical($event)" /></div>
 
           <label class="form-fullwidth">
-            <span>Descripción / Ficha técnica preliminar</span>
+            <span>Descripción comercial</span>
             <textarea
               rows="3"
               placeholder="Detalles complementarios, especificaciones clave o notas administrativas del producto..."

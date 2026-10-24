@@ -48,6 +48,39 @@ public class ProductoServiceImpl implements ProductoService {
     private final com.ecommerce.backend.repository.MarcaRepository marcaRepository;
     private final com.ecommerce.backend.repository.TipoProductoRepository tipoProductoRepository;
     private final ProductoMapper productoMapper;
+    private final com.ecommerce.backend.service.LegacyProductTechnicalReader technicalReader;
+    private final com.ecommerce.backend.service.CatalogAttributeRestorer attributeRestorer;
+
+    @Override
+    @Transactional
+    public AdminProductoDetalleDto agregarImagenesProducto(UUID id, String sku, List<com.ecommerce.backend.dto.ImagenProductoDto> incoming) {
+        var product=productoRepository.findForGalleryUpdate(id).orElseThrow(()->new ResourceNotFoundException("Producto no encontrado"));
+        if(sku==null||!product.getSku().equals(sku))throw new BadRequestException("El SKU exacto no coincide. No se agregó ninguna imagen.");
+        if(incoming==null||incoming.isEmpty())throw new BadRequestException("Incluye al menos una imagen.");
+        validarGaleriaImagenes(incoming);
+        var existing=imagenProductoRepository.findByProductoIdAndIsDeletedFalseOrderByPosicionAsc(id);
+        var known=existing.stream().map(image->image.getUrl().trim().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
+        var additions=incoming.stream().filter(image->!known.contains(image.getUrl().trim().toLowerCase(Locale.ROOT))).toList();
+        if(existing.size()+additions.size()>8)throw new BadRequestException("La galería resultante supera 8 imágenes. No se agregó ni eliminó ninguna; selecciona menos enlaces.");
+        int position=existing.stream().map(ImagenProducto::getPosicion).filter(Objects::nonNull).max(Integer::compareTo).orElse(-1)+1;
+        boolean first=existing.isEmpty();
+        for(var image:additions){
+            imagenProductoRepository.save(ImagenProducto.builder().producto(product).url(image.getUrl().trim())
+                .textoAlternativo(image.getTextoAlternativo()==null||image.getTextoAlternativo().isBlank()?product.getNombre():image.getTextoAlternativo().trim())
+                .posicion(position++).principal(first).isDeleted(false).build());
+            first=false;
+        }
+        return construirAdminDetalleDto(product);
+    }
+
+    @Override
+    @Transactional
+    public AdminProductoDetalleDto actualizarFichaProducto(UUID id, String sku, com.ecommerce.backend.dto.FichaProductoDto ficha) {
+        var product=productoRepository.findByIdAndIsDeletedFalse(id).orElseThrow(()->new ResourceNotFoundException("Producto no encontrado"));
+        if(sku==null||!product.getSku().equals(sku)||ficha==null)throw new BadRequestException("Confirma el SKU exacto y una ficha técnica válida. No se modificó el producto.");
+        new com.ecommerce.backend.service.ProductTechnicalData(atributoTecnicoRepository,valorAtributoProductoRepository,categoriaRepository,attributeRestorer::restore).save(product,ficha);
+        return construirAdminDetalleDto(product);
+    }
 
     @Override
     public PaginatedResponseDto<ProductoResumenDto> listarProductos(
@@ -268,7 +301,9 @@ public class ProductoServiceImpl implements ProductoService {
         List<ValorAtributoProducto> atributos = valorAtributoProductoRepository.findConAtributoPorProductoId(producto.getId());
         Integer stock = existenciaRepository.findStockDisponiblePorProductoId(producto.getId());
 
-        return productoMapper.toAdminDetalleDto(producto, imagenes, atributos, stock);
+        var detalle = productoMapper.toAdminDetalleDto(producto, imagenes, atributos, stock);
+        detalle.setFichaTecnica(technicalReader.read(producto, atributos));
+        return detalle;
     }
 
     private List<FiltroTecnico> normalizarFiltrosAtributos(Map<String, List<String>> filtros) {
@@ -563,6 +598,8 @@ public class ProductoServiceImpl implements ProductoService {
 
         guardarImagenesGaleria(producto, dto.getImagenes(), dto.getImagenPrincipalUrl());
 
+        new com.ecommerce.backend.service.ProductTechnicalData(atributoTecnicoRepository, valorAtributoProductoRepository, categoriaRepository,attributeRestorer::restore).save(producto, dto.getFichaTecnica());
+
         return construirAdminDetalleDto(producto);
     }
 
@@ -574,6 +611,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = productoRepository.findById(id)
                 .filter(p -> !Boolean.TRUE.equals(p.getIsDeleted()))
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con ID: " + id));
+        var previousSchema = com.ecommerce.backend.service.ProductTechnicalData.schema(producto.getCategoria(), categoriaRepository);
 
         if (dto.getSku() != null && !dto.getSku().isBlank()) {
             String skuLimpio = dto.getSku().trim();
@@ -691,6 +729,10 @@ public class ProductoServiceImpl implements ProductoService {
             }
         }
 
+        var technical = new com.ecommerce.backend.service.ProductTechnicalData(atributoTecnicoRepository, valorAtributoProductoRepository, categoriaRepository,attributeRestorer::restore);
+        var nextSchema = com.ecommerce.backend.service.ProductTechnicalData.schema(producto.getCategoria(), categoriaRepository);
+        if (dto.getFichaTecnica() == null && !Objects.equals(previousSchema, nextSchema)) technical.clear(producto);
+        technical.save(producto, dto.getFichaTecnica());
         return construirAdminDetalleDto(productoRepository.save(producto));
     }
 

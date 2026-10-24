@@ -1,0 +1,27 @@
+@if(schema();as current){
+  <details class="technical-fields">
+    <summary>Ficha técnica del componente · {{current.nombre}}</summary>
+    @if(value()?.origen==='ANTERIOR'){<p role="status">Ficha anterior recuperada. No es necesario borrar ni volver a crear el producto.</p>}
+    @for(note of value()?.avisos??[];track $index){<p>{{note}}</p>}
+    <p>Todos los campos son opcionales: vacío significa desconocido, no cero. Estos datos se guardan como pendientes de revisión; no certifican compatibilidad ni se aplican automáticamente al configurador.</p>
+    <p>TDP, potencia máxima y consumo son valores distintos. La potencia de salida de una fuente no equivale a su consumo. Las estimaciones se identifican expresamente.</p>
+    <fieldset [disabled]="disabled()">
+      <legend>Especificaciones de {{current.nombre}}</legend>
+      <label class="source">Fuente del fabricante (opcional)
+        <input type="url" maxlength="250" [value]="source" (input)="setSource($event)" placeholder="https://fabricante.com/ficha">
+      </label>
+      @for(field of current.campos;track field.key){
+        <label>{{field.label}}{{field.unit?' ('+field.unit+')':''}}
+          @if(field.type==='boolean'){
+            <select [value]="values[field.key]==null?'':values[field.key]===true?'true':'false'" (change)="setField(field,$event)"><option value="">Desconocido</option><option value="true">Sí</option><option value="false">No</option></select>
+          }@else{
+            <input [type]="field.type" [value]="values[field.key]??''" [attr.min]="field.type==='number'?(field.positive?1:0):null" [attr.step]="field.type==='number'?(field.integer?'1':'0.0001'):null" [attr.maxlength]="field.type==='text'?250:null" (input)="setField(field,$event)" placeholder="Sin dato">
+          }
+        </label>
+      }
+    </fieldset>
+    @for(issue of issues();track $index){<p class="technical-error" role="alert">{{issue}}</p>}
+  </details>
+} @else {
+  <p class="technical-note">Selecciona una categoría con esquema técnico para mostrar sus campos. Si acabas de actualizar el proyecto, reinicia el backend y vuelve a abrir el formulario.</p>
+}

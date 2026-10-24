@@ -1,0 +1,31 @@
+<section class="references" aria-label="Gestionar marcas y categorías">
+  <h2>Marcas y categorías</h2>
+  <p>Créales un registro antes de asignarlas a productos. Estas altas se guardan en la BD conectada y no requieren crear un producto.</p>
+  <button type="button" (click)="load()" [disabled]="busy() || disabled()">Actualizar listado</button>
+  @if (busy()) { <p role="status">Consultando o guardando…</p> }
+  @if (error()) { <p class="reference-error" role="alert">{{error()}}</p> }
+  @if (message()) { <p role="status">{{message()}}</p> }
+  <form (ngSubmit)="create()">
+    <fieldset [disabled]="busy() || disabled() || !loaded() || uncertain()">
+      <legend>Alta independiente</legend>
+      <label>Tipo <select name="kind" [(ngModel)]="kind" (ngModelChange)="changeKind()"><option value="marca">Marca</option><option value="categoria">Categoría</option></select></label>
+      <label>Nombre <input name="nombre" [(ngModel)]="nombre" required [maxlength]="kind==='marca'?130:120" autocomplete="off"></label>
+      @if (kind==='categoria') {
+        <label>Abreviatura o acrónimo (opcional) <input name="acronimo" [(ngModel)]="acronimo" maxlength="20" placeholder="Ej.: AUD-MIC" aria-describedby="reference-acronym-help"></label>
+        <small id="reference-acronym-help">{{acronimo.length}}/20 caracteres. Es un código corto, no el nombre ni el enlace. Puedes dejarlo vacío.</small>
+        <label>Texto del enlace o slug (opcional) <input name="slug" [(ngModel)]="slug" maxlength="150" placeholder="audifonos-con-microfono" aria-describedby="reference-slug-help"></label>
+        <small id="reference-slug-help">Hasta 150 caracteres. Si lo dejas vacío se genera a partir del nombre completo.</small>
+        <label>Categoría superior <select name="parent" [(ngModel)]="parentId"><option value="">Sin categoría superior</option>@for (category of activeCategories();track category.id) {<option [value]="category.id">{{category.nombre}}</option>}</select></label>
+      }
+      <button type="submit" [disabled]="!nombre.trim()">Crear {{kind==='marca'?'marca':'categoría'}}</button>
+    </fieldset>
+  </form>
+  <label>Buscar marcas y categorías <input type="search" [(ngModel)]="query" placeholder="Nombre"></label>
+  <label class="reference-toggle"><input type="checkbox" [(ngModel)]="showDeleted" (ngModelChange)="load()" [disabled]="busy() || disabled()"> Mostrar eliminadas para restaurar</label>
+  @if (loaded()) {
+    <div class="reference-lists">
+      <section aria-label="Marcas registradas"><h3>Marcas ({{metadata().marcas.length}})</h3><ul>@for(item of filtered('marca');track item.id){<li>{{item.nombre}} {{item.eliminada?'· Eliminada':''}} <small>{{item.slug}}</small><button type="button" [disabled]="busy() || disabled() || uncertain()" [attr.aria-label]="(item.eliminada?'Restaurar marca ':'Borrar marca ')+item.nombre" (click)="changeDeleted('marca',item)">{{item.eliminada?'Restaurar':'Borrar'}}</button></li>}@empty{<li>No hay marcas que coincidan.</li>}</ul></section>
+      <section aria-label="Categorías registradas"><h3>Categorías ({{metadata().categorias.length}})</h3><ul>@for(item of filtered('categoria');track item.id){<li>{{item.nombre}} {{item.eliminada?'· Eliminada':''}} <small>{{item.slug}}</small><button type="button" [disabled]="busy() || disabled() || uncertain()" [attr.aria-label]="(item.eliminada?'Restaurar categoría ':'Borrar categoría ')+item.nombre" (click)="changeDeleted('categoria',item)">{{item.eliminada?'Restaurar':'Borrar'}}</button></li>}@empty{<li>No hay categorías que coincidan.</li>}</ul></section>
+    </div>
+  }
+</section>

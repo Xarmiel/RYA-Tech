@@ -1,0 +1,429 @@
+{
+  "productos": [
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7800x3d.html",
+        "valores": {
+          "socket": "AM5",
+          "cores": 8,
+          "threads": 16,
+          "base_mhz": 4200,
+          "boost_mhz": 5000,
+          "base_w": 120,
+          "igpu": true,
+          "l3_mb": 96,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7700x.html",
+        "valores": {
+          "socket": "AM5",
+          "cores": 8,
+          "threads": 16,
+          "base_mhz": 4500,
+          "boost_mhz": 5400,
+          "base_w": 105,
+          "igpu": true,
+          "l3_mb": 32,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-4000-series/amd-ryzen-3-4100.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 4,
+          "threads": 8,
+          "base_mhz": 3800,
+          "boost_mhz": 4000,
+          "base_w": 65,
+          "igpu": false,
+          "l3_mb": 4,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-4000-series/amd-ryzen-5-4500.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 3600,
+          "boost_mhz": 4100,
+          "base_w": 65,
+          "igpu": false,
+          "l3_mb": 8,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-5-5500.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 3600,
+          "boost_mhz": 4200,
+          "base_w": 65,
+          "igpu": false,
+          "l3_mb": 16,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-5-5600g.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 3900,
+          "boost_mhz": 4400,
+          "base_w": 65,
+          "igpu": true,
+          "l3_mb": 16,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-5-5600.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 3500,
+          "boost_mhz": 4400,
+          "base_w": 65,
+          "igpu": false,
+          "l3_mb": 32,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-7-5700x.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 8,
+          "threads": 16,
+          "base_mhz": 3400,
+          "boost_mhz": 4600,
+          "base_w": 65,
+          "igpu": false,
+          "l3_mb": 32,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-7-5700x3d.html",
+        "valores": {
+          "socket": "AM4",
+          "cores": 8,
+          "threads": 16,
+          "base_mhz": 3000,
+          "boost_mhz": 4100,
+          "base_w": 105,
+          "igpu": false,
+          "l3_mb": 96,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-5-7600x.html",
+        "valores": {
+          "socket": "AM5",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 4700,
+          "boost_mhz": 5300,
+          "base_w": 105,
+          "igpu": true,
+          "l3_mb": 32,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/es/products/processors/desktops/ryzen/7000-series/amd-ryzen-5-7600.html",
+        "valores": {
+          "socket": "AM5",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 3800,
+          "boost_mhz": 5100,
+          "base_w": 65,
+          "igpu": true,
+          "l3_mb": 32,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://www.amd.com/es/products/processors/desktops/ryzen/7000-series/amd-ryzen-9-7950x.html",
+        "valores": {
+          "socket": "AM5",
+          "cores": 16,
+          "threads": 32,
+          "base_mhz": 4500,
+          "boost_mhz": 5700,
+          "base_w": 170,
+          "igpu": true,
+          "l3_mb": 64,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://ark.intel.com/content/www/us/en/ark/products/132223/intel-core-i312100f-processor-12m-cache-up-to-4-30-ghz.html",
+        "valores": {
+          "socket": "LGA1700",
+          "cores": 4,
+          "threads": 8,
+          "base_mhz": 3300,
+          "boost_mhz": 4300,
+          "base_w": 58,
+          "max_w": 89,
+          "igpu": false,
+          "l3_mb": 12,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://ark.intel.com/content/www/us/en/ark/products/134587/intel-core-i512400f-processor-18m-cache-up-to-4-40-ghz.html",
+        "valores": {
+          "socket": "LGA1700",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 2500,
+          "boost_mhz": 4400,
+          "base_w": 65,
+          "max_w": 117,
+          "igpu": false,
+          "l3_mb": 18,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://ark.intel.com/content/www/us/en/ark/products/230501/intel-core-i513400f-processor-20m-cache-up-to-4-60-ghz.html",
+        "valores": {
+          "socket": "LGA1700",
+          "cores": 10,
+          "threads": 16,
+          "base_mhz": 2500,
+          "boost_mhz": 4600,
+          "base_w": 65,
+          "max_w": 148,
+          "igpu": false,
+          "l3_mb": 20,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://ark.intel.com/content/www/us/en/ark/products/236793/intel-core-i514600k-processor-24m-cache-up-to-5-30-ghz.html",
+        "valores": {
+          "socket": "LGA1700",
+          "cores": 14,
+          "threads": 20,
+          "base_mhz": 3500,
+          "boost_mhz": 5300,
+          "base_w": 125,
+          "max_w": 181,
+          "igpu": true,
+          "l3_mb": 24,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "fuenteUrl": "https://ark.intel.com/content/www/us/en/ark/products/236783/intel-core-i7-processor-14700k-33m-cache-up-to-5-60-ghz.html",
+        "valores": {
+          "socket": "LGA1700",
+          "cores": 20,
+          "threads": 28,
+          "base_mhz": 3400,
+          "boost_mhz": 5600,
+          "base_w": 125,
+          "max_w": 253,
+          "igpu": true,
+          "l3_mb": 33,
+          "power_notes": "Dato heredado potencia_base_w; revisar si corresponde a TDP o PBP. No representa consumo máximo."
+        }
+      }
+    },
+    {
+      "categoria": "Placas Madre",
+      "fichaTecnica": {
+        "tipo": "board",
+        "fuenteUrl": "https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b550-plus-wifi-ii/techspec/",
+        "valores": {
+          "socket": "AM4",
+          "chipset": "AMD B550",
+          "form_factor": "ATX",
+          "memory_type": "DDR4",
+          "memory_slots": 4,
+          "memory_max_gb": 128,
+          "memory_oc_mts": 4866,
+          "pcie": "PCIe 4.0 x16",
+          "m2_slots": 2,
+          "sata_ports": 6,
+          "wifi": true,
+          "bluetooth": true,
+          "ethernet_mbps": 2500,
+          "revision": "1.0"
+        }
+      }
+    },
+    {
+      "categoria": "Placas madre",
+      "fichaTecnica": {
+        "tipo": "board",
+        "valores": {
+          "socket": "AM4",
+          "chipset": "AMD B550",
+          "form_factor": "ATX",
+          "memory_type": "DDR4",
+          "memory_slots": 4,
+          "memory_max_gb": 128,
+          "power_connectors": "ATX 24 pines; CPU 8 pines",
+          "pcie": "PCIe 4.0 x16",
+          "m2_slots": 2,
+          "sata_ports": 6,
+          "wifi": true,
+          "bluetooth": true,
+          "ethernet_mbps": 2500,
+          "memory_oc_mts": 4866
+        },
+        "fuenteUrl": "https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b550-plus-wifi-ii/techspec/"
+      }
+    },
+    {
+      "categoria": "Procesadores",
+      "fichaTecnica": {
+        "tipo": "cpu",
+        "valores": {
+          "socket": "AM4",
+          "cores": 6,
+          "threads": 12,
+          "base_mhz": 3500,
+          "boost_mhz": 4400,
+          "l3_mb": 32,
+          "tdp_w": 65,
+          "igpu": false,
+          "memory_type": "DDR4",
+          "power_notes": "TDP declarado. No equivale al consumo máximo ni certifica soporte de placa/BIOS."
+        },
+        "fuenteUrl": "https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-5-5600.html"
+      }
+    },
+    {
+      "categoria": "Memorias RAM",
+      "fichaTecnica": {
+        "tipo": "ram",
+        "valores": {
+          "memory_type": "DDR4",
+          "form_factor": "UDIMM",
+          "capacity_gb": 16,
+          "modules": 2,
+          "speed_mts": 3200,
+          "spd_mts": 2133,
+          "cas": 16,
+          "voltage_v": 1.35,
+          "profiles": "XMP 2.0; SPD 2133 MT/s a 1.2 V. 30 kits de 2 módulos, no 30 módulos."
+        },
+        "fuenteUrl": "https://www.corsair.com/es/es/p/memory/cmk16gx4m2b3200c16/vengeance-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16"
+      }
+    },
+    {
+      "categoria": "Teclados",
+      "fichaTecnica": {
+        "tipo": "keyboard",
+        "valores": {
+          "color": "Grafito",
+          "wireless": true,
+          "backlight": true,
+          "devices": 3,
+          "systems": "Windows, macOS, ChromeOS, Linux, iPadOS",
+          "variant_notes": "Pendiente distribución regional y MPN. Funciones avanzadas de software no disponibles en todos los sistemas."
+        },
+        "fuenteUrl": "https://www.logitech.com/es-es/shop/p/mx-keys-s?crid=27"
+      }
+    },
+    {
+      "categoria": "Mouse",
+      "fichaTecnica": {
+        "tipo": "mouse",
+        "valores": {
+          "edition": "Bluetooth",
+          "color": "Grafito",
+          "sensor": "Óptico",
+          "max_dpi": 8000,
+          "wheel": "MagSpeed",
+          "silent_clicks": true,
+          "variant_notes": "Pendiente MPN y contenido de caja. No se afirma que incluya receptor USB."
+        },
+        "fuenteUrl": "https://www.logitech.com/es-es/shop/p/mx-master-3s"
+      }
+    }
+  ]
+}

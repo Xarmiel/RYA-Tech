@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, forkJoin, map, of, throwError } from 'rxjs';
 import { ADMIN_MODULES } from './admin-modules';
+import { ProductTechnicalFicha, TechnicalSchema } from './product-technical.models';
 
 export interface AdminRow {
   id: string;
@@ -33,9 +34,10 @@ export interface AdminStats {
   categoriasActivas: number | null;
 }
 
+export interface AdminReferenceItem { id: string; nombre: string; slug: string; eliminada?: boolean; fichaEsquema?: TechnicalSchema|null }
 export interface AdminMetadata {
-  categorias: Array<{ id: string; nombre: string; slug: string }>;
-  marcas: Array<{ id: string; nombre: string; slug: string }>;
+  categorias: AdminReferenceItem[];
+  marcas: AdminReferenceItem[];
 }
 
 export interface AlmacenItem {
@@ -136,6 +138,15 @@ export class AdminService {
   getMetadata(): Observable<AdminMetadata> {
     return this.http.get<AdminMetadata>('/api/v1/admin/productos/metadata');
   }
+  getReferences(incluirEliminadas = false): Observable<AdminMetadata> {
+    return this.http.get<AdminMetadata>('/api/v1/admin/referencias', {params:{incluirEliminadas}});
+  }
+  deleteReference(kind: 'marca' | 'categoria', id: string): Observable<void> {
+    return this.http.delete<void>(`/api/v1/admin/referencias/${kind === 'marca' ? 'marcas' : 'categorias'}/${encodeURIComponent(id)}`);
+  }
+  restoreReference(kind: 'marca' | 'categoria', id: string): Observable<void> {
+    return this.http.post<void>(`/api/v1/admin/referencias/${kind === 'marca' ? 'marcas' : 'categorias'}/${encodeURIComponent(id)}/restaurar`, {});
+  }
 
   isModuleConnected(moduleId: string): boolean { return ['catalogo', 'inventario', 'contenido'].includes(moduleId); }
 
@@ -150,9 +161,9 @@ export class AdminService {
   /**
    * Registra una nueva categoría en el backend
    */
-  createCategory(data: { nombre: string; acronimo?: string; slug?: string; parentId?: string }): Observable<{ id: string; nombre: string; slug: string }> {
+  createCategory(data: { nombre: string; acronimo?: string; slug?: string; parentId?: string }): Observable<AdminReferenceItem> {
     return this.http.post<any>('/api/v1/admin/productos/categorias', data).pipe(
-      map(res => ({ id: res.id, nombre: res.nombre, slug: res.slug }))
+      map(res => ({ id: res.id, nombre: res.nombre, slug: res.slug, fichaEsquema: res.fichaEsquema }))
     );
   }
 
@@ -405,6 +416,7 @@ export class AdminService {
         requiereSerie: data.requiereSerie,
         requiereEnvio: data.requiereEnvio,
         descripcion: data.descripcion !== undefined ? data.descripcion.trim() : undefined,
+        ...(data.fichaTecnica !== undefined ? {fichaTecnica: data.fichaTecnica as ProductTechnicalFicha} : {}),
         imagenPrincipalUrl: data.imagenPrincipalUrl?.trim() || (data.imagenes?.[0]?.url) || undefined,
         imagenes: data.imagenes !== undefined
           ? data.imagenes.map((img: any, idx: number) => ({
@@ -438,6 +450,14 @@ export class AdminService {
     }
 
     return throwError(() => new Error('La gestión de esta sección todavía no está conectada.'));
+  }
+
+  updateProductTechnical(id:string,sku:string,fichaTecnica:ProductTechnicalFicha):Observable<any> {
+    return this.http.patch(`/api/v1/admin/productos/${id}/ficha-tecnica`,{sku,fichaTecnica});
+  }
+
+  addProductImages(id:string,sku:string,urls:string[]):Observable<any>{
+    return this.http.patch(`/api/v1/admin/productos/${id}/imagenes`,{sku,imagenes:urls.map(url=>({url}))});
   }
 
   /**

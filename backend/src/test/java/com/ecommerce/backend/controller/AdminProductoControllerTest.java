@@ -25,6 +25,44 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AdminProductoControllerTest {
+    @Test void restauracionPendienteRetorna409EnLugarDeErrorNoConfirmado() throws Exception {
+        var controller=new AdminProductoController(productoService,categoriaService,categoriaRepository,marcaRepository);
+        var mvc=MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new com.ecommerce.backend.exception.GlobalExceptionHandler()).build();
+        when(productoService.actualizarFichaProducto(any(),any(),any())).thenThrow(new com.ecommerce.backend.exception.ConflictException("Falta habilitar restauración auditada; no se aplicó el guardado."));
+        mvc.perform(patch("/api/v1/admin/productos/"+UUID.randomUUID()+"/ficha-tecnica").contentType(MediaType.APPLICATION_JSON).content("{\"sku\":\"CPU-1\",\"fichaTecnica\":{\"tipo\":\"cpu\",\"valores\":{}}}"))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("Falta habilitar restauración auditada; no se aplicó el guardado."));
+    }
+    @Test void endpointImagenesNoUsaActualizacionComercialCompleta() throws Exception {
+        var id=UUID.randomUUID();when(productoService.agregarImagenesProducto(eq(id),eq("CPU-1"),any())).thenReturn(AdminProductoDetalleDto.builder().id(id).sku("CPU-1").build());
+        mockMvc.perform(patch("/api/v1/admin/productos/"+id+"/imagenes").contentType(MediaType.APPLICATION_JSON).content("{\"sku\":\"CPU-1\",\"imagenes\":[{\"url\":\"https://example.com/cpu.webp\"}]}")).andExpect(status().isOk());
+        verify(productoService).agregarImagenesProducto(eq(id),eq("CPU-1"),argThat(list->list.size()==1&&list.getFirst().getUrl().equals("https://example.com/cpu.webp")));
+        verify(productoService,never()).actualizarProducto(any(),any());verify(productoService,never()).crearProducto(any());
+    }
+    @Test void endpointImagenesRechazaListaVaciaYFaltaDeSku() throws Exception {
+        var path="/api/v1/admin/productos/"+UUID.randomUUID()+"/imagenes";
+        for(var body:List.of("{}","{\"sku\":\"CPU\",\"imagenes\":[]}","{\"imagenes\":[{\"url\":\"https://example.com/a\"}]}"))mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+        verifyNoInteractions(productoService);
+    }
+    @Test void actualizaFichaMedianteContratoSeparadoSinUsarGuardadoCompleto() throws Exception {
+        UUID id=UUID.randomUUID();
+        when(productoService.actualizarFichaProducto(eq(id),eq("CPU-1"),any())).thenReturn(AdminProductoDetalleDto.builder().id(id).sku("CPU-1").build());
+        mockMvc.perform(patch("/api/v1/admin/productos/"+id+"/ficha-tecnica").contentType(MediaType.APPLICATION_JSON).content("{\"sku\":\"CPU-1\",\"fichaTecnica\":{\"tipo\":\"cpu\",\"valores\":{\"igpu\":false,\"cores\":6}}}")).andExpect(status().isOk());
+        verify(productoService).actualizarFichaProducto(eq(id),eq("CPU-1"),argThat(f->Boolean.FALSE.equals(f.valores().get("igpu"))));
+        verify(productoService,never()).actualizarProducto(any(),any());verify(productoService,never()).crearProducto(any());
+    }
+    @Test void actualizarFichaRechazaSkuVacioOFichaAusente() throws Exception {
+        String path="/api/v1/admin/productos/"+UUID.randomUUID()+"/ficha-tecnica";
+        for(String body:List.of("{}","{\"sku\":\"CPU-1\"}","{\"sku\":\"\",\"fichaTecnica\":{\"tipo\":\"cpu\",\"valores\":{}}}"))mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+        verifyNoInteractions(productoService);
+    }
+    @Test
+    void rechazaMarcaExistenteSinGuardarDuplicado() {
+        when(marcaRepository.existsByNombreIgnoreCaseAndIsDeletedFalse("AMD")).thenReturn(true);
+        var controller = new AdminProductoController(productoService, categoriaService, categoriaRepository, marcaRepository);
+        var dto = com.ecommerce.backend.dto.CrearMarcaDto.builder().nombre(" AMD ").build();
+        org.junit.jupiter.api.Assertions.assertThrows(com.ecommerce.backend.exception.BadRequestException.class, () -> controller.crearMarca(dto));
+        verify(marcaRepository, never()).save(any());
+    }
 
     private ProductoService productoService;
     private CategoriaService categoriaService;
