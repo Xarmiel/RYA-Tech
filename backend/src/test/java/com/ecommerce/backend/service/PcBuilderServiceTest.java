@@ -44,6 +44,8 @@ class PcBuilderServiceTest {
     private CompatibilidadCpuPlacaRepository compatibilidadCpuPlacaRepository;
     @Mock
     private ValorAtributoProductoRepository valorAtributoProductoRepository;
+    @Mock
+    private FamiliaPerfilAsesoriaRepository familiaPerfilAsesoriaRepository;
 
     private final ProductoMapper productoMapper = new ProductoMapper();
 
@@ -68,7 +70,8 @@ class PcBuilderServiceTest {
                 versionBiosRepository,
                 compatibilidadCpuPlacaRepository,
                 valorAtributoProductoRepository,
-                productoMapper
+                productoMapper,
+                familiaPerfilAsesoriaRepository
         );
 
         cpuId = UUID.randomUUID();

@@ -95,6 +95,50 @@ export interface MovimientoInventario {
   registradoAt: string;
 }
 
+export interface ReglaPresupuestoItem {
+  id?: string;
+  tipoComponenteCodigo: string;
+  porcentajeMin: number;
+  porcentajeMax: number;
+  obligatorio?: boolean;
+}
+
+export interface NecesidadPerfilItem {
+  id?: string;
+  codigo?: string;
+  nombre: string;
+  descripcion?: string;
+}
+
+export interface PerfilAsesoriaItem {
+  id?: string;
+  familiaId: string;
+  familiaNombre?: string;
+  familiaCodigo?: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  prioridadCpu: number;
+  prioridadGpu: number;
+  ramMinimaGb: number;
+  requiereGpuDedicada: boolean;
+  presupuestoSugeridoMin?: number;
+  presupuestoSugeridoMax?: number;
+  activo: boolean;
+  reglasPresupuesto?: ReglaPresupuestoItem[];
+  necesidades?: NecesidadPerfilItem[];
+}
+
+export interface FamiliaPerfilItem {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  icono?: string;
+  posicion?: number;
+  activo?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -148,7 +192,7 @@ export class AdminService {
     return this.http.post<void>(`/api/v1/admin/referencias/${kind === 'marca' ? 'marcas' : 'categorias'}/${encodeURIComponent(id)}/restaurar`, {});
   }
 
-  isModuleConnected(moduleId: string): boolean { return ['catalogo', 'inventario', 'contenido'].includes(moduleId); }
+  isModuleConnected(moduleId: string): boolean { return ['catalogo', 'inventario', 'contenido', 'asesorias'].includes(moduleId); }
 
   getPreviewItems(moduleId: string, query = '', page = 0, pageSize = 10, status = ''): Observable<AdminPagedResult> {
     return this.getLocalItems(moduleId, query, page, pageSize, status);
@@ -188,6 +232,9 @@ export class AdminService {
     }
     if (moduleId === 'contenido') {
       return this.getContentItems(query, page, pageSize, statusFilter);
+    }
+    if (moduleId === 'asesorias') {
+      return this.getAsesoriasItems(query, page, pageSize, statusFilter);
     }
 
     // Para módulos con datos locales o en preparación backend:
@@ -587,6 +634,97 @@ export class AdminService {
       message: `El registro "${row.title}" fue ${actionText} con éxito.`,
       row,
     });
+  }
+
+  /**
+   * Métodos para Módulo de Asesorías y Perfiles
+   */
+  getAsesoriasItems(query: string, page: number, pageSize: number, statusFilter: string): Observable<AdminPagedResult> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', pageSize.toString());
+
+    if (query.trim()) {
+      params = params.set('busqueda', query.trim());
+    }
+    if (statusFilter === 'active') {
+      params = params.set('activo', 'true');
+    } else if (statusFilter === 'draft' || statusFilter === 'inactive') {
+      params = params.set('activo', 'false');
+    }
+
+    return this.http.get<any>('/api/v1/admin/asesorias', { params }).pipe(
+      map(res => {
+        const perfiles = res?.content ?? [];
+        const items: AdminRow[] = perfiles.map((p: any) => this.mapPerfilToRow(p));
+
+        return {
+          items,
+          total: res?.totalElements ?? items.length,
+          page: res?.page ?? page,
+          pageSize: res?.size ?? pageSize,
+          totalPages: res?.totalPages ?? (Math.ceil((res?.totalElements ?? items.length) / pageSize) || 1),
+        };
+      })
+    );
+  }
+
+  private mapPerfilToRow(p: PerfilAsesoriaItem): AdminRow {
+    const isActivo = p.activo !== false;
+    const reglasCount = p.reglasPresupuesto?.length ?? 0;
+    const presupuestoMin = p.presupuestoSugeridoMin ? `S/ ${Number(p.presupuestoSugeridoMin).toFixed(0)}` : 'S/ 0';
+    const presupuestoMax = p.presupuestoSugeridoMax ? ` - S/ ${Number(p.presupuestoSugeridoMax).toFixed(0)}` : '+';
+
+    let validationText = 'Completo';
+    if (reglasCount === 0) {
+      validationText = 'Sin reglas';
+    } else if (p.requiereGpuDedicada) {
+      validationText = 'Requiere GPU';
+    }
+
+    return {
+      id: p.id || '',
+      code: p.codigo,
+      title: p.nombre,
+      subtitle: `${reglasCount} regla(s) asociadas`,
+      tag: p.familiaNombre || 'Sin familia',
+      detail: `Presupuesto: ${presupuestoMin}${presupuestoMax}`,
+      metric: validationText,
+      status: isActivo ? 'active' : 'draft',
+      statusText: isActivo ? 'Activo' : 'Inactivo',
+      rawData: p,
+    };
+  }
+
+  getFamiliasAsesoria(): Observable<FamiliaPerfilItem[]> {
+    return this.http.get<FamiliaPerfilItem[]>('/api/v1/admin/asesorias/familias');
+  }
+
+  createFamiliaAsesoria(data: { codigo: string; nombre: string; descripcion?: string; icono?: string; posicion?: number }): Observable<FamiliaPerfilItem> {
+    return this.http.post<FamiliaPerfilItem>('/api/v1/admin/asesorias/familias', data);
+  }
+
+  getPerfilAsesoriaById(id: string): Observable<PerfilAsesoriaItem> {
+    return this.http.get<PerfilAsesoriaItem>(`/api/v1/admin/asesorias/${id}`);
+  }
+
+  savePerfilAsesoria(perfil: PerfilAsesoriaItem): Observable<PerfilAsesoriaItem> {
+    if (perfil.id) {
+      return this.http.put<PerfilAsesoriaItem>(`/api/v1/admin/asesorias/${perfil.id}`, perfil);
+    }
+    return this.http.post<PerfilAsesoriaItem>('/api/v1/admin/asesorias', perfil);
+  }
+
+  publishPerfilAsesoria(id: string): Observable<PerfilAsesoriaItem> {
+    return this.http.patch<PerfilAsesoriaItem>(`/api/v1/admin/asesorias/${id}/publicar`, {});
+  }
+
+  deactivatePerfilAsesoria(id: string): Observable<PerfilAsesoriaItem> {
+    return this.http.patch<PerfilAsesoriaItem>(`/api/v1/admin/asesorias/${id}/desactivar`, {});
+  }
+
+  deletePerfilAsesoria(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/v1/admin/asesorias/${id}`);
   }
 
   updateLocalStatus(moduleId: string, id: string, status: AdminRow['status'], text: string): void {

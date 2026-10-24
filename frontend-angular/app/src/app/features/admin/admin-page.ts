@@ -145,6 +145,60 @@ export class AdminPage implements OnInit {
   protected readonly kardexItems = signal<MovimientoInventario[]>([]);
   protected readonly selectedKardexRow = signal<AdminRow | null>(null);
 
+  // Estado para gestión de Asesorías
+  protected readonly showAsesoriaModal = signal(false);
+  protected readonly isEditingAsesoria = signal(false);
+  protected readonly isSavingAsesoria = signal(false);
+  protected readonly asesoriaFormError = signal<string | null>(null);
+  protected readonly familiasAsesoria = signal<any[]>([]);
+  protected readonly isCreatingFamilia = signal(false);
+  protected readonly newFamiliaCodigo = signal('');
+  protected readonly newFamiliaNombre = signal('');
+  protected readonly newFamiliaIcono = signal('tune');
+  protected readonly savingFamilia = signal(false);
+  protected readonly familiaError = signal<string | null>(null);
+  protected readonly asesoriaFormData = signal<{
+    id?: string;
+    familiaId: string;
+    codigo: string;
+    nombre: string;
+    descripcion: string;
+    prioridadCpu: number;
+    prioridadGpu: number;
+    ramMinimaGb: number;
+    requiereGpuDedicada: boolean;
+    presupuestoSugeridoMin: number | null;
+    presupuestoSugeridoMax: number | null;
+    activo: boolean;
+    reglasPresupuesto: Array<{
+      id?: string;
+      tipoComponenteCodigo: string;
+      porcentajeMin: number;
+      porcentajeMax: number;
+      obligatorio: boolean;
+    }>;
+    necesidades: Array<{
+      id?: string;
+      codigo?: string;
+      nombre: string;
+      descripcion?: string;
+    }>;
+  }>({
+    familiaId: '',
+    codigo: '',
+    nombre: '',
+    descripcion: '',
+    prioridadCpu: 5,
+    prioridadGpu: 5,
+    ramMinimaGb: 16,
+    requiereGpuDedicada: false,
+    presupuestoSugeridoMin: 2500,
+    presupuestoSugeridoMax: 6000,
+    activo: true,
+    reglasPresupuesto: [],
+    necesidades: [],
+  });
+
   // Estado del modal de formulario
   protected readonly showFormModal = signal(false);
   protected readonly isEditing = signal(false);
@@ -331,6 +385,10 @@ export class AdminPage implements OnInit {
   // --- Manejo del Formulario Modal ---
 
   protected openCreateForm(): void {
+    if (this.section === 'asesorias') {
+      this.openCreateAsesoria();
+      return;
+    }
     if (!this.design && this.section !== 'catalogo') return;
     this.isEditing.set(false);
     this.formError.set(null);
@@ -367,6 +425,10 @@ export class AdminPage implements OnInit {
   }
 
   protected openEditForm(row: AdminRow): void {
+    if (this.section === 'asesorias') {
+      this.openEditAsesoria(row);
+      return;
+    }
     if (!this.design && this.section !== 'catalogo') return;
     this.isEditing.set(true);
     this.formError.set(null);
@@ -853,6 +915,14 @@ export class AdminPage implements OnInit {
   }
 
   protected toggleRowStatus(row: AdminRow): void {
+    if (this.section === 'asesorias') {
+      if (row.status === 'active') {
+        this.deactivateAsesoria(row);
+      } else {
+        this.publishAsesoria(row);
+      }
+      return;
+    }
     if (this.design) {
       const nextStatus = row.status === 'active' ? 'inactive' : 'active';
       this.adminService.updateLocalStatus(this.section, row.id, nextStatus, nextStatus === 'active' ? 'Activo' : 'Inactivo');
@@ -870,6 +940,237 @@ export class AdminPage implements OnInit {
         error: err => {
           this.notifications.show(err?.error?.message || 'Error al cambiar estado en el servidor.', 'error');
         }
+      });
+  }
+
+  // --- Operaciones de Asesorías ---
+
+  protected openCreateAsesoria(): void {
+    this.isEditingAsesoria.set(false);
+    this.asesoriaFormError.set(null);
+    this.isCreatingFamilia.set(false);
+    this.newFamiliaNombre.set('');
+    this.newFamiliaCodigo.set('');
+    this.loadFamiliasAsesoria();
+
+    this.asesoriaFormData.set({
+      familiaId: this.familiasAsesoria()[0]?.id || '',
+      codigo: '',
+      nombre: '',
+      descripcion: '',
+      prioridadCpu: 5,
+      prioridadGpu: 5,
+      ramMinimaGb: 16,
+      requiereGpuDedicada: false,
+      presupuestoSugeridoMin: 2500,
+      presupuestoSugeridoMax: 6000,
+      activo: true,
+      reglasPresupuesto: [
+        { tipoComponenteCodigo: 'CPU', porcentajeMin: 20, porcentajeMax: 30, obligatorio: true },
+        { tipoComponenteCodigo: 'GPU', porcentajeMin: 35, porcentajeMax: 45, obligatorio: false },
+        { tipoComponenteCodigo: 'RAM', porcentajeMin: 10, porcentajeMax: 15, obligatorio: true },
+        { tipoComponenteCodigo: 'PLACA', porcentajeMin: 12, porcentajeMax: 18, obligatorio: true },
+        { tipoComponenteCodigo: 'FUENTE', porcentajeMin: 8, porcentajeMax: 12, obligatorio: true },
+        { tipoComponenteCodigo: 'GABINETE', porcentajeMin: 5, porcentajeMax: 10, obligatorio: true },
+      ],
+      necesidades: [],
+    });
+    this.showAsesoriaModal.set(true);
+  }
+
+  protected openEditAsesoria(row: AdminRow): void {
+    this.isEditingAsesoria.set(true);
+    this.asesoriaFormError.set(null);
+    this.loadFamiliasAsesoria();
+
+    const raw = row.rawData || {};
+    this.asesoriaFormData.set({
+      id: row.id,
+      familiaId: raw.familiaId || '',
+      codigo: raw.codigo || row.code,
+      nombre: raw.nombre || row.title,
+      descripcion: raw.descripcion || '',
+      prioridadCpu: raw.prioridadCpu ?? 5,
+      prioridadGpu: raw.prioridadGpu ?? 5,
+      ramMinimaGb: raw.ramMinimaGb ?? 16,
+      requiereGpuDedicada: Boolean(raw.requiereGpuDedicada),
+      presupuestoSugeridoMin: raw.presupuestoSugeridoMin ?? 0,
+      presupuestoSugeridoMax: raw.presupuestoSugeridoMax ?? 0,
+      activo: raw.activo ?? (row.status === 'active'),
+      reglasPresupuesto: (raw.reglasPresupuesto || []).map((r: any) => ({ ...r })),
+      necesidades: (raw.necesidades || []).map((n: any) => ({ ...n })),
+    });
+    this.showAsesoriaModal.set(true);
+  }
+
+  protected closeAsesoriaModal(): void {
+    if (this.isSavingAsesoria()) return;
+    this.showAsesoriaModal.set(false);
+  }
+
+  protected loadFamiliasAsesoria(): void {
+    this.adminService.getFamiliasAsesoria()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: list => {
+          this.familiasAsesoria.set(list || []);
+          if (list.length > 0 && !this.asesoriaFormData().familiaId) {
+            this.asesoriaFormData.update(f => ({ ...f, familiaId: list[0].id }));
+          }
+        },
+        error: () => {}
+      });
+  }
+
+  protected toggleCreateFamilia(): void {
+    this.isCreatingFamilia.update(v => !v);
+    this.familiaError.set(null);
+  }
+
+  protected submitNewFamilia(): void {
+    const nombre = this.newFamiliaNombre().trim();
+    if (!nombre) {
+      this.familiaError.set('Ingresa un nombre para la familia.');
+      return;
+    }
+    const codigo = (this.newFamiliaCodigo().trim() || this.slugify(nombre)).toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    this.savingFamilia.set(true);
+    this.adminService.createFamiliaAsesoria({
+      nombre,
+      codigo,
+      icono: this.newFamiliaIcono(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: created => {
+          this.savingFamilia.set(false);
+          this.familiasAsesoria.update(list => [...list, created]);
+          this.asesoriaFormData.update(f => ({ ...f, familiaId: created.id }));
+          this.isCreatingFamilia.set(false);
+          this.notifications.show(`Familia "${created.nombre}" creada y seleccionada.`, 'success');
+        },
+        error: err => {
+          this.savingFamilia.set(false);
+          this.familiaError.set(err?.error?.message || 'Error al crear la familia.');
+        }
+      });
+  }
+
+  protected addReglaPresupuesto(): void {
+    this.asesoriaFormData.update(f => ({
+      ...f,
+      reglasPresupuesto: [
+        ...f.reglasPresupuesto,
+        { tipoComponenteCodigo: 'OTRO', porcentajeMin: 5, porcentajeMax: 10, obligatorio: false }
+      ]
+    }));
+  }
+
+  protected removeReglaPresupuesto(index: number): void {
+    this.asesoriaFormData.update(f => {
+      const next = [...f.reglasPresupuesto];
+      next.splice(index, 1);
+      return { ...f, reglasPresupuesto: next };
+    });
+  }
+
+  protected addNecesidad(): void {
+    this.asesoriaFormData.update(f => ({
+      ...f,
+      necesidades: [
+        ...f.necesidades,
+        { nombre: '', descripcion: '' }
+      ]
+    }));
+  }
+
+  protected removeNecesidad(index: number): void {
+    this.asesoriaFormData.update(f => {
+      const next = [...f.necesidades];
+      next.splice(index, 1);
+      return { ...f, necesidades: next };
+    });
+  }
+
+  protected submitAsesoriaForm(): void {
+    if (this.isSavingAsesoria()) return;
+    const form = this.asesoriaFormData();
+    if (!form.nombre.trim()) {
+      this.asesoriaFormError.set('El nombre del perfil es obligatorio.');
+      return;
+    }
+    if (!form.familiaId) {
+      this.asesoriaFormError.set('Debes seleccionar o crear una familia de uso.');
+      return;
+    }
+    if (!form.codigo.trim()) {
+      form.codigo = this.slugify(form.nombre).toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    }
+
+    this.isSavingAsesoria.set(true);
+    this.asesoriaFormError.set(null);
+
+    this.adminService.savePerfilAsesoria(form as any)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: res => {
+          this.isSavingAsesoria.set(false);
+          this.showAsesoriaModal.set(false);
+          this.notifications.show(`Perfil "${res.nombre}" guardado correctamente.`, 'success');
+          this.loadItems();
+        },
+        error: err => {
+          this.isSavingAsesoria.set(false);
+          this.asesoriaFormError.set(err?.error?.message || 'Error al guardar el perfil en el servidor.');
+        }
+      });
+  }
+
+  protected publishAsesoria(row: AdminRow): void {
+    if (this.pendingRows().has(row.id)) return;
+    this.pendingRows.update(rows => new Set([...rows, row.id]));
+    this.adminService.publishPerfilAsesoria(row.id)
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
+        this.pendingRows.update(rows => { const next = new Set(rows); next.delete(row.id); return next; });
+      }))
+      .subscribe({
+        next: () => {
+          this.notifications.show(`Perfil activado.`, 'success');
+          this.loadItems();
+        },
+        error: err => this.notifications.show(err?.error?.message || 'Error al activar perfil.', 'error')
+      });
+  }
+
+  protected deactivateAsesoria(row: AdminRow): void {
+    if (this.pendingRows().has(row.id)) return;
+    this.pendingRows.update(rows => new Set([...rows, row.id]));
+    this.adminService.deactivatePerfilAsesoria(row.id)
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
+        this.pendingRows.update(rows => { const next = new Set(rows); next.delete(row.id); return next; });
+      }))
+      .subscribe({
+        next: () => {
+          this.notifications.show(`Perfil desactivado.`, 'info');
+          this.loadItems();
+        },
+        error: err => this.notifications.show(err?.error?.message || 'Error al desactivar perfil.', 'error')
+      });
+  }
+
+  protected deleteAsesoria(row: AdminRow): void {
+    if (this.pendingRows().has(row.id)) return;
+    if (!confirm(`¿Eliminar el perfil "${row.title}" de asesorías?`)) return;
+    this.pendingRows.update(rows => new Set([...rows, row.id]));
+    this.adminService.deletePerfilAsesoria(row.id)
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
+        this.pendingRows.update(rows => { const next = new Set(rows); next.delete(row.id); return next; });
+      }))
+      .subscribe({
+        next: () => {
+          this.notifications.show('Perfil eliminado.', 'success');
+          this.loadItems();
+        },
+        error: err => this.notifications.show(err?.error?.message || 'Error al eliminar perfil.', 'error')
       });
   }
 

@@ -177,3 +177,56 @@ CREATE TABLE IF NOT EXISTS rya.valores_atributo_producto (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS rya.familias_perfil_asesoria (
+  id uuid PRIMARY KEY,
+  codigo varchar(60) NOT NULL UNIQUE,
+  nombre varchar(120) NOT NULL,
+  descripcion text,
+  icono varchar(60) DEFAULT 'tune',
+  posicion integer NOT NULL DEFAULT 0,
+  activo boolean NOT NULL DEFAULT true,
+  is_deleted boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rya.perfiles_asesoria (
+  id uuid PRIMARY KEY,
+  familia_id uuid NOT NULL,
+  codigo varchar(60) NOT NULL UNIQUE,
+  nombre varchar(140) NOT NULL,
+  descripcion text,
+  prioridad_cpu integer NOT NULL DEFAULT 5,
+  prioridad_gpu integer NOT NULL DEFAULT 5,
+  ram_minima_gb integer NOT NULL DEFAULT 8,
+  requiere_gpu_dedicada boolean NOT NULL DEFAULT false,
+  presupuesto_sugerido_min numeric(14,2) DEFAULT 0,
+  presupuesto_sugerido_max numeric(14,2) DEFAULT 0,
+  activo boolean NOT NULL DEFAULT true,
+  is_deleted boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rya.necesidades_perfil (
+  id uuid PRIMARY KEY,
+  perfil_id uuid NOT NULL,
+  codigo varchar(60),
+  nombre varchar(140) NOT NULL,
+  descripcion text,
+  posicion integer NOT NULL DEFAULT 0,
+  activo boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rya.reglas_presupuesto_perfil (
+  id uuid PRIMARY KEY,
+  perfil_id uuid NOT NULL,
+  tipo_componente_codigo varchar(50) NOT NULL,
+  porcentaje_min numeric(5,2) NOT NULL DEFAULT 0,
+  porcentaje_max numeric(5,2) NOT NULL DEFAULT 0,
+  obligatorio boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+

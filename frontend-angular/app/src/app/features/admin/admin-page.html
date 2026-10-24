@@ -68,7 +68,7 @@
             <h1>{{ current.name }}</h1>
             <p class="section-desc">{{ current.description }}</p>
           </div>
-          <button type="button" class="admin-action-btn" (click)="section === 'inventario' ? openStockModal() : openCreateForm()" [disabled]="!design && section !== 'catalogo' && section !== 'inventario'">
+          <button type="button" class="admin-action-btn" (click)="section === 'inventario' ? openStockModal() : openCreateForm()" [disabled]="!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias'">
             <span class="material-symbols-rounded" aria-hidden="true">{{ section === 'inventario' ? 'swap_vert' : 'add' }}</span>
             {{ current.action }}
           </button>
@@ -77,7 +77,7 @@
         @if (!design && section === 'catalogo') {
           <app-product-import (busyChange)="importBusy.set($event)" (saved)="loadItems(); loadStats()" />
         }
-        @if (!design && section !== 'catalogo' && section !== 'inventario') {
+        @if (!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias') {
           <p class="admin-alert" role="status">{{ connected() ? 'Vista de consulta. La edición de esta sección se conectará en su fase respectiva.' : 'Sección pendiente de conexión. No se muestran registros ni se simulan guardados.' }}</p>
         }
         <!-- Alerta de servidor si ocurre error -->
@@ -308,6 +308,38 @@
                               <span class="material-symbols-rounded">delete_outline</span>
                             </button>
                           }
+                        </fieldset>
+                        } @else if (section === 'asesorias') {
+                        <fieldset class="row-actions" [disabled]="pendingRows().has(row.id)">
+                          <button
+                            type="button"
+                            class="row-action-btn"
+                            title="Editar perfil de asesoría"
+                            aria-label="Editar perfil"
+                            (click)="openEditForm(row)"
+                          >
+                            <span class="material-symbols-rounded">edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            class="row-action-btn"
+                            [title]="row.status === 'active' ? 'Desactivar perfil' : 'Activar perfil'"
+                            [attr.aria-label]="row.status === 'active' ? 'Desactivar perfil' : 'Activar perfil'"
+                            (click)="toggleRowStatus(row)"
+                          >
+                            <span class="material-symbols-rounded">
+                              {{ row.status === 'active' ? 'toggle_on' : 'toggle_off' }}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            class="row-action-btn row-action-danger"
+                            title="Eliminar perfil"
+                            aria-label="Eliminar perfil"
+                            (click)="deleteAsesoria(row)"
+                          >
+                            <span class="material-symbols-rounded">delete_outline</span>
+                          </button>
                         </fieldset>
                         } @else if (section === 'inventario') {
                         <fieldset class="row-actions" [disabled]="pendingRows().has(row.id)">
@@ -1036,4 +1068,302 @@
     </div>
   </div>
 }
-</div>
+<!-- ========================================================== -->
+<!-- MODAL DE ASESORÍAS: CREAR / EDITAR PERFIL Y REGLAS         -->
+<!-- ========================================================== -->
+@if (showAsesoriaModal()) {
+  <div class="admin-modal-backdrop" (click)="!isSavingAsesoria() && closeAsesoriaModal()" (keydown.escape)="!isSavingAsesoria() && closeAsesoriaModal()">
+    <div class="admin-modal-card asesoria-modal-card" appDialogFocus (dialogClose)="closeAsesoriaModal()" aria-labelledby="asesoria-form-title" [attr.aria-busy]="isSavingAsesoria()" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">INTELIGENCIA TÉCNICA · ASESORÍAS</p>
+          <h2 id="asesoria-form-title">{{ isEditingAsesoria() ? 'Editar perfil de asesoría' : 'Nuevo perfil de asesoría' }}</h2>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeAsesoriaModal()" [disabled]="isSavingAsesoria()" aria-label="Cerrar ventana">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (asesoriaFormError()) {
+          <div class="admin-alert admin-alert-error" role="alert">
+            <span class="material-symbols-rounded" aria-hidden="true">error_outline</span>
+            <div>
+              <strong>Error en el formulario</strong>
+              <p>{{ asesoriaFormError() }}</p>
+            </div>
+          </div>
+        }
+
+        <form (ngSubmit)="submitAsesoriaForm()" class="modal-form">
+          <fieldset class="admin-form-fields" [disabled]="isSavingAsesoria()">
+            <div class="form-grid">
+              <!-- Nombre -->
+              <label>
+                <span>Nombre del perfil *</span>
+                <input
+                  type="text"
+                  placeholder="Ej. Gaming Competitivo 1080p o Edición 4K"
+                  [ngModel]="asesoriaFormData().nombre"
+                  (ngModelChange)="asesoriaFormData().nombre = $event"
+                  name="asesoriaNombre"
+                  maxlength="140"
+                  required
+                >
+              </label>
+
+              <!-- Código -->
+              <label>
+                <span>Código único (identificador)</span>
+                <input
+                  type="text"
+                  placeholder="Ej. GAMING_ESPORTS o EDICION_4K"
+                  [ngModel]="asesoriaFormData().codigo"
+                  (ngModelChange)="asesoriaFormData().codigo = $event"
+                  name="asesoriaCodigo"
+                  maxlength="60"
+                >
+              </label>
+
+              <!-- Familia de Uso -->
+              <div class="form-field-group">
+                <div class="field-label-row">
+                  <label for="asesoria-familia">Familia de uso *</label>
+                  <button type="button" class="field-quick-add" (click)="toggleCreateFamilia()" [disabled]="savingFamilia()" [attr.aria-expanded]="isCreatingFamilia()">
+                    <span class="material-symbols-rounded">{{ isCreatingFamilia() ? 'close' : 'add' }}</span>
+                    <span>{{ isCreatingFamilia() ? 'Cancelar' : '+ Nueva familia' }}</span>
+                  </button>
+                </div>
+
+                @if (isCreatingFamilia()) {
+                  <div class="inline-creation-box">
+                    <input
+                      type="text"
+                      placeholder="Nombre de familia (ej. Gaming, Oficina)"
+                      aria-label="Nombre de familia nueva"
+                      maxlength="120"
+                      [disabled]="savingFamilia()"
+                      [value]="newFamiliaNombre()"
+                      (input)="newFamiliaNombre.set($any($event.target).value)"
+                    >
+                    <input
+                      type="text"
+                      placeholder="Código (opcional, ej. GAMING)"
+                      aria-label="Código de familia nueva"
+                      maxlength="60"
+                      [disabled]="savingFamilia()"
+                      [value]="newFamiliaCodigo()"
+                      (input)="newFamiliaCodigo.set($any($event.target).value)"
+                    >
+                    @if (familiaError()) { <p role="alert">{{ familiaError() }}</p> }
+                    <button type="button" class="button button-primary" (click)="submitNewFamilia()" [disabled]="savingFamilia()">
+                      {{ savingFamilia() ? 'Guardando familia…' : 'Crear y seleccionar familia' }}
+                    </button>
+                  </div>
+                } @else {
+                  <select id="asesoria-familia" [ngModel]="asesoriaFormData().familiaId" (ngModelChange)="asesoriaFormData().familiaId = $event" name="asesoriaFamiliaId" required>
+                    <option value="">-- Selecciona una familia --</option>
+                    @for (fam of familiasAsesoria(); track fam.id) {
+                      <option [value]="fam.id">{{ fam.nombre }} ({{ fam.codigo }})</option>
+                    }
+                  </select>
+                  @if (!familiasAsesoria().length) {
+                    <p class="notice">No hay familias registradas. Haz clic en "+ Nueva familia" para crear una.</p>
+                  }
+                }
+              </div>
+
+              <!-- Rango de Presupuesto -->
+              <label>
+                <span>Presupuesto sugerido mín (S/)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  [ngModel]="asesoriaFormData().presupuestoSugeridoMin"
+                  (ngModelChange)="asesoriaFormData().presupuestoSugeridoMin = $event"
+                  name="presupuestoMin"
+                >
+              </label>
+
+              <label>
+                <span>Presupuesto sugerido máx (S/)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  [ngModel]="asesoriaFormData().presupuestoSugeridoMax"
+                  (ngModelChange)="asesoriaFormData().presupuestoSugeridoMax = $event"
+                  name="presupuestoMax"
+                >
+              </label>
+
+              <!-- Prioridades de Hardware -->
+              <label>
+                <span>Prioridad CPU (1 = básico, 10 = crítico)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  [ngModel]="asesoriaFormData().prioridadCpu"
+                  (ngModelChange)="asesoriaFormData().prioridadCpu = $event"
+                  name="prioridadCpu"
+                  required
+                >
+              </label>
+
+              <label>
+                <span>Prioridad GPU (1 = básico, 10 = crítico)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  [ngModel]="asesoriaFormData().prioridadGpu"
+                  (ngModelChange)="asesoriaFormData().prioridadGpu = $event"
+                  name="prioridadGpu"
+                  required
+                >
+              </label>
+
+              <!-- RAM mínima y GPU requerida -->
+              <label>
+                <span>RAM mínima sugerida (GB)</span>
+                <input
+                  type="number"
+                  min="4"
+                  max="256"
+                  step="4"
+                  [ngModel]="asesoriaFormData().ramMinimaGb"
+                  (ngModelChange)="asesoriaFormData().ramMinimaGb = $event"
+                  name="ramMinima"
+                  required
+                >
+              </label>
+
+              <label class="form-checkbox-label" style="align-self: center; margin-top: 18px;">
+                <input
+                  type="checkbox"
+                  [ngModel]="asesoriaFormData().requiereGpuDedicada"
+                  (ngModelChange)="asesoriaFormData().requiereGpuDedicada = $event"
+                  name="requiereGpu"
+                >
+                <span>Requiere GPU dedicada obligatoria</span>
+              </label>
+            </div>
+
+            <label class="form-fullwidth" style="margin-top: 14px;">
+              <span>Descripción del perfil de uso</span>
+              <textarea
+                rows="2"
+                placeholder="Explica para qué tipo de usuario o programas está orientado este perfil..."
+                [ngModel]="asesoriaFormData().descripcion"
+                (ngModelChange)="asesoriaFormData().descripcion = $event"
+                name="asesoriaDescripcion"
+              ></textarea>
+            </label>
+
+            <!-- SECCIÓN: REGLAS DE DISTRIBUCIÓN DE PRESUPUESTO -->
+            <div class="form-fullwidth" style="margin-top: 24px; border-top: 1px solid var(--line); padding-top: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                  <strong>Reglas de ponderación de presupuesto</strong>
+                  <p class="notice" style="margin: 4px 0 0;">Define el % del presupuesto total que se destinará a cada tipo de pieza.</p>
+                </div>
+                <button type="button" class="button button-secondary" (click)="addReglaPresupuesto()">
+                  + Agregar regla
+                </button>
+              </div>
+
+              <div style="display: grid; gap: 10px;">
+                @for (regla of asesoriaFormData().reglasPresupuesto; track $index) {
+                  <div style="display: flex; gap: 12px; align-items: center; background: var(--surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line);">
+                    <label style="flex: 2; margin: 0;">
+                      <span style="font-size: 11px;">Componente</span>
+                      <input type="text" [(ngModel)]="regla.tipoComponenteCodigo" [name]="'reglaComp_' + $index" placeholder="CPU, GPU, RAM..." style="text-transform: uppercase;">
+                    </label>
+                    <label style="flex: 1.5; margin: 0;">
+                      <span style="font-size: 11px;">% Mínimo</span>
+                      <input type="number" min="0" max="100" [(ngModel)]="regla.porcentajeMin" [name]="'reglaMin_' + $index">
+                    </label>
+                    <label style="flex: 1.5; margin: 0;">
+                      <span style="font-size: 11px;">% Máximo</span>
+                      <input type="number" min="0" max="100" [(ngModel)]="regla.porcentajeMax" [name]="'reglaMax_' + $index">
+                    </label>
+                    <label style="flex: 1; margin: 0; display: flex; align-items: center; gap: 6px; padding-top: 16px;">
+                      <input type="checkbox" [(ngModel)]="regla.obligatorio" [name]="'reglaOblig_' + $index">
+                      <span style="font-size: 11px;">Obligatorio</span>
+                    </label>
+                    <button type="button" class="row-action-btn row-action-danger" style="margin-top: 16px;" (click)="removeReglaPresupuesto($index)" title="Eliminar regla">
+                      <span class="material-symbols-rounded">delete</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- SECCIÓN: NECESIDADES ESPECÍFICAS -->
+            <div class="form-fullwidth" style="margin-top: 24px; border-top: 1px solid var(--line); padding-top: 18px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                  <strong>Necesidades puntuales (opcionales)</strong>
+                  <p class="notice" style="margin: 4px 0 0;">Opciones secundarias seleccionables por el usuario dentro del asesor.</p>
+                </div>
+                <button type="button" class="button button-secondary" (click)="addNecesidad()">
+                  + Agregar necesidad
+                </button>
+              </div>
+
+              <div style="display: grid; gap: 10px;">
+                @for (nec of asesoriaFormData().necesidades; track $index) {
+                  <div style="display: flex; gap: 12px; align-items: center; background: var(--surface); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--line);">
+                    <label style="flex: 2; margin: 0;">
+                      <span style="font-size: 11px;">Nombre de la necesidad</span>
+                      <input type="text" [(ngModel)]="nec.nombre" [name]="'necNom_' + $index" placeholder="Ej. 144Hz Competitivo, Render V-Ray...">
+                    </label>
+                    <label style="flex: 3; margin: 0;">
+                      <span style="font-size: 11px;">Descripción / Detalle</span>
+                      <input type="text" [(ngModel)]="nec.descripcion" [name]="'necDesc_' + $index" placeholder="Detalle técnico de la necesidad...">
+                    </label>
+                    <button type="button" class="row-action-btn row-action-danger" style="margin-top: 16px;" (click)="removeNecesidad($index)" title="Eliminar necesidad">
+                      <span class="material-symbols-rounded">delete</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- ESTADO ACTIVO -->
+            <div class="form-fullwidth" style="margin-top: 18px;">
+              <label class="form-checkbox-label">
+                <input
+                  type="checkbox"
+                  [ngModel]="asesoriaFormData().activo"
+                  (ngModelChange)="asesoriaFormData().activo = $event"
+                  name="asesoriaActivo"
+                >
+                <span>Perfil activo y disponible para el asesor público</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="modal-footer" style="margin-top: 24px;">
+            <button type="button" class="button button-secondary" (click)="closeAsesoriaModal()" [disabled]="isSavingAsesoria()">
+              Cancelar
+            </button>
+            <button type="submit" class="button button-primary" [disabled]="isSavingAsesoria()">
+              @if (isSavingAsesoria()) {
+                <span class="material-symbols-rounded spin">progress_activity</span>
+                <span>Guardando perfil…</span>
+              } @else {
+                <span class="material-symbols-rounded">check</span>
+                <span>{{ isEditingAsesoria() ? 'Guardar cambios' : 'Crear perfil' }}</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+

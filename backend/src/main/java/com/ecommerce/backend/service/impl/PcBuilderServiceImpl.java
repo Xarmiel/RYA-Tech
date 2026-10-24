@@ -32,6 +32,7 @@ public class PcBuilderServiceImpl implements PcBuilderService {
     private final CompatibilidadCpuPlacaRepository compatibilidadCpuPlacaRepository;
     private final ValorAtributoProductoRepository valorAtributoProductoRepository;
     private final ProductoMapper productoMapper;
+    private final FamiliaPerfilAsesoriaRepository familiaPerfilAsesoriaRepository;
 
     @Override
     public PcBuilderInicialDto obtenerDatosIniciales() {
@@ -54,9 +55,43 @@ public class PcBuilderServiceImpl implements PcBuilderService {
                             .build())
                     .toList();
         }
+
+        List<Map<String, Object>> profileFamilies = familiaPerfilAsesoriaRepository.findByActivoTrueAndIsDeletedFalseOrderByPosicionAsc().stream()
+                .map(f -> {
+                    Map<String, Object> famMap = new LinkedHashMap<>();
+                    famMap.put("id", f.getId().toString());
+                    famMap.put("code", f.getCodigo());
+                    famMap.put("name", f.getNombre());
+                    famMap.put("description", f.getDescripcion());
+                    famMap.put("icon", f.getIcono());
+                    List<Map<String, Object>> perfiles = f.getPerfiles().stream()
+                            .filter(p -> Boolean.TRUE.equals(p.getActivo()) && !Boolean.TRUE.equals(p.getIsDeleted()))
+                            .map(p -> {
+                                Map<String, Object> perfMap = new LinkedHashMap<>();
+                                perfMap.put("id", p.getId().toString());
+                                perfMap.put("code", p.getCodigo());
+                                perfMap.put("name", p.getNombre());
+                                perfMap.put("description", p.getDescripcion());
+                                List<Map<String, Object>> needs = p.getNecesidades().stream()
+                                        .filter(n -> Boolean.TRUE.equals(n.getActivo()))
+                                        .map(n -> Map.<String, Object>of(
+                                                "id", n.getId().toString(),
+                                                "code", n.getCodigo() != null ? n.getCodigo() : n.getId().toString(),
+                                                "name", n.getNombre()
+                                        ))
+                                        .toList();
+                                perfMap.put("needs", needs);
+                                return perfMap;
+                            })
+                            .toList();
+                    famMap.put("profiles", perfiles);
+                    return famMap;
+                })
+                .toList();
+
         return PcBuilderInicialDto.builder()
                 .componentTypes(tipos)
-                .profileFamilies(List.of())
+                .profileFamilies(profileFamilies)
                 .resolutions(List.of())
                 .build();
     }
