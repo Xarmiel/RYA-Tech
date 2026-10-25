@@ -15,7 +15,7 @@
           @if(field.type==='boolean'){
             <select [value]="values[field.key]==null?'':values[field.key]===true?'true':'false'" (change)="setField(field,$event)"><option value="">Desconocido</option><option value="true">Sí</option><option value="false">No</option></select>
           }@else{
-            <input [type]="field.type" [value]="values[field.key]??''" [attr.min]="field.type==='number'?(field.positive?1:0):null" [attr.step]="field.type==='number'?(field.integer?'1':'0.0001'):null" [attr.maxlength]="field.type==='text'?250:null" (input)="setField(field,$event)" placeholder="Sin dato">
+            <input [type]="field.type" [value]="values[field.key]??''" [attr.min]="field.type==='number'?(field.positive?1:0):null" [attr.step]="field.type==='number'?(field.integer?'1':'0.0001'):null" [attr.maxlength]="field.type==='text'?250:null" (input)="setField(field,$event)" [placeholder]="placeholder(field)">
           }
         </label>
       }

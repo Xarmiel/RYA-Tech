@@ -6,6 +6,11 @@ export interface ImportProduct {
   errors: string[]; warnings: string[];
   fichaTecnica?: ProductTechnicalFicha;
   accion?: 'crear'|'actualizar-ficha'|'agregar-imagenes';
+  slug?: string;
+  costoReferencia?: number;
+  estado?: string;
+  requiereSerie?: boolean;
+  requiereEnvio?: boolean;
 }
 
 export const importKey = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -64,8 +69,14 @@ export function parseProducts(source: string, format: 'json' | 'csv'): ImportPro
     const imagenes = Array.isArray(rawImages) ? rawImages.map((image: any) => text(typeof image === 'string' ? image : image?.url)) : [];
     const product = {
       nombre: text(item.nombre), sku: text(item.skuPropuesto ?? item.sku),
+      slug: text(item.slug),
       marca: text(item.marca), categoria: text(item.categoriaPropuesta ?? item.categoria), mpn: text(item.mpn),
-      precio: number(item.precioDemoPEN ?? item.precio), stockInicial: number(item.stockInicialDemo ?? item.stockInicial ?? item.stock),
+      precio: number(item.precioDemoPEN ?? item.precio),
+      costoReferencia: Number.isFinite(number(item.costoReferencia)) ? number(item.costoReferencia) : undefined,
+      stockInicial: number(item.stockInicialDemo ?? item.stockInicial ?? item.stock),
+      estado: typeof item.estado === 'string' && item.estado.trim() ? item.estado.trim() : undefined,
+      requiereSerie: typeof item.requiereSerie === 'boolean' ? item.requiereSerie : undefined,
+      requiereEnvio: typeof item.requiereEnvio === 'boolean' ? item.requiereEnvio : undefined,
       descripcion: text(item.descripcion), imagenes, errors, warnings,
       accion:item.accion==='actualizar-ficha'?'actualizar-ficha' as const:item.accion==='agregar-imagenes'?'agregar-imagenes' as const:'crear' as const,
     };

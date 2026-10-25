@@ -133,8 +133,13 @@ export class ProductImport {
             :p.accion==='agregar-imagenes'?this.api.addProductImages(row.targetId!,p.sku,p.imagenes)
             :this.api.saveItem('catalogo', {
             nombre: p.nombre, sku: p.sku, descripcion: p.descripcion,
-            precio: p.precio, stockInicial: p.stockInicial, categoriaId: row.categoriaId, marcaId: row.marcaId,
-            estado: 'draft', requiereEnvio: true,
+            slug: p.slug || undefined,
+            precio: p.precio, stockInicial: p.stockInicial,
+            costoReferencia: p.costoReferencia,
+            categoriaId: row.categoriaId, marcaId: row.marcaId,
+            estado: p.estado || 'draft',
+            requiereSerie: p.requiereSerie ?? false,
+            requiereEnvio: p.requiereEnvio ?? true,
             ...(p.fichaTecnica?{fichaTecnica:p.fichaTecnica}:{}),
             imagenes: p.imagenes.map((url, posicion) => ({url, textoAlternativo: `${p.nombre} — imagen ${posicion + 1}`, posicion, principal: posicion === 0})),
           }, false)).pipe(timeout(45000)));

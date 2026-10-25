@@ -1,0 +1,248 @@
+[
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Procesadores (tipo: cpu). Campos obligatorios: nombre, sku, slug, categoria, marca, precio, stockInicial, estado, requiereSerie, requiereEnvio.",
+    "nombre": "AMD Ryzen 7 7800X3D (4.2GHz / 5.0GHz, 8 Núcleos, 16 Hilos)",
+    "sku": "AMD-RYZEN-7-7800X3D",
+    "slug": "amd-ryzen-7-7800x3d",
+    "categoria": "Procesadores",
+    "marca": "AMD",
+    "precio": 1849.00,
+    "costoReferencia": 1580.00,
+    "stockInicial": 12,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Descripción detallada del procesador, arquitectura, tecnologías integradas y soporte de memoria.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "cpu",
+      "fuenteUrl": "https://www.amd.com/es/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7800x3d.html",
+      "valores": {
+        "socket": "AM5",
+        "generacion": "Ryzen 7000",
+        "cores": 8,
+        "threads": 16,
+        "base_mhz": 4200,
+        "boost_mhz": 5000,
+        "l3_mb": 96,
+        "tdp_w": 120,
+        "base_w": 120,
+        "max_w": 162,
+        "power_notes": "PPT máximo de 162W según especificación oficial de AMD",
+        "igpu": true,
+        "memory_type": "DDR5",
+        "cooler_included": false
+      }
+    }
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Placas Madre (tipo: board).",
+    "nombre": "ASUS ROG STRIX B650-A GAMING WIFI",
+    "sku": "ASUS-ROG-STRIX-B650-A-WIFI",
+    "slug": "asus-rog-strix-b650-a-gaming-wifi",
+    "categoria": "Placas Madre",
+    "marca": "ASUS ROG",
+    "precio": 1099.00,
+    "costoReferencia": 910.00,
+    "stockInicial": 8,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Placa madre para procesadores de escritorio con soporte para alta conectividad, puertos M.2 y red de alta velocidad.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "board",
+      "fuenteUrl": "https://rog.asus.com/motherboards/rog-strix/rog-strix-b650-a-gaming-wifi-model/",
+      "valores": {
+        "socket": "AM5",
+        "chipset": "AMD B650",
+        "form_factor": "ATX",
+        "memory_type": "DDR5",
+        "memory_slots": 4,
+        "memory_max_gb": 192,
+        "power_connectors": "1x 24-pin ATX, 1x 8-pin + 1x 4-pin EPS 12V",
+        "pcie": "1x PCIe 4.0 x16 (x16), 1x PCIe 4.0 x16 (x4), 2x PCIe 4.0/3.0 x1",
+        "storage_interfaces": "3x M.2 (1x PCIe 5.0 x4, 2x PCIe 4.0 x4), 4x SATA 6Gb/s",
+        "m2_pcie_version": "PCIe 5.0 x4 / PCIe 4.0 x4",
+        "revision": "Rev 1.0",
+        "estimated_w": 55,
+        "m2_slots": 3,
+        "sata_ports": 4,
+        "wifi": true,
+        "bluetooth": true,
+        "ethernet_mbps": 2500,
+        "memory_oc_mts": 7600
+      }
+    }
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Memorias RAM (tipo: ram).",
+    "nombre": "Corsair Vengeance RGB DDR5 32GB (2x16GB) 6000MHz CL30",
+    "sku": "CORSAIR-VEN-RGB-32GB-6000-CL30",
+    "slug": "corsair-vengeance-rgb-ddr5-32gb-2x16gb-6000mhz-cl30",
+    "categoria": "Memorias RAM",
+    "marca": "Corsair",
+    "precio": 549.00,
+    "costoReferencia": 450.00,
+    "stockInicial": 20,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Kit de memoria RAM de alto rendimiento con disipador de calor y compatibilidad con perfiles de overclock.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1541029071515-84cc54f84dc5?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "ram",
+      "fuenteUrl": "https://www.corsair.com/es/es/p/memory/cmh32gx5m2b6000z30k/",
+      "valores": {
+        "memory_type": "DDR5",
+        "form_factor": "DIMM 288-pin",
+        "capacity_gb": 32,
+        "modules": 2,
+        "speed_mts": 6000,
+        "spd_mts": 4800,
+        "cas": 30,
+        "voltage_v": 1.40,
+        "profiles": "AMD EXPO / Intel XMP 3.0",
+        "height_mm": 44,
+        "power_w": 6.0
+      }
+    }
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Almacenamiento (tipo: storage).",
+    "nombre": "Samsung 990 PRO 1TB M.2 PCIe 4.0 NVMe SSD",
+    "sku": "SAMSUNG-990-PRO-1TB",
+    "slug": "samsung-990-pro-1tb-m2-nvme-ssd",
+    "categoria": "Almacenamiento",
+    "marca": "Samsung",
+    "precio": 489.00,
+    "costoReferencia": 395.00,
+    "stockInicial": 25,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Unidad de estado sólido de alta velocidad en formato M.2 2280 con interfaz NVMe para tiempos de carga inmediatos.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "storage",
+      "fuenteUrl": "https://www.samsung.com/es/memory-storage/nvme-ssd/990-pro-1tb-nvme-pcie-4-0-m-2-ssd-mz-v9p1t0bw/",
+      "valores": {
+        "drive_type": "SSD",
+        "capacity_gb": 1000,
+        "interface": "PCIe 4.0 x4, NVMe 2.0",
+        "form_factor": "M.2 2280",
+        "m2_key": "M Key",
+        "read_mbs": 7450,
+        "write_mbs": 6900,
+        "power_w": 5.5
+      }
+    }
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Tarjetas Gráficas (tipo: gpu).",
+    "nombre": "ASUS TUF Gaming GeForce RTX 4070 Ti SUPER 16GB GDDR6X",
+    "sku": "ASUS-TUF-RTX4070TI-SUPER-16G",
+    "slug": "asus-tuf-gaming-geforce-rtx-4070-ti-super-16gb",
+    "categoria": "Tarjetas Gráficas",
+    "marca": "ASUS TUF",
+    "precio": 3999.00,
+    "costoReferencia": 3450.00,
+    "stockInicial": 6,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Tarjeta gráfica de alto rendimiento para gaming y renderizado profesional con soporte para trazado de rayos y DLSS.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "gpu",
+      "fuenteUrl": "https://www.asus.com/motherboards-components/graphics-cards/tuf-gaming/tuf-rtx4070tis-16g-gaming/",
+      "valores": {
+        "interface": "PCIe 4.0 x16",
+        "vram_gb": 16,
+        "memory_type": "GDDR6X",
+        "length_mm": 305,
+        "height_mm": 138,
+        "thickness_mm": 65,
+        "slots": 3.25,
+        "board_w": 285,
+        "power_notes": "TGP oficial de 285W con carga completa",
+        "recommended_psu_w": 750,
+        "power_connectors": "1x 16-pin 12VHPWR",
+        "video_outputs": "2x HDMI 2.1a, 3x DisplayPort 1.4a"
+      }
+    }
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Fuentes de Poder (tipo: psu).",
+    "nombre": "Corsair RM750e 750W 80 Plus Gold ATX 3.0 Full Modular",
+    "sku": "CORSAIR-RM750E-750W-GOLD",
+    "slug": "corsair-rm750e-750w-80-plus-gold-modular",
+    "categoria": "Fuentes de Poder",
+    "marca": "Corsair",
+    "precio": 499.00,
+    "costoReferencia": 410.00,
+    "stockInicial": 16,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Fuente de alimentación modular con alta eficiencia energética certificada y estándar moderno para componentes de última generación.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1587202372616-b43abea06c2a?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "psu",
+      "fuenteUrl": "https://www.corsair.com/es/es/p/psu/cp-9020262-eu/rme-series-rm750e-fully-modular-low-noise-atx-power-supply-cp-9020262-eu",
+      "valores": {
+        "continuous_w": 750,
+        "form_factor": "ATX",
+        "atx_version": "ATX 3.0 / PCIe 5.0",
+        "efficiency": "80 Plus Gold",
+        "modularity": "Full Modular",
+        "connectors": "1x 24-pin ATX, 2x 8-pin EPS, 1x 16-pin 12VHPWR, 3x 8-pin PCIe, 7x SATA",
+        "length_mm": 140
+      }
+    }
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA CATEGORÍA: Gabinetes (tipo: case).",
+    "nombre": "NZXT H5 Flow Black Mid-Tower con Panel Frontal Perforado",
+    "sku": "NZXT-H5-FLOW-BLACK",
+    "slug": "nzxt-h5-flow-black-mid-tower",
+    "categoria": "Gabinetes",
+    "marca": "NZXT",
+    "precio": 389.00,
+    "costoReferencia": 310.00,
+    "stockInicial": 14,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Chasis de computadora diseñado para flujo de aire eficiente, gestión limpia de cables y compatibilidad con disipadores y gráficas grandes.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80"
+    ],
+    "fichaTecnica": {
+      "tipo": "case",
+      "fuenteUrl": "https://nzxt.com/es-ES/product/h5-flow",
+      "valores": {
+        "form_factor": "ATX, Micro-ATX, Mini-ITX",
+        "height_mm": 464,
+        "length_mm": 446,
+        "width_mm": 227,
+        "psu_max_length_mm": 185,
+        "gpu_max_length_mm": 365,
+        "cooler_max_height_mm": 165,
+        "max_fans": 6
+      }
+    }
+  }
+]

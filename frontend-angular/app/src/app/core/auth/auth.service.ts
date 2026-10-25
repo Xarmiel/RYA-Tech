@@ -66,6 +66,9 @@ export class AuthService {
       },
     });
     if (error) throw error;
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw new Error('User already registered');
+    }
     this.acceptSession(data.session);
     return !!data.session;
   }
@@ -88,5 +91,44 @@ export class AuthService {
     this.acceptSession(null);
   }
 
-  accessToken(): string | null { return this.session()?.access_token ?? null; }
+  accessToken(): string | null {
+    const memToken = this.session()?.access_token;
+    if (memToken) return memToken;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Direct check for standard Supabase project key
+        const projectKey = `sb-rasudbiaxwyoojxxdutz-auth-token`;
+        const directRaw = localStorage.getItem(projectKey);
+        if (directRaw) {
+          try {
+            const parsed = JSON.parse(directRaw);
+            if (parsed?.access_token) return parsed.access_token;
+            if (parsed?.currentSession?.access_token) return parsed.currentSession.access_token;
+          } catch {
+            // ignore
+          }
+        }
+
+        // Generic fallback scan
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('auth-token') || key.startsWith('sb-') || key.includes('supabase.auth'))) {
+            const raw = localStorage.getItem(key);
+            if (raw && raw.includes('access_token')) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (parsed?.access_token) return parsed.access_token;
+                if (parsed?.currentSession?.access_token) return parsed.currentSession.access_token;
+              } catch {
+                // not json
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore localStorage read errors
+    }
+    return null;
+  }
 }

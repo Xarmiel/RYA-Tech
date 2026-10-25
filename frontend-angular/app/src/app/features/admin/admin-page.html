@@ -53,12 +53,12 @@
 
       <!-- CASO 1: CARGA TÉCNICA RESERVADA -->
       @if (section === 'carga-tecnica') {
-        <app-technical-editor [isDesignMode]="design" />
+        <app-technical-editor [isDesignMode]="design"></app-technical-editor>
       }
 
       @else if (section === 'referencias' && !design) {
         <h1>Marcas y categorías</h1>
-        <app-catalog-references (busyChange)="importBusy.set($event)" (changed)="loadMetadata(); loadStats()" />
+        <app-catalog-references (busyChange)="importBusy.set($event)" (changed)="loadMetadata(); loadStats()"></app-catalog-references>
       }
       <!-- CASO 2: MÓDULO ADMINISTRATIVO SELECCIONADO -->
       @else if (current) {
@@ -75,7 +75,7 @@
         </div>
 
         @if (!design && section === 'catalogo') {
-          <app-product-import (busyChange)="importBusy.set($event)" (saved)="loadItems(); loadStats()" />
+          <app-product-import (busyChange)="importBusy.set($event)" (saved)="loadItems(); loadStats()"></app-product-import>
         }
         @if (!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias') {
           <p class="admin-alert" role="status">{{ connected() ? 'Vista de consulta. La edición de esta sección se conectará en su fase respectiva.' : 'Sección pendiente de conexión. No se muestran registros ni se simulan guardados.' }}</p>
@@ -695,7 +695,7 @@
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0.00"
+                placeholder="Ej. 1499.00"
                 [(ngModel)]="formData().precio"
                 name="precio"
                 required
@@ -708,7 +708,7 @@
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0.00"
+                placeholder="Ej. 1200.00"
                 [(ngModel)]="formData().costoReferencia"
                 name="costoReferencia"
               >
@@ -730,7 +730,7 @@
                   type="number"
                   min="0"
                   step="1"
-                  placeholder="0"
+                  placeholder="Ej. 10"
                   [(ngModel)]="formData().stockInicial"
                   name="stockInicial"
                 >
@@ -751,7 +751,7 @@
           </div>
           <p class="notice">{{ design ? 'Los estados son una demostración local.' : 'No publicado no significa revisado ni compatible. La ficha comercial no reemplaza la revisión técnica del configurador.' }}</p>
 
-          <div class="form-fullwidth"><app-product-technical-form [schema]="technicalSchema()" [value]="formData().fichaTecnica??null" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" (valueChange)="setTechnical($event)" /></div>
+          <div class="form-fullwidth"><app-product-technical-form [schema]="technicalSchema()" [value]="formData().fichaTecnica??null" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" (valueChange)="setTechnical($event)"></app-product-technical-form></div>
 
           <label class="form-fullwidth">
             <span>Descripción comercial</span>
@@ -764,7 +764,7 @@
           </label>
 
           <div class="form-fullwidth product-media-wrapper">
-            <app-product-media [isDesignMode]="design" />
+            <app-product-media [isDesignMode]="design"></app-product-media>
           </div>
 
           </fieldset>
@@ -1365,5 +1365,6 @@
     </div>
   </div>
 }
+</div>
 
 

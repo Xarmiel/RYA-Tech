@@ -51,13 +51,20 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
             .authorizeHttpRequests(auth -> auth
+                // Preflight CORS siempre permitido
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 // Documentación Swagger / OpenAPI
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/admin/acceso").authenticated()
                 .requestMatchers("/api/v1/admin/**").access((authentication, context) -> {
                     var principal = authentication.get();
-                    boolean allowed = principal instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken token
-                            && AdminPermissions.allowed(token.getToken());
+                    if (!(principal instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken token)) {
+                        org.slf4j.LoggerFactory.getLogger(SecurityConfig.class).warn(
+                                "[ADMIN-SECURITY] Principal is not JwtAuthenticationToken: {}",
+                                principal != null ? principal.getClass().getName() : "null");
+                        return new org.springframework.security.authorization.AuthorizationDecision(false);
+                    }
+                    boolean allowed = AdminPermissions.allowed(token.getToken());
                     return new org.springframework.security.authorization.AuthorizationDecision(allowed);
                 })
                 .requestMatchers("/api/v1/cuenta/**", "/api/v1/pedidos/**", "/api/v1/favoritos/**",
@@ -87,11 +94,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-        configuration.setAllowedOriginPatterns(origins);
+        java.util.Set<String> origins = new java.util.LinkedHashSet<>(
+                Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .toList()
+        );
+        origins.add("http://localhost:*");
+        origins.add("http://*.localhost:*");
+        origins.add("http://127.0.0.1:*");
+        configuration.setAllowedOriginPatterns(new java.util.ArrayList<>(origins));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization", "Content-Disposition", "X-Total-Count"));
