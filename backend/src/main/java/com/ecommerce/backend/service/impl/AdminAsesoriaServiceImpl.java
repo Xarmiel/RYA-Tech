@@ -93,11 +93,14 @@ public class AdminAsesoriaServiceImpl implements AdminAsesoriaService {
 
         if (dto.getReglasPresupuesto() != null) {
             for (var r : dto.getReglasPresupuesto()) {
+                BigDecimal min = r.getPorcentajeMin() != null ? r.getPorcentajeMin() : defaultMinParaPrioridad(r.getPrioridad());
+                BigDecimal max = r.getPorcentajeMax() != null ? r.getPorcentajeMax() : defaultMaxParaPrioridad(r.getPrioridad());
                 perfil.getReglasPresupuesto().add(ReglaPresupuestoPerfil.builder()
                         .perfil(perfil)
                         .tipoComponenteCodigo(r.getTipoComponenteCodigo().trim().toUpperCase())
-                        .porcentajeMin(r.getPorcentajeMin() != null ? r.getPorcentajeMin() : BigDecimal.ZERO)
-                        .porcentajeMax(r.getPorcentajeMax() != null ? r.getPorcentajeMax() : BigDecimal.ZERO)
+                        .prioridad(r.getPrioridad())
+                        .porcentajeMin(min)
+                        .porcentajeMax(max)
                         .obligatorio(r.getObligatorio() == null || r.getObligatorio())
                         .build());
             }
@@ -155,11 +158,14 @@ public class AdminAsesoriaServiceImpl implements AdminAsesoriaService {
         if (dto.getReglasPresupuesto() != null) {
             perfil.getReglasPresupuesto().clear();
             for (var r : dto.getReglasPresupuesto()) {
+                BigDecimal min = r.getPorcentajeMin() != null ? r.getPorcentajeMin() : defaultMinParaPrioridad(r.getPrioridad());
+                BigDecimal max = r.getPorcentajeMax() != null ? r.getPorcentajeMax() : defaultMaxParaPrioridad(r.getPrioridad());
                 perfil.getReglasPresupuesto().add(ReglaPresupuestoPerfil.builder()
                         .perfil(perfil)
                         .tipoComponenteCodigo(r.getTipoComponenteCodigo().trim().toUpperCase())
-                        .porcentajeMin(r.getPorcentajeMin() != null ? r.getPorcentajeMin() : BigDecimal.ZERO)
-                        .porcentajeMax(r.getPorcentajeMax() != null ? r.getPorcentajeMax() : BigDecimal.ZERO)
+                        .prioridad(r.getPrioridad())
+                        .porcentajeMin(min)
+                        .porcentajeMax(max)
                         .obligatorio(r.getObligatorio() == null || r.getObligatorio())
                         .build());
             }
@@ -271,6 +277,7 @@ public class AdminAsesoriaServiceImpl implements AdminAsesoriaService {
                         .map(r -> PerfilAsesoriaDto.ReglaPresupuestoDto.builder()
                                 .id(r.getId())
                                 .tipoComponenteCodigo(r.getTipoComponenteCodigo())
+                                .prioridad(r.getPrioridad())
                                 .porcentajeMin(r.getPorcentajeMin())
                                 .porcentajeMax(r.getPorcentajeMax())
                                 .obligatorio(r.getObligatorio())
@@ -285,5 +292,31 @@ public class AdminAsesoriaServiceImpl implements AdminAsesoriaService {
                                 .build())
                         .toList() : List.of())
                 .build();
+    }
+
+    private BigDecimal defaultMinParaPrioridad(Integer prioridad) {
+        if (prioridad == null) return BigDecimal.ZERO;
+        return switch (prioridad) {
+            case 1 -> new BigDecimal("35.00");
+            case 2 -> new BigDecimal("20.00");
+            case 3 -> new BigDecimal("12.00");
+            case 4 -> new BigDecimal("10.00");
+            case 5 -> new BigDecimal("8.00");
+            case 6 -> new BigDecimal("5.00");
+            default -> BigDecimal.ZERO;
+        };
+    }
+
+    private BigDecimal defaultMaxParaPrioridad(Integer prioridad) {
+        if (prioridad == null) return BigDecimal.ZERO;
+        return switch (prioridad) {
+            case 1 -> new BigDecimal("45.00");
+            case 2 -> new BigDecimal("30.00");
+            case 3 -> new BigDecimal("18.00");
+            case 4 -> new BigDecimal("15.00");
+            case 5 -> new BigDecimal("12.00");
+            case 6 -> new BigDecimal("10.00");
+            default -> BigDecimal.ZERO;
+        };
     }
 }

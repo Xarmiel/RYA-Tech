@@ -68,6 +68,7 @@ public class PerfilAsesoriaDto {
         private UUID id;
         @NotBlank(message = "El código de componente es requerido")
         private String tipoComponenteCodigo;
+        private Integer prioridad;
         private BigDecimal porcentajeMin;
         private BigDecimal porcentajeMax;
         @Builder.Default

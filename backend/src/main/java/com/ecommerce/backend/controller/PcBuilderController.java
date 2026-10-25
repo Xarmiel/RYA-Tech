@@ -8,6 +8,8 @@ import com.ecommerce.backend.dto.ConfiguracionPcDto;
 import com.ecommerce.backend.dto.CrearConfiguracionRequestDto;
 import com.ecommerce.backend.dto.PcBuilderInicialDto;
 import com.ecommerce.backend.dto.ProductoResumenDto;
+import com.ecommerce.backend.dto.RecomendarPcRequestDto;
+import com.ecommerce.backend.dto.RecomendarPcResponseDto;
 import com.ecommerce.backend.dto.ValidarCambioRequestDto;
 import com.ecommerce.backend.dto.ValidarCambioResponseDto;
 import com.ecommerce.backend.service.PcBuilderService;
@@ -66,6 +68,15 @@ public class PcBuilderController {
             @Valid @RequestBody CalcularConfiguracionRequestDto request
     ) {
         return ResponseEntity.ok(pcBuilderService.calcularConfiguracion(request));
+    }
+
+    @PostMapping("/recomendar")
+    @Operation(summary = "Recomendar configuración de PC por perfil y presupuesto (Modo 1)",
+            description = "Genera un ensamble de componentes 100% compatibles ajustados al perfil de uso y presupuesto ingresado, utilizando productos reales y vendibles del catálogo.")
+    public ResponseEntity<RecomendarPcResponseDto> recomendar(
+            @Valid @RequestBody RecomendarPcRequestDto request
+    ) {
+        return ResponseEntity.ok(pcBuilderService.recomendarConfiguracion(request));
     }
 
     @PostMapping("/configuraciones")

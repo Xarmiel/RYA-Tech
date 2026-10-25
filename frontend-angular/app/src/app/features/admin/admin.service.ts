@@ -98,8 +98,9 @@ export interface MovimientoInventario {
 export interface ReglaPresupuestoItem {
   id?: string;
   tipoComponenteCodigo: string;
-  porcentajeMin: number;
-  porcentajeMax: number;
+  prioridad?: number;
+  porcentajeMin?: number;
+  porcentajeMax?: number;
   obligatorio?: boolean;
 }
 

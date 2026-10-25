@@ -16,4 +16,6 @@ public interface PcBuilderService {
     ValidarCambioResponseDto validarCambio(ValidarCambioRequestDto request);
 
     CalcularConfiguracionResponseDto calcularConfiguracion(CalcularConfiguracionRequestDto request);
+
+    RecomendarPcResponseDto recomendarConfiguracion(RecomendarPcRequestDto request);
 }

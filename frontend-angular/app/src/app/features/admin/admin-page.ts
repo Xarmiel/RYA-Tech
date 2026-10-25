@@ -173,8 +173,9 @@ export class AdminPage implements OnInit {
     reglasPresupuesto: Array<{
       id?: string;
       tipoComponenteCodigo: string;
-      porcentajeMin: number;
-      porcentajeMax: number;
+      prioridad: number;
+      porcentajeMin?: number;
+      porcentajeMax?: number;
       obligatorio: boolean;
     }>;
     necesidades: Array<{
@@ -966,16 +967,44 @@ export class AdminPage implements OnInit {
       presupuestoSugeridoMax: 6000,
       activo: true,
       reglasPresupuesto: [
-        { tipoComponenteCodigo: 'CPU', porcentajeMin: 20, porcentajeMax: 30, obligatorio: true },
-        { tipoComponenteCodigo: 'GPU', porcentajeMin: 35, porcentajeMax: 45, obligatorio: false },
-        { tipoComponenteCodigo: 'RAM', porcentajeMin: 10, porcentajeMax: 15, obligatorio: true },
-        { tipoComponenteCodigo: 'PLACA', porcentajeMin: 12, porcentajeMax: 18, obligatorio: true },
-        { tipoComponenteCodigo: 'FUENTE', porcentajeMin: 8, porcentajeMax: 12, obligatorio: true },
-        { tipoComponenteCodigo: 'GABINETE', porcentajeMin: 5, porcentajeMax: 10, obligatorio: true },
+        { tipoComponenteCodigo: 'CPU', prioridad: 1, obligatorio: true },
+        { tipoComponenteCodigo: 'GPU', prioridad: 2, obligatorio: false },
+        { tipoComponenteCodigo: 'RAM', prioridad: 3, obligatorio: true },
+        { tipoComponenteCodigo: 'PLACA', prioridad: 4, obligatorio: true },
+        { tipoComponenteCodigo: 'FUENTE', prioridad: 5, obligatorio: true },
+        { tipoComponenteCodigo: 'GABINETE', prioridad: 6, obligatorio: true },
       ],
       necesidades: [],
     });
     this.showAsesoriaModal.set(true);
+  }
+
+  protected readonly prioridadesDisponibles = [1, 2, 3, 4, 5, 6];
+
+  protected isPrioridadOcupada(prioridad: number, currentIndex: number): boolean {
+    const reglas = this.asesoriaFormData().reglasPresupuesto || [];
+    return reglas.some((r, idx) => idx !== currentIndex && Number(r.prioridad) === Number(prioridad));
+  }
+
+  protected getPrioridadTexto(p: number): string {
+    switch (p) {
+      case 1: return '(Máxima importancia)';
+      case 2: return '(Alta importancia)';
+      case 3: return '(Media-Alta)';
+      case 4: return '(Media)';
+      case 5: return '(Moderada)';
+      case 6: return '(Básica)';
+      default: return '';
+    }
+  }
+
+  protected getSiguientePrioridadLibre(): number {
+    const reglas = this.asesoriaFormData().reglasPresupuesto || [];
+    const ocupadas = new Set(reglas.map(r => Number(r.prioridad)));
+    for (const p of this.prioridadesDisponibles) {
+      if (!ocupadas.has(p)) return p;
+    }
+    return 6;
   }
 
   protected openEditAsesoria(row: AdminRow): void {
@@ -997,7 +1026,10 @@ export class AdminPage implements OnInit {
       presupuestoSugeridoMin: raw.presupuestoSugeridoMin ?? 0,
       presupuestoSugeridoMax: raw.presupuestoSugeridoMax ?? 0,
       activo: raw.activo ?? (row.status === 'active'),
-      reglasPresupuesto: (raw.reglasPresupuesto || []).map((r: any) => ({ ...r })),
+      reglasPresupuesto: (raw.reglasPresupuesto || []).map((r: any, idx: number) => ({
+        ...r,
+        prioridad: r.prioridad != null ? Number(r.prioridad) : (idx + 1)
+      })),
       necesidades: (raw.necesidades || []).map((n: any) => ({ ...n })),
     });
     this.showAsesoriaModal.set(true);
@@ -1056,11 +1088,16 @@ export class AdminPage implements OnInit {
   }
 
   protected addReglaPresupuesto(): void {
+    if (this.asesoriaFormData().reglasPresupuesto.length >= 6) {
+      this.notifications.show('Solo se pueden configurar hasta 6 componentes (prioridades del 1 al 6).', 'info');
+      return;
+    }
+    const prio = this.getSiguientePrioridadLibre();
     this.asesoriaFormData.update(f => ({
       ...f,
       reglasPresupuesto: [
         ...f.reglasPresupuesto,
-        { tipoComponenteCodigo: 'OTRO', porcentajeMin: 5, porcentajeMax: 10, obligatorio: false }
+        { tipoComponenteCodigo: 'OTRO', prioridad: prio, obligatorio: false }
       ]
     }));
   }
@@ -1104,6 +1141,20 @@ export class AdminPage implements OnInit {
     }
     if (!form.codigo.trim()) {
       form.codigo = this.slugify(form.nombre).toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    }
+
+    // Validar que no se repitan niveles de prioridad entre componentes (1-6)
+    if (form.reglasPresupuesto && form.reglasPresupuesto.length > 0) {
+      const prioridades = form.reglasPresupuesto.map(r => Number(r.prioridad));
+      const unicas = new Set(prioridades);
+      if (unicas.size !== prioridades.length) {
+        this.asesoriaFormError.set('No se puede aplicar el mismo nivel de prioridad a dos componentes.');
+        return;
+      }
+      if (prioridades.some(p => !p || p < 1 || p > 6)) {
+        this.asesoriaFormError.set('Cada componente debe tener asignado un nivel de prioridad entre 1 y 6.');
+        return;
+      }
     }
 
     this.isSavingAsesoria.set(true);

@@ -1267,7 +1267,7 @@
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div>
                   <strong>Reglas de ponderación de presupuesto</strong>
-                  <p class="notice" style="margin: 4px 0 0;">Define el % del presupuesto total que se destinará a cada tipo de pieza.</p>
+                  <p class="notice" style="margin: 4px 0 0;">Asigna un nivel de prioridad del 1 al 6 para cada componente. No se puede repetir la misma prioridad en dos componentes.</p>
                 </div>
                 <button type="button" class="button button-secondary" (click)="addReglaPresupuesto()">
                   + Agregar regla
@@ -1281,13 +1281,15 @@
                       <span style="font-size: 11px;">Componente</span>
                       <input type="text" [(ngModel)]="regla.tipoComponenteCodigo" [name]="'reglaComp_' + $index" placeholder="CPU, GPU, RAM..." style="text-transform: uppercase;">
                     </label>
-                    <label style="flex: 1.5; margin: 0;">
-                      <span style="font-size: 11px;">% Mínimo</span>
-                      <input type="number" min="0" max="100" [(ngModel)]="regla.porcentajeMin" [name]="'reglaMin_' + $index">
-                    </label>
-                    <label style="flex: 1.5; margin: 0;">
-                      <span style="font-size: 11px;">% Máximo</span>
-                      <input type="number" min="0" max="100" [(ngModel)]="regla.porcentajeMax" [name]="'reglaMax_' + $index">
+                    <label style="flex: 2.5; margin: 0;">
+                      <span style="font-size: 11px;">Nivel de prioridad (1-6)</span>
+                      <select [(ngModel)]="regla.prioridad" [name]="'reglaPrio_' + $index" class="form-select" style="padding: 7px 10px; width: 100%;">
+                        @for (p of prioridadesDisponibles; track p) {
+                          <option [ngValue]="p" [disabled]="isPrioridadOcupada(p, $index)">
+                            Prioridad {{ p }} {{ getPrioridadTexto(p) }}
+                          </option>
+                        }
+                      </select>
                     </label>
                     <label style="flex: 1; margin: 0; display: flex; align-items: center; gap: 6px; padding-top: 16px;">
                       <input type="checkbox" [(ngModel)]="regla.obligatorio" [name]="'reglaOblig_' + $index">

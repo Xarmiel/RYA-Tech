@@ -28,11 +28,14 @@ public class ReglaPresupuestoPerfil {
     @Column(name = "tipo_componente_codigo", nullable = false, length = 50)
     private String tipoComponenteCodigo;
 
-    @Column(name = "porcentaje_min", nullable = false, precision = 5, scale = 2)
+    @Column(name = "prioridad")
+    private Integer prioridad;
+
+    @Column(name = "porcentaje_min", precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal porcentajeMin = BigDecimal.ZERO;
 
-    @Column(name = "porcentaje_max", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porcentaje_max", precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal porcentajeMax = BigDecimal.ZERO;
 
