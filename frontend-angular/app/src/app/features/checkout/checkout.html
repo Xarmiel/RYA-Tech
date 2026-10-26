@@ -31,8 +31,55 @@
             </div>
           }
           @case (4) {
-            @if (validation(); as result) { <div class="step-content confirmation"><div class="validation-icon"><span class="material-symbols-rounded">task_alt</span></div><div class="step-title centered"><div><p class="eyebrow">VALIDACIÓN COMPLETADA</p><h2>Tu compra está lista para confirmar</h2><p>El pedido aún no ha sido creado y no se realizó ningún cobro.</p></div></div><div class="review-grid"><div><small>Cliente</small><strong>{{ customer.name }}</strong><span>{{ customer.email }}</span></div><div><small>Entrega</small><strong>{{ result.delivery }}</strong><span>{{ delivery.address }}</span></div><div><small>Pago</small><strong>{{ result.paymentMethod }}</strong><span>Procesado mediante pasarela segura</span></div><div><small>Total validado</small><strong>{{ result.total | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong><span>Incluye envío</span></div></div>@if(result.requiresAuthentication){<div class="auth-required"><span class="material-symbols-rounded">lock</span><div><strong>Falta iniciar sesión</strong><p>Inicia sesión para vincular el carrito y continuar con el pedido.</p></div></div>}@else{<div class="auth-required"><span class="material-symbols-rounded">verified_user</span><div><strong>Identidad verificada</strong><p>El carrito ya está asociado a tu cuenta. La conexión con la pasarela será el siguiente paso.</p></div></div>}<footer class="step-actions"><button class="button button-secondary" type="button" (click)="currentStep.set(3)">← Cambiar pago</button>@if(result.requiresAuthentication){<a class="button button-primary" routerLink="/login" [queryParams]="{returnUrl:'/checkout'}">Iniciar sesión</a>}@else{<button class="button button-primary" type="button" disabled>Pasarela pendiente</button>}</footer></div> }
+            @if (paymentSuccess(); as success) {
+              <div class="step-content confirmation">
+                <div class="validation-icon success-icon"><span class="material-symbols-rounded">verified</span></div>
+                <div class="step-title centered">
+                  <div>
+                    <p class="eyebrow">¡PAGO COMPLETADO!</p>
+                    <h2>Gracias por tu compra en RYA Tech</h2>
+                    <p>Tu orden <strong>{{ success.numeroPedido }}</strong> fue pagada con éxito mediante Mercado Pago.</p>
+                  </div>
+                </div>
+                <div class="review-grid">
+                  <div><small>Número de Pedido</small><strong>{{ success.numeroPedido }}</strong></div>
+                  <div><small>Total Cobrado</small><strong>{{ success.monto | currency:success.moneda:'symbol':'1.2-2':'es-PE' }}</strong></div>
+                  <div><small>ID Mercado Pago</small><span>{{ success.mpPaymentId || 'Aprobado' }}</span></div>
+                  <div><small>Estado</small><span class="status-badge">{{ success.estadoPedido }}</span></div>
+                </div>
+                <footer class="step-actions centered">
+                  <a class="button button-primary" routerLink="/catalogo">Seguir explorando el catálogo</a>
+                </footer>
+              </div>
+            } @else if (validation(); as result) {
+              <div class="step-content confirmation">
+                <div class="validation-icon"><span class="material-symbols-rounded">task_alt</span></div>
+                <div class="step-title centered"><div><p class="eyebrow">VALIDACIÓN COMPLETADA</p><h2>Tu compra está lista para confirmar</h2><p>El cobro se procesará de forma segura a través de Mercado Pago.</p></div></div>
+                <div class="review-grid"><div><small>Cliente</small><strong>{{ customer.name }}</strong><span>{{ customer.email }}</span></div><div><small>Entrega</small><strong>{{ result.delivery }}</strong><span>{{ delivery.address }}</span></div><div><small>Pago</small><strong>{{ result.paymentMethod }}</strong><span>Procesado mediante pasarela segura</span></div><div><small>Total validado</small><strong>{{ result.total | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong><span>Incluye envío</span></div></div>
+                @if(result.requiresAuthentication){
+                  <div class="auth-required"><span class="material-symbols-rounded">lock</span><div><strong>Falta iniciar sesión</strong><p>Inicia sesión para vincular el carrito y continuar con el pedido.</p></div></div>
+                }@else{
+                  <div class="auth-required"><span class="material-symbols-rounded">verified_user</span><div><strong>Identidad verificada</strong><p>El carrito ya está asociado a tu cuenta. Haz clic en "Continuar a pagar" para abrir el formulario seguro de Mercado Pago.</p></div></div>
+                }
+
+                <!-- Contenedor del componente Embebido de Mercado Pago Brick -->
+                <div id="paymentBrick_container" class="payment-brick-box"></div>
+
+                <footer class="step-actions">
+                  <button class="button button-secondary" type="button" (click)="currentStep.set(3)" [disabled]="processingPayment()">← Cambiar pago</button>
+                  @if(result.requiresAuthentication){
+                    <a class="button button-primary" routerLink="/login" [queryParams]="{returnUrl:'/checkout'}">Iniciar sesión</a>
+                  }@else{
+                    <button class="button button-primary" type="button" (click)="pagarConMercadoPago()" [disabled]="processingPayment()">
+                      {{ processingPayment() ? 'Preparando pasarela…' : 'Continuar a pagar con Mercado Pago' }} <span>🔒</span>
+                    </button>
+                  }
+                </footer>
+              </div>
+            }
           }
+
+
         }
       </section>
       <aside class="order-summary"><header><h2>Resumen del pedido</h2><a routerLink="/catalogo">Editar</a></header><div class="summary-items">@for (item of cart.cart()?.items ?? []; track item.id) { <article><a [routerLink]="['/producto',item.slug]" class="summary-image">@if (item.image) { <img [src]="item.image" [alt]="item.name"> } @else { <span class="material-symbols-rounded">memory</span> }</a><div><strong>{{ item.name }}</strong><small>{{ item.sku }}</small><div class="mini-quantity"><button type="button" (click)="changeQuantity(item,item.quantity-1)" [disabled]="item.quantity<=1 || updating().has(item.id)">−</button><span>{{ item.quantity }}</span><button type="button" (click)="changeQuantity(item,item.quantity+1)" [disabled]="item.quantity>=item.availableStock || updating().has(item.id)">+</button><button type="button" class="remove-item" (click)="remove(item)" [disabled]="updating().has(item.id)">Eliminar</button></div></div><b>{{ item.subtotal | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</b></article> }</div><div class="totals"><p><span>Productos</span><b>{{ cart.totalQuantity() }}</b></p><p><span>Subtotal</span><b>{{ (validation()?.subtotal ?? cart.cart()?.subtotal) | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</b></p><p><span>Envío</span><b>{{ validation() ? (validation()!.shipping | currency:'PEN':'symbol':'1.2-2':'es-PE') : 'Por calcular' }}</b></p><p class="grand-total"><span>Total</span><b>{{ validation() ? (validation()!.total | currency:'PEN':'symbol':'1.2-2':'es-PE') : (cart.cart()?.subtotal | currency:'PEN':'symbol':'1.2-2':'es-PE') }}</b></p></div><div class="guarantees"><span><i class="material-symbols-rounded">database</i>Datos vigentes de la base de datos</span><span><i class="material-symbols-rounded">shield_lock</i>Pago externo seguro</span><span><i class="material-symbols-rounded">inventory_2</i>Stock revalidado antes de confirmar</span></div></aside>

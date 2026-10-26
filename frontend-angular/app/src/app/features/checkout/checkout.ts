@@ -27,15 +27,19 @@ export class Checkout implements OnInit {
   protected readonly validation = signal<CheckoutValidation | null>(null);
   protected readonly updating = signal<Set<string>>(new Set());
   protected readonly validating = signal(false);
+  protected readonly processingPayment = signal(false);
+  protected readonly paymentSuccess = signal<import('./checkout.models').ResultadoPago | null>(null);
   protected readonly message = signal('');
   protected readonly errors = signal<Record<string, string>>({});
   protected paymentMethodId = '';
   protected customer: CheckoutCustomer = { documentType: 'DNI', documentNumber: '', name: '', email: '', phone: '' };
   protected delivery: CheckoutDelivery = { shippingRateId: '', address: '', reference: '' };
+  private activePedidoId = '';
 
   ngOnInit(): void {
     this.load();
   }
+
 
   protected load(): void {
     this.state.set('loading'); this.message.set('');
@@ -45,6 +49,106 @@ export class Checkout implements OnInit {
         error: error => { this.state.set('error'); this.message.set(error?.error?.message ?? 'No se pudo preparar el checkout.'); },
       });
   }
+
+  protected pagarConMercadoPago(): void {
+    if (!this.paymentMethodId || !this.validation()) return;
+    this.processingPayment.set(true);
+    this.message.set('');
+
+    this.checkout.iniciarPago(this.customer, this.delivery, this.paymentMethodId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: resp => {
+          this.activePedidoId = resp.pedidoId;
+          this.montarBrickMercadoPago(resp);
+        },
+        error: err => {
+          this.processingPayment.set(false);
+          this.message.set(err?.error?.message ?? 'No se pudo iniciar la pasarela de pago.');
+        }
+      });
+  }
+
+  private montarBrickMercadoPago(resp: import('./checkout.models').IniciarPagoResponse): void {
+    const win = globalThis as unknown as { MercadoPago?: any };
+    if (!win.MercadoPago) {
+      this.processingPayment.set(false);
+      this.message.set('El SDK de Mercado Pago no está disponible. Revisa tu conexión.');
+      return;
+    }
+
+    try {
+      const mp = new win.MercadoPago(resp.publicKey, { locale: 'es-PE' });
+      const bricksBuilder = mp.bricks();
+
+      const container = document.getElementById('paymentBrick_container');
+      if (container) container.innerHTML = '';
+
+      bricksBuilder.create('payment', 'paymentBrick_container', {
+        initialization: {
+          amount: resp.total,
+          preferenceId: resp.preferenceId,
+          payer: {
+            email: this.customer.email,
+          },
+        },
+        customization: {
+          paymentMethods: {
+            ticket: 'all',
+            bankTransfer: 'all',
+            creditCard: 'all',
+            debitCard: 'all',
+            mercadoPago: 'all',
+          },
+        },
+        callbacks: {
+          onReady: () => {
+            this.processingPayment.set(false);
+          },
+          onSubmit: ({ selectedPaymentMethod, formData }: any) => {
+            return new Promise<void>((resolve, reject) => {
+              this.processingPayment.set(true);
+              this.checkout.procesarCargo(this.activePedidoId, this.customer.email, {
+                token: formData.token,
+                paymentMethodId: formData.payment_method_id || selectedPaymentMethod,
+                installments: formData.installments,
+                issuerId: formData.issuer_id,
+              })
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                  next: result => {
+                    this.processingPayment.set(false);
+                    if (result.exitoso) {
+                      this.paymentSuccess.set(result);
+                      this.cart.load().subscribe();
+                      this.scrollTop();
+                      resolve();
+                    } else {
+                      this.message.set(result.mensaje || 'El pago no fue aprobado.');
+                      reject();
+                    }
+                  },
+                  error: err => {
+                    this.processingPayment.set(false);
+                    this.message.set(err?.error?.message ?? 'Ocurrió un error al procesar el pago.');
+                    reject();
+                  }
+                });
+            });
+          },
+          onError: (error: any) => {
+            this.processingPayment.set(false);
+            this.message.set('Error en el formulario de Mercado Pago: ' + (error?.message || 'Revisa los datos.'));
+          },
+        },
+      });
+    } catch (err: any) {
+      this.processingPayment.set(false);
+      this.message.set('No se pudo inicializar el Brick de pago: ' + (err?.message || err));
+    }
+  }
+
+
 
   protected goToCustomer(): void { this.currentStep.set(1); this.scrollTop(); }
   protected goToDelivery(): void {

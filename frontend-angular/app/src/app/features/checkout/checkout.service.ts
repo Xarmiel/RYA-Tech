@@ -32,7 +32,34 @@ export class CheckoutService {
       messages: response.mensajes, cart: this.cart.cart()!,
     })));
   }
+
+  iniciarPago(customer: CheckoutCustomer, delivery: CheckoutDelivery, paymentMethodId: string): Observable<import('./checkout.models').IniciarPagoResponse> {
+    return this.http.post<import('./checkout.models').IniciarPagoResponse>('/api/v1/pagos/iniciar', {
+      cliente: { tipoDocumento: customer.documentType, numeroDocumento: customer.documentNumber,
+        nombre: customer.name, email: customer.email, telefono: customer.phone },
+      entrega: { tarifaEnvioId: delivery.shippingRateId, direccion: delivery.address,
+        referencia: delivery.reference || null },
+      metodoPagoId: paymentMethodId,
+    }, { headers: this.cart.requestHeaders() });
+  }
+
+  procesarCargo(
+    pedidoId: string,
+    email: string,
+    paymentData: { token?: string; paymentMethodId?: string; installments?: number; issuerId?: string }
+  ): Observable<import('./checkout.models').ResultadoPago> {
+    return this.http.post<import('./checkout.models').ResultadoPago>('/api/v1/pagos/procesar', {
+      pedidoId,
+      email,
+      token: paymentData.token,
+      paymentMethodId: paymentData.paymentMethodId,
+      installments: paymentData.installments,
+      issuerId: paymentData.issuerId,
+    }, { headers: this.cart.requestHeaders() });
+  }
 }
+
+
 
 interface BackendOptions {
   metodosPago: Array<{ id: string; codigo: string; nombre: string }>;
