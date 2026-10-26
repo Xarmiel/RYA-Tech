@@ -1,0 +1,110 @@
+[
+  {
+    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Teclado Mecánico / Gamer. Sin ficha técnica requerida. Campos obligatorios: nombre, sku, categoria, marca, precio, stockInicial, estado, requiereSerie, requiereEnvio.",
+    "nombre": "Logitech G Pro X Mechanical Gaming Keyboard RGB (Switches GX Blue Clicky)",
+    "sku": "LOGI-G-PRO-X-KEYB-BLUE",
+    "slug": "logitech-g-pro-x-mechanical-keyboard",
+    "categoria": "Periféricos",
+    "marca": "Logitech G",
+    "precio": 489.00,
+    "costoReferencia": 395.00,
+    "stockInicial": 20,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Teclado mecánico para gaming profesional en formato compacto tenkeyless (TKL) con switches intercambiables y retroiluminación RGB Lightsync.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=80"
+    ]
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Mouse Gamer / Inalámbrico. Sin ficha técnica requerida.",
+    "nombre": "Logitech G Pro X Superlight 2 Wireless Gaming Mouse (Sensor Hero 2, 32000 DPI)",
+    "sku": "LOGI-G-PRO-X-SUPERLIGHT2-BLK",
+    "slug": "logitech-g-pro-x-superlight-2-wireless-black",
+    "categoria": "Periféricos",
+    "marca": "Logitech G",
+    "precio": 569.00,
+    "costoReferencia": 460.00,
+    "stockInicial": 25,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Mouse inalámbrico ultraligero de 60 gramos con sensor Hero 2 de alta precisión, switches híbridos óptico-mecánicos Lightforce y conectividad Lightspeed.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&auto=format&fit=crop&q=80"
+    ]
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Audífonos / Headset Gamer.",
+    "nombre": "HyperX Cloud III Gaming Headset con Audio Espacial DTS y Micrófono 10mm",
+    "sku": "HYPERX-CLOUD-III-RED",
+    "slug": "hyperx-cloud-iii-gaming-headset-black-red",
+    "categoria": "Periféricos",
+    "marca": "HyperX",
+    "precio": 369.00,
+    "costoReferencia": 290.00,
+    "stockInicial": 18,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Auriculares gamer alámbricos con controladores angulares de 53 mm rediseñados, almohadillas viscoelásticas HyperX y conexión USB-C/USB-A/3.5mm.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&auto=format&fit=crop&q=80"
+    ]
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Mousepad Gamer / Superficie XL.",
+    "nombre": "Corsair MM300 PRO Extended Mouse Pad de Tela Antisalpicaduras (930x300mm)",
+    "sku": "CORSAIR-MM300-PRO-EXT",
+    "slug": "corsair-mm300-pro-extended-mouse-pad",
+    "categoria": "Periféricos",
+    "marca": "Corsair",
+    "precio": 119.00,
+    "costoReferencia": 85.00,
+    "stockInicial": 35,
+    "estado": "active",
+    "requiereSerie": false,
+    "requiereEnvio": true,
+    "descripcion": "Mousepad gamer tamaño extendido con recubrimiento resistente a derrames y manchas, microtejido de precisión de 3 mm de grosor y bordes reforzados cosidos.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1616440347437-b1c73416efc2?w=800&auto=format&fit=crop&q=80"
+    ]
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Monitor Gamer de Alta Frecuencia.",
+    "nombre": "ASUS TUF Gaming VG27AQ3A 27\" IPS QHD (2560x1440, 180Hz, 1ms, G-Sync Compatible)",
+    "sku": "ASUS-TUF-VG27AQ3A-27-QHD",
+    "slug": "asus-tuf-gaming-vg27aq3a-27-qhd-180hz",
+    "categoria": "Periféricos",
+    "marca": "ASUS TUF",
+    "precio": 1199.00,
+    "costoReferencia": 980.00,
+    "stockInicial": 10,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Monitor gaming de 27 pulgadas Fast IPS 2.5K WQHD con frecuencia de actualización de 180Hz, ELMB Sync, HDR10 y soporte DisplayPort / HDMI.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80"
+    ]
+  },
+  {
+    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Micrófono USB para Streaming / Podcasting.",
+    "nombre": "HyperX QuadCast S Micrófono de Condensador USB con Iluminación RGB y Filtro Antipop",
+    "sku": "HYPERX-QUADCAST-S-RGB",
+    "slug": "hyperx-quadcast-s-usb-condenser-mic-rgb",
+    "categoria": "Periféricos",
+    "marca": "HyperX",
+    "precio": 549.00,
+    "costoReferencia": 435.00,
+    "stockInicial": 12,
+    "estado": "active",
+    "requiereSerie": true,
+    "requiereEnvio": true,
+    "descripcion": "Micrófono USB condensador independiente con soporte antivibraciones integrado, cuatro patrones polares seleccionables, sensor de silenciamiento táctil y software NGENUITY.",
+    "imagenes": [
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&auto=format&fit=crop&q=80"
+    ]
+  }
+]

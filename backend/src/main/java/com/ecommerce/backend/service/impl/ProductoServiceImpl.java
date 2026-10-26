@@ -703,11 +703,14 @@ public class ProductoServiceImpl implements ProductoService {
         if (dto.getImagenes() != null) {
             List<ImagenProducto> existentes = imagenProductoRepository.findByProductoIdAndIsDeletedFalseOrderByPosicionAsc(id);
             for (ImagenProducto ex : existentes) {
+                ex.setPrincipal(false);
                 ex.setIsDeleted(true);
             }
             imagenProductoRepository.saveAll(existentes);
+            imagenProductoRepository.flush();
             if (!dto.getImagenes().isEmpty()) {
                 guardarImagenesGaleria(producto, dto.getImagenes(), dto.getImagenPrincipalUrl());
+                imagenProductoRepository.flush();
             }
         } else if (dto.getImagenPrincipalUrl() != null && !dto.getImagenPrincipalUrl().isBlank()) {
             validarUrlHttps(dto.getImagenPrincipalUrl());

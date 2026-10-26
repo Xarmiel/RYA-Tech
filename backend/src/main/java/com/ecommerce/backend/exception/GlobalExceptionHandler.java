@@ -26,6 +26,23 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage()).path(request.getRequestURI()).build());
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.error("Violación de integridad de datos en {} {}", request.getMethod(), request.getRequestURI(), ex);
+        String msg = "Conflicto de integridad de datos en el servidor.";
+        if (ex.getMessage() != null && ex.getMessage().contains("ux_imagen_principal")) {
+            msg = "Solo una imagen del producto puede ser principal.";
+        }
+        ErrorResponseDto error = ErrorResponseDto.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .message(msg)
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         ErrorResponseDto error = ErrorResponseDto.builder()
