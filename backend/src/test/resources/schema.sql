@@ -1,4 +1,33 @@
 CREATE SCHEMA IF NOT EXISTS rya;
+CREATE SCHEMA IF NOT EXISTS auth;
+
+CREATE TABLE IF NOT EXISTS auth.users (
+  id uuid PRIMARY KEY,
+  instance_id uuid,
+  aud varchar(255),
+  role varchar(255),
+  email varchar(255) NOT NULL,
+  encrypted_password varchar(255),
+  email_confirmed_at timestamp with time zone,
+  raw_app_meta_data json,
+  raw_user_meta_data json,
+  is_sso_user boolean DEFAULT false,
+  is_anonymous boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rya.usuarios (
+  id uuid PRIMARY KEY,
+  nombre varchar(140) NOT NULL,
+  email varchar(254) NOT NULL,
+  telefono varchar(30),
+  estado varchar(24) NOT NULL DEFAULT 'ACTIVO',
+  email_verificado_at timestamp with time zone,
+  is_deleted boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Normalized technical records are read by the administrative product detail.
 CREATE TABLE IF NOT EXISTS rya.fuentes_tecnicas (

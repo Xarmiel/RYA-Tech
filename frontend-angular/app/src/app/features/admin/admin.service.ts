@@ -193,7 +193,7 @@ export class AdminService {
     return this.http.post<void>(`/api/v1/admin/referencias/${kind === 'marca' ? 'marcas' : 'categorias'}/${encodeURIComponent(id)}/restaurar`, {});
   }
 
-  isModuleConnected(moduleId: string): boolean { return ['catalogo', 'inventario', 'contenido', 'asesorias'].includes(moduleId); }
+  isModuleConnected(moduleId: string): boolean { return ['catalogo', 'inventario', 'contenido', 'asesorias', 'clientes'].includes(moduleId); }
 
   getPreviewItems(moduleId: string, query = '', page = 0, pageSize = 10, status = ''): Observable<AdminPagedResult> {
     return this.getLocalItems(moduleId, query, page, pageSize, status);
@@ -222,6 +222,13 @@ export class AdminService {
   }
 
   /**
+   * Actualiza el rol de un usuario en el backend (admin / user)
+   */
+  updateUserRole(userId: string, newRole: 'admin' | 'user'): Observable<any> {
+    return this.http.patch<any>(`/api/v1/admin/usuarios/${encodeURIComponent(userId)}/rol`, { rol: newRole });
+  }
+
+  /**
    * Obtiene listado paginado y filtrado para cualquier módulo administrativo
    */
   getItems(moduleId: string, query = '', page = 0, pageSize = 10, statusFilter = ''): Observable<AdminPagedResult> {
@@ -237,9 +244,62 @@ export class AdminService {
     if (moduleId === 'asesorias') {
       return this.getAsesoriasItems(query, page, pageSize, statusFilter);
     }
+    if (moduleId === 'clientes') {
+      return this.getClientesReal(query, page, pageSize, statusFilter);
+    }
 
     // Para módulos con datos locales o en preparación backend:
     return of({ items: [], total: 0, page: 0, pageSize, totalPages: 0 });
+  }
+
+  /**
+   * Consulta real al endpoint administrativo de usuarios/clientes
+   */
+  private getClientesReal(query: string, page: number, pageSize: number, statusFilter: string): Observable<AdminPagedResult> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', pageSize.toString());
+
+    if (query.trim()) {
+      params = params.set('busqueda', query.trim());
+    }
+    if (statusFilter === 'active') {
+      params = params.set('rol', 'admin');
+    } else if (statusFilter === 'alert') {
+      params = params.set('rol', 'user');
+    }
+
+    return this.http.get<any>('/api/v1/admin/usuarios', { params }).pipe(
+      map(res => {
+        const users = res?.content ?? [];
+        return {
+          items: users.map((u: any) => this.mapUsuarioToRow(u)),
+          total: res?.totalElements ?? 0,
+          page: res?.page ?? 0,
+          pageSize: res?.size ?? pageSize,
+          totalPages: res?.totalPages ?? 1,
+        };
+      })
+    );
+  }
+
+  /**
+   * Mapea un usuario a la estructura AdminRow
+   */
+  private mapUsuarioToRow(u: any): AdminRow {
+    const isAdmin = u.rol === 'admin';
+    return {
+      id: u.id,
+      code: isAdmin ? 'ADMIN' : 'USUARIO',
+      title: u.nombre || u.email,
+      subtitle: u.telefono || 'Sin teléfono',
+      tag: isAdmin ? 'Administrador' : 'Cliente',
+      detail: u.email,
+      metric: `${u.totalPedidos || 0} pedidos`,
+      status: isAdmin ? 'active' : 'draft',
+      statusText: isAdmin ? 'Administrador' : 'Usuario',
+      rawData: u,
+    };
   }
 
   /**

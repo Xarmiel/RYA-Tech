@@ -563,4 +563,60 @@ describe('Admin service and listings', () => {
     const localList = (service as any).localStore.get('catalogo') || [];
     expect(localList.some((it: any) => it.code === 'REJ-1')).toBe(false);
   });
+
+  it('connects clientes module, retrieves users, and updates roles correctly', async () => {
+    const service = TestBed.inject(AdminService);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    expect(service.isModuleConnected('clientes')).toBe(true);
+
+    let result: any = null;
+    service.getItems('clientes', 'juan', 0, 10, 'active').subscribe(res => result = res);
+
+    const reqUsers = httpMock.expectOne(req =>
+      req.url === '/api/v1/admin/usuarios' &&
+      req.params.get('busqueda') === 'juan' &&
+      req.params.get('rol') === 'admin'
+    );
+    expect(reqUsers.request.method).toBe('GET');
+
+    reqUsers.flush({
+      content: [
+        {
+          id: 'user-1',
+          email: 'admin@gmail.com',
+          nombre: 'Administrador Principal',
+          telefono: '+51 987654321',
+          rol: 'admin',
+          totalPedidos: 3,
+          ultimaCompra: '2026-10-25T20:00:00Z',
+          creadoEn: '2026-10-01T10:00:00Z'
+        }
+      ],
+      totalElements: 1,
+      page: 0,
+      size: 10,
+      totalPages: 1
+    });
+
+    expect(result).not.toBeNull();
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].code).toBe('ADMIN');
+    expect(result.items[0].title).toBe('Administrador Principal');
+    expect(result.items[0].subtitle).toBe('+51 987654321');
+    expect(result.items[0].status).toBe('active');
+    expect(result.items[0].statusText).toBe('Administrador');
+    expect(result.items[0].metric).toBe('3 pedidos');
+
+    // Test role update
+    let updateSuccess = false;
+    service.updateUserRole('user-1', 'user').subscribe(() => updateSuccess = true);
+
+    const reqRole = httpMock.expectOne('/api/v1/admin/usuarios/user-1/rol');
+    expect(reqRole.request.method).toBe('PATCH');
+    expect(reqRole.request.body).toEqual({ rol: 'user' });
+    reqRole.flush({ id: 'user-1', rol: 'user' });
+
+    expect(updateSuccess).toBe(true);
+  });
 });

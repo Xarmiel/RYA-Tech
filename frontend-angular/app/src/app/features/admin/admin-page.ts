@@ -386,6 +386,10 @@ export class AdminPage implements OnInit {
   // --- Manejo del Formulario Modal ---
 
   protected openCreateForm(): void {
+    if (this.section === 'clientes') {
+      document.querySelector<HTMLInputElement>('.search-box input')?.focus();
+      return;
+    }
     if (this.section === 'asesorias') {
       this.openCreateAsesoria();
       return;
@@ -940,6 +944,53 @@ export class AdminPage implements OnInit {
         },
         error: err => {
           this.notifications.show(err?.error?.message || 'Error al cambiar estado en el servidor.', 'error');
+        }
+      });
+  }
+
+  protected toggleUserRole(row: AdminRow): void {
+    const currentRole = row.rawData?.rol || (row.status === 'active' ? 'admin' : 'user');
+    const targetRole: 'admin' | 'user' = currentRole === 'admin' ? 'user' : 'admin';
+    const roleLabel = targetRole === 'admin' ? 'Administrador' : 'Usuario';
+
+    if (currentRole === 'admin' && this.auth.user()?.id === row.id) {
+      const confirmSelf = confirm('Estás a punto de quitarte los permisos de administrador. Perderás el acceso a este panel en tu próxima sesión. ¿Deseas continuar?');
+      if (!confirmSelf) return;
+    }
+
+    const nextPending = new Set(this.pendingRows());
+    nextPending.add(row.id);
+    this.pendingRows.set(nextPending);
+
+    this.adminService.updateUserRole(row.id, targetRole)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          const updatedSet = new Set(this.pendingRows());
+          updatedSet.delete(row.id);
+          this.pendingRows.set(updatedSet);
+
+          this.notifications.show(`El rol de ${row.title} se actualizó a ${roleLabel}.`, 'success');
+          this.items.update(list => list.map(item => {
+            if (item.id === row.id) {
+              const rawData = { ...item.rawData, rol: targetRole };
+              return {
+                ...item,
+                code: targetRole === 'admin' ? 'ADMIN' : 'USUARIO',
+                status: targetRole === 'admin' ? 'active' : 'draft',
+                statusText: targetRole === 'admin' ? 'Administrador' : 'Usuario',
+                tag: targetRole === 'admin' ? 'Administrador' : 'Cliente',
+                rawData,
+              };
+            }
+            return item;
+          }));
+        },
+        error: err => {
+          const updatedSet = new Set(this.pendingRows());
+          updatedSet.delete(row.id);
+          this.pendingRows.set(updatedSet);
+          this.notifications.show(err?.error?.message || 'No se pudo actualizar el rol del usuario.', 'error');
         }
       });
   }

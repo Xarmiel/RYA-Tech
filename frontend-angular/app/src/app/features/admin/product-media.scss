@@ -183,6 +183,7 @@
           border-radius: 4px;
           background: rgba(0, 0, 0, 0.75);
           color: #fff;
+          -webkit-backdrop-filter: blur(4px);
           backdrop-filter: blur(4px);
 
           &.badge-primary {

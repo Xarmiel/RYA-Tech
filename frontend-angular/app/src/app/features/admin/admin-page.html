@@ -68,8 +68,8 @@
             <h1>{{ current.name }}</h1>
             <p class="section-desc">{{ current.description }}</p>
           </div>
-          <button type="button" class="admin-action-btn" (click)="section === 'inventario' ? openStockModal() : openCreateForm()" [disabled]="!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias'">
-            <span class="material-symbols-rounded" aria-hidden="true">{{ section === 'inventario' ? 'swap_vert' : 'add' }}</span>
+          <button type="button" class="admin-action-btn" (click)="section === 'inventario' ? openStockModal() : openCreateForm()" [disabled]="!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias' && section !== 'clientes'">
+            <span class="material-symbols-rounded" aria-hidden="true">{{ section === 'inventario' ? 'swap_vert' : (section === 'clientes' ? 'search' : 'add') }}</span>
             {{ current.action }}
           </button>
         </div>
@@ -77,7 +77,7 @@
         @if (!design && section === 'catalogo') {
           <app-product-import (busyChange)="importBusy.set($event)" (saved)="loadItems(); loadStats()"></app-product-import>
         }
-        @if (!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias') {
+        @if (!design && section !== 'catalogo' && section !== 'inventario' && section !== 'asesorias' && section !== 'clientes') {
           <p class="admin-alert" role="status">{{ connected() ? 'Vista de consulta. La edición de esta sección se conectará en su fase respectiva.' : 'Sección pendiente de conexión. No se muestran registros ni se simulan guardados.' }}</p>
         }
         <!-- Alerta de servidor si ocurre error -->
@@ -126,7 +126,7 @@
               [class.is-active]="statusFilter() === 'active'"
               (click)="setStatusFilter('active')"
             >
-              {{ section === 'inventario' ? 'Stock suficiente (>3)' : 'Activos' }}
+              {{ section === 'inventario' ? 'Stock suficiente (>3)' : (section === 'clientes' ? 'Administradores' : 'Activos') }}
             </button>
             <button
               type="button"
@@ -134,16 +134,18 @@
               [class.is-active]="statusFilter() === 'alert'"
               (click)="setStatusFilter('alert')"
             >
-              Alertas / Stock bajo
+              {{ section === 'clientes' ? 'Usuarios' : 'Alertas / Stock bajo' }}
             </button>
-            <button
-              type="button"
-              class="filter-pill"
-              [class.is-active]="statusFilter() === (section === 'inventario' ? 'agotado' : 'draft')"
-              (click)="setStatusFilter(section === 'inventario' ? 'agotado' : 'draft')"
-            >
-              {{ section === 'inventario' ? 'Agotados' : 'No publicados' }}
-            </button>
+            @if (section !== 'clientes') {
+              <button
+                type="button"
+                class="filter-pill"
+                [class.is-active]="statusFilter() === (section === 'inventario' ? 'agotado' : 'draft')"
+                (click)="setStatusFilter(section === 'inventario' ? 'agotado' : 'draft')"
+              >
+                {{ section === 'inventario' ? 'Agotados' : 'No publicados' }}
+              </button>
+            }
           </div>
         </div>
 
@@ -177,55 +179,109 @@
                       <!-- Columna 1: Título y Código/SKU -->
                       <td class="cell-main">
                         <div class="item-title-wrap">
-                          @if (row.thumbnail) {
+                          @if (section === 'clientes') {
+                            <div class="user-avatar-badge" [class.is-admin]="row.rawData?.rol === 'admin'">
+                              <span class="material-symbols-rounded">
+                                {{ row.rawData?.rol === 'admin' ? 'admin_panel_settings' : 'person' }}
+                              </span>
+                            </div>
+                          } @else if (row.thumbnail) {
                             <img class="table-thumb" [src]="row.thumbnail" [alt]="row.title">
                           }
                           <div>
                             <strong class="item-title">{{ row.title }}</strong>
                             <div class="item-subinfo">
-                              <span class="sku-code">{{ row.code }}</span>
-                              @if (row.subtitle) {
-                                <span class="item-subtitle">· {{ row.subtitle }}</span>
+                              @if (section === 'clientes') {
+                                <span class="sku-code">{{ row.rawData?.telefono || 'Sin teléfono' }}</span>
+                              } @else {
+                                <span class="sku-code">{{ row.code }}</span>
+                                @if (row.subtitle) {
+                                  <span class="item-subtitle">· {{ row.subtitle }}</span>
+                                }
                               }
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      <!-- Columna 2: Etiqueta / Marca -->
+                      <!-- Columna 2: Etiqueta / Marca / Correo -->
                       <td>
-                        <span class="info-badge">{{ row.subtitle || '—' }}</span>
+                        @if (section === 'clientes') {
+                          <span class="client-email">{{ row.rawData?.email || row.detail || '—' }}</span>
+                        } @else {
+                          <span class="info-badge">{{ row.subtitle || '—' }}</span>
+                        }
                       </td>
 
-                      <!-- Columna 3: Categoría o Detalle -->
+                      <!-- Columna 3: Categoría o Rol -->
                       <td>
-                        <span class="info-tag">{{ row.tag || 'General' }}</span>
-                        @if (row.detail) {
-                          <small class="row-subdetail">{{ row.detail }}</small>
+                        @if (section === 'clientes') {
+                          <span
+                            class="status-pill"
+                            [class.status-active]="row.rawData?.rol === 'admin'"
+                            [class.status-draft]="row.rawData?.rol !== 'admin'"
+                          >
+                            <span class="material-symbols-rounded pill-icon">
+                              {{ row.rawData?.rol === 'admin' ? 'verified_user' : 'person' }}
+                            </span>
+                            {{ row.rawData?.rol === 'admin' ? 'Administrador' : 'Usuario' }}
+                          </span>
+                        } @else {
+                          <span class="info-tag">{{ row.tag || 'General' }}</span>
+                          @if (row.detail) {
+                            <small class="row-subdetail">{{ row.detail }}</small>
+                          }
                         }
                       </td>
 
                       <!-- Columna 4: Estado y Métricas -->
                       <td>
-                        <div class="status-cell">
-                          <span
-                            class="status-pill"
-                            [class.status-active]="row.status === 'active'"
-                            [class.status-alert]="row.status === 'alert'"
-                            [class.status-draft]="row.status === 'draft' || row.status === 'pending'"
-                            [class.status-inactive]="row.status === 'inactive'"
-                          >
-                            {{ row.statusText }}
-                          </span>
-                          @if (row.metric) {
+                        @if (section === 'clientes') {
+                          <div class="status-cell">
                             <strong class="row-metric">{{ row.metric }}</strong>
-                          }
-                        </div>
+                            @if (row.rawData?.ultimaCompra) {
+                              <small class="row-subdetail">Última: {{ row.rawData.ultimaCompra | date:'dd/MM/yyyy' }}</small>
+                            }
+                          </div>
+                        } @else {
+                          <div class="status-cell">
+                            <span
+                              class="status-pill"
+                              [class.status-active]="row.status === 'active'"
+                              [class.status-alert]="row.status === 'alert'"
+                              [class.status-draft]="row.status === 'draft' || row.status === 'pending'"
+                              [class.status-inactive]="row.status === 'inactive'"
+                            >
+                              {{ row.statusText }}
+                            </span>
+                            @if (row.metric) {
+                              <strong class="row-metric">{{ row.metric }}</strong>
+                            }
+                          </div>
+                        }
                       </td>
 
                       <!-- Columna 5: Acciones de Fila -->
                       <td class="cell-actions">
-                        @if (design || section === 'catalogo') {
+                        @if (section === 'clientes') {
+                          <fieldset class="row-actions" [disabled]="pendingRows().has(row.id)">
+                            <button
+                              type="button"
+                              class="role-toggle-btn"
+                              [class.is-admin]="row.rawData?.rol === 'admin'"
+                              [title]="row.rawData?.rol === 'admin' ? 'Degradar a rol Usuario' : 'Promover a Administrador'"
+                              [attr.aria-label]="row.rawData?.rol === 'admin' ? 'Degradar a Usuario' : 'Promover a Administrador'"
+                              (click)="toggleUserRole(row)"
+                            >
+                              <span class="material-symbols-rounded">
+                                {{ row.rawData?.rol === 'admin' ? 'shield_person' : 'admin_panel_settings' }}
+                              </span>
+                              <span class="btn-role-label">
+                                {{ row.rawData?.rol === 'admin' ? 'Quitar Admin' : 'Hacer Admin' }}
+                              </span>
+                            </button>
+                          </fieldset>
+                        } @else if (design || section === 'catalogo') {
                         <fieldset class="row-actions" [disabled]="pendingRows().has(row.id)" [attr.aria-busy]="pendingRows().has(row.id)">
                           <button
                             type="button"
