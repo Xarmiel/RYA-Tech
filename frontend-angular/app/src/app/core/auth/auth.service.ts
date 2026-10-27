@@ -1,4 +1,5 @@
 import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Session, User, createClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 
@@ -12,6 +13,11 @@ export const SUPABASE_AUTH_CLIENT = new InjectionToken<ReturnType<typeof createC
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly client = inject(SUPABASE_AUTH_CLIENT);
+  private readonly router = inject(Router, {optional:true});
+  private readonly recoveryStorageKey = 'rya-password-recovery';
+  private recoveryExpiresAt=0;
+  private recoveryNavigation?: ReturnType<typeof setTimeout>;
+  readonly recoveryPending = signal(false);
   private initialization?: Promise<Session | null>;
   private sessionRevision = 0;
 
@@ -21,8 +27,15 @@ export class AuthService {
   readonly isAuthenticated = computed(() => !!this.user());
 
   constructor() {
-    this.client.auth.onAuthStateChange((_event, session) => {
+    this.client.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        this.recoveryExpiresAt=Date.now()+60*60*1000;this.recoveryPending.set(true);
+        try { sessionStorage.setItem(this.recoveryStorageKey,JSON.stringify({userId:session.user.id,expires:this.recoveryExpiresAt})); } catch {}
+      } else if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
+        this.clearRecovery();
+      }
       this.acceptSession(session);
+      if (event === 'PASSWORD_RECOVERY' && session) this.openRecoveryPage();
     });
   }
 
@@ -49,12 +62,33 @@ export class AuthService {
     this.sessionRevision++;
     this.session.set(session);
     this.ready.set(true);
+    if (session && !this.recoveryPending()) {
+      try {
+        const saved=JSON.parse(sessionStorage.getItem(this.recoveryStorageKey)??'null');
+        if(saved?.userId===session.user.id && saved.expires>Date.now()){
+          this.recoveryExpiresAt=saved.expires;this.recoveryPending.set(true);this.openRecoveryPage();
+        } else if(saved) this.clearRecovery();
+      } catch { this.clearRecovery(); }
+    } else if(!session) this.clearRecovery();
+  }
+
+  private openRecoveryPage():void {
+    clearTimeout(this.recoveryNavigation);
+    // Leave the Supabase callback before invoking work which may acquire its auth lock.
+    this.recoveryNavigation=setTimeout(()=>{
+      if(this.recoveryPending() && this.session() && this.router && this.router.url.split(/[?#]/,1)[0]!=='/restablecer-clave')
+        void this.router.navigateByUrl('/restablecer-clave',{replaceUrl:true});
+    },0);
+  }
+  private clearRecovery():void {
+    clearTimeout(this.recoveryNavigation);this.recoveryPending.set(false);this.recoveryExpiresAt=0;
+    try {sessionStorage.removeItem(this.recoveryStorageKey);}catch{}
   }
 
   async signIn(email: string, password: string): Promise<void> {
     const { data, error } = await this.client.auth.signInWithPassword({ email: email.trim(), password });
     if (error) throw error;
-    this.acceptSession(data.session);
+    this.clearRecovery();this.acceptSession(data.session);
   }
 
   async signUp(name: string, phone: string, email: string, password: string): Promise<boolean> {
@@ -81,8 +115,11 @@ export class AuthService {
   }
 
   async updatePassword(password: string): Promise<void> {
+    const session=await this.initialize();
+    if(!session || !this.recoveryPending() || this.recoveryExpiresAt<=Date.now())throw new Error('El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo.');
     const { error } = await this.client.auth.updateUser({ password });
     if (error) throw error;
+    this.clearRecovery();
   }
 
   async signOut(): Promise<void> {

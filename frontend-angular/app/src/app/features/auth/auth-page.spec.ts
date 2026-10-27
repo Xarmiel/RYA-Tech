@@ -14,7 +14,7 @@ describe('Auth form redirection without backend dependency',()=>{
   let data:{mode:string},query:Record<string,string>,user:ReturnType<typeof signal<any>>;
   beforeEach(()=>{
     vi.useFakeTimers();data={mode:'login'};query={};user=signal(null);
-    auth={user,initialize:vi.fn(async()=>null),signIn:vi.fn(async()=>{user.set({id:'test'});}),signUp:vi.fn(async()=>{user.set({id:'test'});return true;}),requestPasswordReset:vi.fn(),updatePassword:vi.fn()};
+    auth={user,recoveryPending:signal(false),initialize:vi.fn(async()=>null),signIn:vi.fn(async()=>{user.set({id:'test'});}),signUp:vi.fn(async()=>{user.set({id:'test'});return true;}),requestPasswordReset:vi.fn(),updatePassword:vi.fn()};
     account={load:vi.fn(()=>NEVER)};cart={linkToAccount:vi.fn(()=>NEVER)};notifications={show:vi.fn()};
     TestBed.configureTestingModule({imports:[AuthPage],providers:[provideRouter([]),
       {provide:ActivatedRoute,useValue:{snapshot:{data,queryParamMap:{get:(key:string)=>query[key]??null}}}},
@@ -25,6 +25,18 @@ describe('Auth form redirection without backend dependency',()=>{
     page.email='test@example.invalid';page.password='test-password';page.confirmPassword='test-password';page.name='Test User';
   });
   afterEach(()=>{vi.clearAllTimers();vi.useRealTimers();TestBed.resetTestingModule();});
+  it('shows an enabled password form only for a valid recovery session',async()=>{
+    data.mode='reset';auth.recoveryPending.set(true);auth.initialize.mockResolvedValue({user:{id:'test'}});page.ngOnInit();await Promise.resolve();await Promise.resolve();await Promise.resolve();
+    expect(page.resetReady).toBe(true);await page.submit();expect(auth.updatePassword).toHaveBeenCalledWith('test-password');expect(page.resetComplete).toBe(true);expect(page.password).toBe('');expect(router.navigateByUrl).not.toHaveBeenCalled();
+    await page.submit();expect(auth.updatePassword).toHaveBeenCalledTimes(1);
+  });
+  it('blocks expired recovery instead of updating the password with an ordinary session',async()=>{
+    data.mode='reset';auth.initialize.mockResolvedValue({user:{id:'test'}});page.ngOnInit();await Promise.resolve();await Promise.resolve();await Promise.resolve();await page.submit();
+    expect(page.resetReady).toBe(false);expect(page.message).toContain('Solicita uno nuevo');expect(auth.updatePassword).not.toHaveBeenCalled();
+  });
+  it('reports failure verifying a reset link without leaving the submit button busy',async()=>{
+    data.mode='reset';auth.initialize.mockRejectedValue(new Error('offline'));page.ngOnInit();await Promise.resolve();await Promise.resolve();await Promise.resolve();expect(page.busy).toBe(false);expect(page.resetReady).toBe(false);expect(page.message).toContain('verificar');
+  });
   it('redirects immediately even when profile and cart never answer',async()=>{
     page.ngOnInit();await page.submit();expect(router.navigateByUrl).toHaveBeenCalledWith('/cuenta');expect(page.busy).toBe(false);expect(account.load).toHaveBeenCalledTimes(1);expect(cart.linkToAccount).toHaveBeenCalledTimes(1);
   });
