@@ -27,7 +27,7 @@ describe('Phase two product and reference forms', () => {
       createCategory:vi.fn(()=>reference),createBrand:vi.fn(()=>reference),saveItem:vi.fn(()=>of({message:'ok'})),
       publishProduct:vi.fn(()=>action),deactivateProduct:vi.fn(()=>action),getProductDetail:vi.fn(()=>reference)};
     TestBed.configureTestingModule({imports:[AdminPage],providers:[provideRouter([]),
-      {provide:ActivatedRoute,useValue:{paramMap:params,snapshot:{paramMap:params.value,data}}},
+      {provide:ActivatedRoute,useValue:{paramMap:params,queryParamMap:of(convertToParamMap({})),snapshot:{paramMap:params.value,data}}},
       {provide:AdminService,useValue:service},{provide:NotificationService,useValue:{show:vi.fn()}},
       {provide:PreferencesService,useValue:{theme:signal('dark'),setTheme:vi.fn()}},{provide:SupabaseStorageService,useValue:{}}]});
   });

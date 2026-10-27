@@ -83,6 +83,25 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    @Transactional
+    public AdminProductoDetalleDto actualizarCamposFichaProducto(UUID id,String sku,com.ecommerce.backend.dto.FichaProductoDto ficha,List<String> campos) {
+        var product=productoRepository.findForGalleryUpdate(id).orElseThrow(()->new ResourceNotFoundException("Producto no encontrado"));
+        if(sku==null||!product.getSku().equals(sku)||ficha==null||ficha.valores()==null||campos==null||campos.isEmpty()
+            ||new HashSet<>(campos).size()!=campos.size()||!new HashSet<>(campos).equals(ficha.valores().keySet()))
+            throw new BadRequestException("Confirma el SKU exacto y los campos de ficha que se actualizarán; cada campo debe incluir su valor explícito.");
+        var schema=com.ecommerce.backend.service.ProductTechnicalData.schema(product.getCategoria(),categoriaRepository);
+        if(schema==null||!schema.tipo().equals(ficha.tipo())||campos.stream().anyMatch(key->schema.campos().stream().noneMatch(field->field.key().equals(key))))
+            throw new BadRequestException("Los campos no corresponden al esquema técnico del producto actual.");
+        var current=construirAdminDetalleDto(product).getFichaTecnica();
+        var merged=new LinkedHashMap<String,Object>();
+        if(current!=null&&current.valores()!=null)merged.putAll(current.valores());
+        ficha.valores().forEach(merged::put);
+        var patch=new com.ecommerce.backend.dto.FichaProductoDto(ficha.tipo(),current==null?null:current.fuenteUrl(),merged);
+        new com.ecommerce.backend.service.ProductTechnicalData(atributoTecnicoRepository,valorAtributoProductoRepository,categoriaRepository,attributeRestorer::restore).save(product,patch);
+        return construirAdminDetalleDto(product);
+    }
+
+    @Override
     public PaginatedResponseDto<ProductoResumenDto> listarProductos(
             String busqueda,
             UUID categoriaId,
@@ -293,7 +312,8 @@ public class ProductoServiceImpl implements ProductoService {
         List<ValorAtributoProducto> atributos = valorAtributoProductoRepository.findConAtributoPorProductoId(producto.getId());
         Integer stock = existenciaRepository.findStockDisponiblePorProductoId(producto.getId());
 
-        return productoMapper.toDetalleDto(producto, imagenes, atributos, stock);
+        var publicAttributes=atributos.stream().filter(value->value.getAtributo()==null || !com.ecommerce.backend.service.ProductTechnicalData.isInternalAttributeCode(value.getAtributo().getCodigo())).toList();
+        return productoMapper.toDetalleDto(producto, imagenes, publicAttributes, stock);
     }
 
     private AdminProductoDetalleDto construirAdminDetalleDto(Producto producto) {
@@ -329,7 +349,9 @@ public class ProductoServiceImpl implements ProductoService {
                     .toList();
             if (!opciones.isEmpty()) {
                 var atributo = atributoTecnicoRepository.findByCodigoAndIsDeletedFalse(codigoLimpio)
-                        .filter(item -> Boolean.TRUE.equals(item.getFiltrable()))
+                        .filter(item -> item.getCodigo().startsWith("CATALOG_TECH_")
+                            ? com.ecommerce.backend.service.ProductTechnicalData.isPublicFilterCode(item.getCodigo())
+                            : Boolean.TRUE.equals(item.getFiltrable()))
                         .orElseThrow(() -> new BadRequestException("Filtro técnico desconocido o no filtrable: " + codigoLimpio));
                 String tipoDato = Optional.ofNullable(atributo.getTipoDato()).orElse("TEXTO").toUpperCase(Locale.ROOT);
                 if ("NUMERO".equals(tipoDato)) {
@@ -490,6 +512,9 @@ public class ProductoServiceImpl implements ProductoService {
             throw new BadRequestException("Ya existe un producto con el SKU: " + sku);
         }
 
+        if (productoRepository.existsBySku(sku)) {
+            throw new com.ecommerce.backend.exception.ConflictException("Ese SKU pertenece a un producto eliminado. Revisa su historial y solicita una restauración auditada; no se creará ni reactivará desde la importación.");
+        }
         String slug = dto.getSlug();
         if (slug == null || slug.isBlank()) {
             slug = dto.getNombre().toLowerCase(Locale.ROOT)
@@ -503,6 +528,9 @@ public class ProductoServiceImpl implements ProductoService {
         }
         if (productoRepository.existsBySlugAndIsDeletedFalse(slug)) {
             slug = slug + "-" + UUID.randomUUID().toString().substring(0, 6);
+        }
+        if (productoRepository.existsBySlug(slug)) {
+            throw new com.ecommerce.backend.exception.ConflictException("El enlace (slug) pertenece a un producto eliminado. Revisa su historial antes de crear otro producto.");
         }
 
         com.ecommerce.backend.entity.Categoria categoria = null;

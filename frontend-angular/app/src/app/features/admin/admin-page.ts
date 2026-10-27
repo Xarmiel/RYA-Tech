@@ -18,12 +18,13 @@ import { CatalogReferences } from './catalog-references';
 import { ProductTechnicalForm } from './product-technical-form';
 import { ProductTechnicalFicha } from './product-technical.models';
 import { AdminReferenceItem } from './admin.service';
+import { SidebarResize } from './sidebar-resize';
 
 @Component({
   selector: 'app-admin-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus, ProductImport, CatalogReferences, ProductTechnicalForm],
-  styleUrl: './admin.scss',
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus, ProductImport, CatalogReferences, ProductTechnicalForm, SidebarResize],
+  styleUrls: ['./admin.scss', './sidebar-resize.scss'],
   templateUrl: './admin-page.html',
 })
 export class AdminPage implements OnInit {
@@ -32,6 +33,9 @@ export class AdminPage implements OnInit {
   protected setTechnical(value:ProductTechnicalFicha){this.formData.update(data=>({...data,fichaTecnica:value}));}
   protected readonly importBusy = signal(false);
   @ViewChild(ProductMedia) productMediaComponent?: ProductMedia;
+  @ViewChild(ProductImport) productImporter?: ProductImport;
+  private dockTimer?: ReturnType<typeof setTimeout>;
+  private dockFocus = '';
   @ViewChild(TechnicalEditor) technicalEditor?: TechnicalEditor;
   private readonly technicalEntry = inject(TechnicalEntry);
   private readonly auth = inject(AuthService);
@@ -271,6 +275,24 @@ export class AdminPage implements OnInit {
       this.statusFilter.set('');
       this.loadItems();
     });
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      clearTimeout(this.dockTimer);
+      this.dockTimer = setTimeout(() => {
+        const search = params.get('buscar');
+        if (search && this.section === 'inventario') { this.searchTerm.set(search); this.currentPage.set(0); this.loadItems(); }
+        const action = params.get('accion');
+        if (this.section === 'inventario' && action === 'stock') { if (this.canLeave()) this.openStockModal(); return; }
+        if (this.section !== 'catalogo' || !action) return;
+        if (!this.canLeave()) return;
+        if (action === 'nuevo') { this.openCreateForm(); return; }
+        if (action === 'importar' && !this.design) { this.productImporter?.open.set(true); return; }
+        const id = params.get('producto');
+        if (!id || !['editar', 'imagenes', 'ficha'].includes(action)) return;
+        this.dockFocus = action;
+        this.openEditForm({id, code:'', title:'Consultar producto', status:'draft', statusText:'', rawData:{}});
+      });
+    });
+    this.destroyRef.onDestroy(() => clearTimeout(this.dockTimer));
   }
 
   protected theme(): void {
@@ -290,7 +312,12 @@ export class AdminPage implements OnInit {
     if (this.design) return;
     this.metadataLoading.set(true); this.metadataError.set(null);
     this.adminService.getMetadata().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: meta => { this.categories.set(meta.categorias); this.brands.set(meta.marcas); this.metadataLoading.set(false); },
+      next: meta => {
+        this.categories.set(meta.categorias); this.brands.set(meta.marcas); this.metadataLoading.set(false);
+        if (this.showFormModal() && this.isEditing()) this.formData.update(data => ({...data,
+          categoriaId:data.categoriaId||meta.categorias.find(c=>c.nombre===data.categoria)?.id||'',
+          marcaId:data.marcaId||meta.marcas.find(m=>m.nombre===data.marca)?.id||''}));
+      },
       error: err => { this.metadataLoading.set(false); this.metadataError.set(err?.error?.message || 'No se pudieron cargar categorías y marcas.'); }
     });
     this.loadAlmacenes();
@@ -521,6 +548,14 @@ export class AdminPage implements OnInit {
               this.productMediaComponent?.setImages(detail.imagenes);
             }
             this.captureBaseline();
+            if (this.dockFocus) {
+              const focus = this.dockFocus; this.dockFocus = '';
+              setTimeout(() => {
+                if (this.currentEditRowId !== rowId || !this.showFormModal()) return;
+                const target = document.getElementById(focus === 'imagenes' ? 'admin-product-images' : focus === 'ficha' ? 'admin-product-technical' : '');
+                target?.scrollIntoView({block:'start'}); target?.focus({preventScroll:true});
+              });
+            }
           },
           error: err => {
             if (this.currentEditRowId !== rowId) return;

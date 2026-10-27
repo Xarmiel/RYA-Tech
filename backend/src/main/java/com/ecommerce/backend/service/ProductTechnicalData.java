@@ -12,6 +12,16 @@ import java.util.*;
 /** Called inside the product service transaction. Uses isolated EAV codes, not certified component tables. */
 public class ProductTechnicalData {
     private static final String PREFIX="CATALOG_TECH_";
+    public static boolean isInternalAttributeCode(String code) {
+        return code!=null && code.startsWith(PREFIX) && (code.endsWith("_INTERNAL_NOTES") || code.endsWith("_POWER_NOTES"));
+    }
+    /** Public commercial facets do not certify technical compatibility. Metadata and free-form notes stay private to the sheet. */
+    public static boolean isPublicFilterCode(String code) {
+        if (code == null) return false;
+        var excluded = Set.of("power_notes", "variant_notes", "connectors", "power_connectors", "pcie", "storage_interfaces", "video_outputs");
+        return SCHEMAS.values().stream().anyMatch(schema -> schema.campos().stream().anyMatch(field ->
+            !excluded.contains(field.key()) && (PREFIX + schema.tipo().toUpperCase(Locale.ROOT) + "_" + field.key().toUpperCase(Locale.ROOT)).equals(code)));
+    }
     public record Field(String key, String label, String type, String unit, boolean integer, boolean positive) {}
     public record Schema(String tipo, String nombre, List<Field> campos) {}
     private static Field text(String key,String label){return new Field(key,label,"text",null,false,false);}
@@ -44,7 +54,11 @@ public class ProductTechnicalData {
         var visited=new HashSet<UUID>();
         for(int depth=0;category!=null && depth<20;depth++){
             String type=ALIASES.getOrDefault(key(category.getSlug()),ALIASES.get(key(category.getNombre())));
-            if(type!=null)return SCHEMAS.get(type);
+            if(type!=null){
+                var schema=SCHEMAS.get(type);var fields=new ArrayList<>(schema.campos());
+                fields.add(text("internal_notes","Notas internas de revisión (no se publican)"));
+                return new Schema(schema.tipo(),schema.nombre(),List.copyOf(fields));
+            }
             if(category.getParentId()==null||!visited.add(category.getParentId()))return null;
             category=categories.findById(category.getParentId()).filter(c->!Boolean.TRUE.equals(c.getIsDeleted())).orElse(null);
         }

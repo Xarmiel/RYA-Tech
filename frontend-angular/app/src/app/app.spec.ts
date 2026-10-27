@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 import { PreferencesService } from './core/preferences/preferences.service';
 
 describe('App', () => {
+  afterEach(()=>vi.useRealTimers());
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
@@ -29,6 +30,18 @@ describe('App', () => {
     expect(dropdown.classList.contains('is-open')).toBe(true);
     dropdown.dispatchEvent(new MouseEvent('mouseleave')); fixture.detectChanges();
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  });
+  it('keeps catalog links accessible while crossing the search row and closes on exit or Escape',()=>{
+    vi.useFakeTimers();const fixture=TestBed.createComponent(App);fixture.detectChanges();
+    const root=fixture.nativeElement as HTMLElement, item=root.querySelector('.nav-mega-item')!, menu=item.querySelector('.mega-menu')!, trigger=item.querySelector('a')!;
+    item.dispatchEvent(new MouseEvent('mouseenter'));fixture.detectChanges();expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    const search=root.querySelector('.header-discovery')!;
+    item.dispatchEvent(new MouseEvent('mouseleave',{relatedTarget:search}));search.dispatchEvent(new MouseEvent('mousemove',{bubbles:true}));
+    vi.advanceTimersByTime(1000);fixture.detectChanges();expect(item.classList.contains('is-open')).toBe(true);
+    menu.dispatchEvent(new MouseEvent('mouseenter'));fixture.detectChanges();expect(menu.querySelector('a[href]')).toBeTruthy();
+    const link=menu.querySelector('a')!;link.focus();link.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));fixture.detectChanges();
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');expect(document.activeElement).toBe(trigger);
+    item.dispatchEvent(new MouseEvent('mouseenter'));item.dispatchEvent(new MouseEvent('mouseleave'));vi.advanceTimersByTime(251);fixture.detectChanges();expect(item.classList.contains('is-open')).toBe(false);
   });
 
   it('cambia de tema e icono en cada clic sin desplegar un menú', () => {

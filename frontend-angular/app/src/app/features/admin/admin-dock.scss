@@ -1,0 +1,25 @@
+:host{position:relative;z-index:200}
+.admin-dock{position:fixed;width:min(340px,calc(100vw - 32px));color:var(--text);font-size:14px}
+.admin-dock.is-minimized{width:56px}
+.dock-bar{display:flex;align-items:center;padding:4px;border:1px solid var(--line);border-radius:40px;background:var(--surface-raised);box-shadow:0 8px 30px #0004}
+.admin-dock button,.admin-dock a{font:inherit;color:var(--text)}
+.admin-dock button{cursor:pointer}
+.dock-icon{display:grid;place-items:center;flex-shrink:0;width:44px;min-height:44px;padding:0;border:0;border-radius:50%;background:transparent}
+.dock-handle{touch-action:none;user-select:none;cursor:grab!important}
+.is-dragging .dock-handle{cursor:grabbing!important}
+.dock-toggle{display:flex;align-items:center;justify-content:space-between;flex:1;min-width:0;padding:10px 16px;border:0;border-radius:32px;background:transparent}
+.dock-panel{position:fixed;display:grid;gap:12px;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 100px);overflow:auto;overscroll-behavior:contain;padding:18px;background:var(--surface-raised);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.dock-panel header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dock-panel nav{display:grid;gap:6px}
+.dock-context{margin:0;color:var(--cyan);font-weight:600}
+.dock-panel nav button,.dock-panel nav a,.dock-pending li button,.dock-pending li a{display:block;width:100%;text-align:left;text-decoration:none;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.dock-panel button:hover,.dock-panel a:hover{color:var(--cyan);border-color:var(--cyan)}
+.dock-panel button:disabled{opacity:.5;cursor:wait}
+.dock-pending{border-top:1px solid var(--line);padding-top:12px}
+.dock-filters{display:flex;flex-wrap:wrap;gap:6px}
+.dock-filters button{padding:6px 8px;background:var(--surface);border:1px solid var(--line);border-radius:6px;font-size:12px}
+.dock-filters [aria-pressed=true]{border-color:var(--cyan);color:var(--cyan)}
+.dock-pending ul{display:grid;gap:6px;list-style:none;padding:0;max-height:200px;overflow:auto}
+.dock-pending small{display:block;color:var(--muted);font-size:12px}
+.dock-panel-link{padding:10px 0;color:var(--cyan)!important;font-weight:600}
+.dock-reset{background:transparent;border:0;text-align:left;color:var(--muted)!important;font-size:12px!important;padding:6px 0}

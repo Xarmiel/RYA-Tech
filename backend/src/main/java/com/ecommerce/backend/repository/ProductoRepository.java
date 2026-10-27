@@ -41,6 +41,8 @@ public interface ProductoRepository extends JpaRepository<Producto, UUID>, JpaSp
     Optional<Producto> findBySkuAndIsDeletedFalse(String sku);
 
     boolean existsBySkuAndIsDeletedFalse(String sku);
+    boolean existsBySku(String sku);
+    boolean existsBySlug(String slug);
     boolean existsByMarca_Id(UUID marcaId);
     boolean existsByCategoria_Id(UUID categoriaId);
 

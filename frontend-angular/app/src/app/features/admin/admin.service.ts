@@ -560,8 +560,15 @@ export class AdminService {
     return throwError(() => new Error('La gestión de esta sección todavía no está conectada.'));
   }
 
-  updateProductTechnical(id:string,sku:string,fichaTecnica:ProductTechnicalFicha):Observable<any> {
-    return this.http.patch(`/api/v1/admin/productos/${id}/ficha-tecnica`,{sku,fichaTecnica});
+  updateProductTechnical(id:string,sku:string,fichaTecnica:ProductTechnicalFicha,campos?:string[]):Observable<any> {
+    return this.http.patch(`/api/v1/admin/productos/${id}/ficha-tecnica`,{sku,fichaTecnica,...(campos?{campos}:{})});
+  }
+
+  getImportComparison(id:string):Observable<import('./import-resolution-model').ImportSnapshot> {
+    return this.http.get<import('./import-resolution-model').ImportSnapshot>(`/api/v1/admin/productos/${encodeURIComponent(id)}/importacion`);
+  }
+  resolveImport(id:string,request:unknown):Observable<import('./import-resolution-model').ImportSnapshot> {
+    return this.http.patch<import('./import-resolution-model').ImportSnapshot>(`/api/v1/admin/productos/${encodeURIComponent(id)}/importacion`,request);
   }
 
   addProductImages(id:string,sku:string,urls:string[]):Observable<any>{

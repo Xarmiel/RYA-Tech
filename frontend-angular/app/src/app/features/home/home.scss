@@ -5,7 +5,7 @@ h1, h2, h3 { font-family: "Space Grotesk", Inter, sans-serif; margin: 0; }
 .button-row { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 .button { align-items: center; border: 1px solid transparent; border-radius: 4px; cursor: pointer; display: inline-flex; font-size: 13px; font-weight: 700; gap: 8px; justify-content: center; min-height: 44px; padding: 11px 18px; text-decoration: none; transition: background .2s, border-color .2s, color .2s, transform .2s; }
 .button:hover { transform: translateY(-2px); }
-.button-primary { background: var(--cyan); color: #001017; }
+.button-primary { background: var(--cyan); color: var(--on-accent); }
 .button-secondary { background: transparent; border-color: color-mix(in srgb, var(--cyan) 48%, transparent); color: var(--cyan); }
 .button-secondary:hover { background: #c2c5cc; border-color: #c2c5cc; color: #000; }
 .text-link { color: var(--cyan); font-size: 12px; text-decoration: none; }

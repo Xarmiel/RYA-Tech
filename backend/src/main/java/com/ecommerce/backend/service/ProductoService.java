@@ -49,6 +49,7 @@ public interface ProductoService {
 
     AdminProductoDetalleDto actualizarProducto(UUID id, com.ecommerce.backend.dto.AdminProductoDto dto);
     AdminProductoDetalleDto actualizarFichaProducto(UUID id, String sku, com.ecommerce.backend.dto.FichaProductoDto ficha);
+    AdminProductoDetalleDto actualizarCamposFichaProducto(UUID id, String sku, com.ecommerce.backend.dto.FichaProductoDto ficha, List<String> campos);
     AdminProductoDetalleDto agregarImagenesProducto(UUID id, String sku, List<com.ecommerce.backend.dto.ImagenProductoDto> imagenes);
 
     AdminProductoDetalleDto cambiarEstado(UUID id, String nuevoEstado);

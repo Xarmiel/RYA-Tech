@@ -25,6 +25,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AdminProductoControllerTest {
+    @Test void camposFichaUsaActualizacionParcialSinReemplazarLaFichaCompleta() throws Exception {
+        var id=UUID.randomUUID();
+        when(productoService.actualizarCamposFichaProducto(eq(id),eq("MOUSE-1"),any(),any())).thenReturn(AdminProductoDetalleDto.builder().id(id).build());
+        mockMvc.perform(patch("/api/v1/admin/productos/"+id+"/ficha-tecnica").contentType(MediaType.APPLICATION_JSON)
+            .content("{\"sku\":\"MOUSE-1\",\"campos\":[\"variant_notes\"],\"fichaTecnica\":{\"tipo\":\"mouse\",\"valores\":{\"variant_notes\":null}}}"))
+            .andExpect(status().isOk());
+        verify(productoService).actualizarCamposFichaProducto(eq(id),eq("MOUSE-1"),any(),eq(List.of("variant_notes")));
+        verify(productoService,never()).actualizarFichaProducto(any(),any(),any());
+    }
     @Test void restauracionPendienteRetorna409EnLugarDeErrorNoConfirmado() throws Exception {
         var controller=new AdminProductoController(productoService,categoriaService,categoriaRepository,marcaRepository);
         var mvc=MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new com.ecommerce.backend.exception.GlobalExceptionHandler()).build();

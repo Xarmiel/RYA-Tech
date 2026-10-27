@@ -20,7 +20,7 @@ const hiddenCodes=new Set(['CATALOG_TECH_TYPE','CATALOG_TECH_STATUS','CATALOG_TE
 export function productSpecifications(attributes:readonly ProductAttribute[]):DisplaySpecification[]{
   const result=new Map<string,DisplaySpecification>();
   for(const original of attributes){
-    if(hiddenCodes.has(original.code)||/^CATALOG_TECH_.*_POWER_NOTES$/.test(original.code))continue;
+    if(hiddenCodes.has(original.code)||/^CATALOG_TECH_.*_(POWER_NOTES|INTERNAL_NOTES)$/.test(original.code))continue;
     const commercial=/^CATALOG_TECH_(CPU|BOARD|RAM|STORAGE|GPU|PSU|CASE|KEYBOARD|MOUSE)_(.+)$/.exec(original.code);
     // Unknown internal namespace entries must not leak implementation metadata to the storefront.
     if(original.code.startsWith('CATALOG_TECH_')&&!commercial)continue;
@@ -39,6 +39,12 @@ export function productSpecifications(attributes:readonly ProductAttribute[]):Di
     if(!previous||attribute.pendingReview&&!previous.pendingReview)result.set(key,attribute);
   }
   return [...result.values()];
+}
+
+export function usesComponentConfigurator(attributes:readonly ProductAttribute[]):boolean {
+  const type=attributes.find(attribute=>attribute.code==='CATALOG_TECH_TYPE')?.value?.trim().toLowerCase();
+  if(type)return ['cpu','board','ram','storage','gpu','psu','case'].includes(type);
+  return attributes.some(attribute=>/^CATALOG_TECH_(CPU|BOARD|RAM|STORAGE|GPU|PSU|CASE)_/.test(attribute.code));
 }
 
 export function specificationSource(attributes:readonly ProductAttribute[]):string|null{

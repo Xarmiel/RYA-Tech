@@ -123,11 +123,13 @@ public class AdminProductoController {
 
     // Technical-only updates deliberately do not accept prices, stock, images or publication state.
     public record FichaUpdate(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=80) String sku,
-                              @jakarta.validation.constraints.NotNull com.ecommerce.backend.dto.FichaProductoDto fichaTecnica) {}
+                              @jakarta.validation.constraints.NotNull com.ecommerce.backend.dto.FichaProductoDto fichaTecnica,
+                              @jakarta.validation.constraints.Size(min=1,max=60) java.util.List<@jakarta.validation.constraints.NotBlank String> campos) {}
     @PatchMapping("/{id}/ficha-tecnica")
     @Operation(summary = "Actualizar solo la ficha comercial, sin alterar inventario ni datos certificados")
     public ResponseEntity<AdminProductoDetalleDto> actualizarFicha(@PathVariable UUID id,@Valid @RequestBody FichaUpdate dto) {
-        return ResponseEntity.ok(productoService.actualizarFichaProducto(id,dto.sku(),dto.fichaTecnica()));
+        return ResponseEntity.ok(dto.campos()==null?productoService.actualizarFichaProducto(id,dto.sku(),dto.fichaTecnica())
+            :productoService.actualizarCamposFichaProducto(id,dto.sku(),dto.fichaTecnica(),dto.campos()));
     }
 
     public record ImagenesUpdate(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=80) String sku,

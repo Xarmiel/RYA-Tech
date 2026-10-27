@@ -41,6 +41,25 @@ export class App implements OnInit {
   };
   protected readonly mobileMenuOpen = signal(false);
   protected readonly accountMenuOpen = signal(false);
+  protected readonly catalogMenuOpen = signal(false);
+  private catalogCloseTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor() {this.destroyRef.onDestroy(()=>clearTimeout(this.catalogCloseTimer));}
+  protected openCatalogMenu():void {
+    clearTimeout(this.catalogCloseTimer);this.catalogCloseTimer=undefined;this.catalogMenuOpen.set(true);
+  }
+  protected crossCatalogHeader(event:MouseEvent):void {
+    if(!this.catalogMenuOpen())return;
+    const target=event.target as HTMLElement;
+    if(target.closest('.header-discovery')){clearTimeout(this.catalogCloseTimer);this.catalogCloseTimer=undefined;}
+    else if(!target.closest('.nav-mega-item')&&this.catalogCloseTimer===undefined)this.leaveCatalogMenu(event);
+  }
+  protected leaveCatalogMenu(event:MouseEvent|FocusEvent):void {
+    if(event.relatedTarget instanceof Node && (event.currentTarget as HTMLElement).contains(event.relatedTarget))return;
+    clearTimeout(this.catalogCloseTimer);
+    // The search row sits between the trigger and panel in wrapped headers.
+    this.catalogCloseTimer=setTimeout(()=>{this.catalogMenuOpen.set(false);this.catalogCloseTimer=undefined;},250);
+  }
 
   ngOnInit(): void {
     this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
@@ -90,6 +109,7 @@ export class App implements OnInit {
     if (!target.closest('.account-dropdown')) {
       this.accountMenuOpen.set(false);
     }
+    if(!target.closest('.nav-mega-item')){clearTimeout(this.catalogCloseTimer);this.catalogMenuOpen.set(false);}
   }
 
   protected loginReturnUrl(): string {
@@ -115,9 +135,10 @@ export class App implements OnInit {
       const selector = this.accountMenuOpen() ? '.account-trigger' : this.mobileMenuOpen() ? '.mobile-menu-toggle' : '';
       if (selector) { event.preventDefault(); document.querySelector<HTMLElement>(selector)?.focus(); }
       else if ((event.target as HTMLElement | null)?.closest('.nav-mega-item')) {
-        event.preventDefault(); document.querySelector<HTMLElement>('.main-nav > a')?.focus();
+        event.preventDefault(); document.querySelector<HTMLElement>('.nav-mega-item > a')?.focus();
       }
     }
+    clearTimeout(this.catalogCloseTimer);this.catalogMenuOpen.set(false);
     this.accountMenuOpen.set(false); this.mobileMenuOpen.set(false);
   }
 

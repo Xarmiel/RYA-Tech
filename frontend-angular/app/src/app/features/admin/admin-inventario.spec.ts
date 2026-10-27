@@ -254,6 +254,7 @@ describe('Admin Inventario Page UI & Modals', () => {
           useValue: {
             snapshot: { paramMap: { get: () => 'inventario' }, data: {} },
             paramMap: of({ get: (k: string) => (k === 'section' ? 'inventario' : null) }),
+            queryParamMap: of({get: () => null}),
           },
         },
         { provide: AdminService, useValue: adminServiceMock },

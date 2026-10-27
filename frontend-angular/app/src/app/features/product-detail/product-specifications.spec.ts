@@ -1,10 +1,17 @@
 import { describe,expect,it } from 'vitest';
 import { ProductAttribute } from './product-detail.models';
-import { productSpecifications,specificationSource } from './product-specifications';
+import { productSpecifications,specificationSource,usesComponentConfigurator } from './product-specifications';
 
 const attribute=(code:string,value:string,name=code,unit:string|null=null):ProductAttribute=>({code,value,name,unit,dataType:'TEXTO'});
 
 describe('Storefront specifications without destructive changes',()=>{
+  it('hides internal review notes while keeping useful connection and variant limitations',()=>{
+    const specs=productSpecifications([attribute('CATALOG_TECH_MOUSE_INTERNAL_NOTES','No confundir modelos'),attribute('CATALOG_TECH_MOUSE_VARIANT_NOTES','Receptor no incluido'),attribute('CATALOG_TECH_MOUSE_CONNECTIONS','Bluetooth; USB-C para carga')]);
+    expect(specs.map(spec=>spec.value)).toEqual(['Receptor no incluido','Bluetooth; USB-C para carga']);
+    expect(usesComponentConfigurator([attribute('CATALOG_TECH_TYPE','mouse')])).toBe(false);
+    expect(usesComponentConfigurator([attribute('CATALOG_TECH_TYPE','board')])).toBe(true);
+    expect(usesComponentConfigurator([])).toBe(false);
+  });
   it('shows the legacy and commercial CPU fields only once, regardless of response order',()=>{
     const old=[attribute('socket_cpu','AM4','Socket'),attribute('nucleos_cpu','6','Núcleos'),attribute('cache_l3_kb','8192','Caché L3 Total','KB'),attribute('graficos_integrados_cpu','No','Gráficos integrados')];
     const manual=[attribute('CATALOG_TECH_CPU_SOCKET','AM4','Ficha · Socket'),attribute('CATALOG_TECH_CPU_CORES','6','Ficha · Núcleos'),attribute('CATALOG_TECH_CPU_L3_MB','8','Ficha · Caché L3','MB'),attribute('CATALOG_TECH_CPU_IGPU','No','Ficha · Gráficos integrados')];

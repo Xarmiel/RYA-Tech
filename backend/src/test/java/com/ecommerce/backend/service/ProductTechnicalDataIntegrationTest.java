@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class ProductTechnicalDataIntegrationTest {
     @Autowired ProductoService products;
+    @Autowired ProductImportService imports;
+    @Autowired FiltroService filters;
     @Autowired ProductoRepository productRepo;
     @Autowired CategoriaRepository categories;
     @Autowired TipoProductoRepository types;
@@ -27,6 +29,98 @@ class ProductTechnicalDataIntegrationTest {
     @Autowired RevisionPlacaRepository boards;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @org.springframework.test.context.bean.override.mockito.MockitoBean CatalogAttributeRestorer attributeRestorer;
+
+    @Test void limpiezaParcialConservaFichaYFuenteActualesYNoExponeNotasInternas(){
+        var dto=request(category("Mouse"),new FichaProductoDto("mouse","https://example.com/source",Map.of("max_dpi",8000,"silent_clicks",false,"connections","Bluetooth","variant_notes","Revisar referencia")));
+        dto.setStockInicial(30);var created=products.crearProducto(dto);
+        var fields=new LinkedHashMap<String,Object>();fields.put("variant_notes",null);fields.put("internal_notes","Revisar referencia; comentario solo administrativo.");
+        products.actualizarCamposFichaProducto(created.getId(),created.getSku(),new FichaProductoDto("mouse",null,fields),List.of("variant_notes","internal_notes"));
+        var admin=products.obtenerPorIdAdmin(created.getId());assertEquals("https://example.com/source",admin.getFichaTecnica().fuenteUrl());
+        assertEquals(8000,((Number)admin.getFichaTecnica().valores().get("max_dpi")).intValue());assertEquals(false,admin.getFichaTecnica().valores().get("silent_clicks"));
+        assertEquals("Bluetooth",admin.getFichaTecnica().valores().get("connections"));assertFalse(admin.getFichaTecnica().valores().containsKey("variant_notes"));
+        assertTrue(admin.getFichaTecnica().valores().get("internal_notes").toString().contains("administrativo"));assertEquals(30,admin.getStockDisponible());
+        assertTrue(products.obtenerPorId(created.getId()).getAtributos().stream().noneMatch(a->a.getCodigo().endsWith("_INTERNAL_NOTES")));
+        assertTrue(products.obtenerPorSlug(created.getSlug()).getAtributos().stream().noneMatch(a->a.getCodigo().endsWith("_INTERNAL_NOTES")));
+        assertFalse(ProductTechnicalData.isPublicFilterCode("CATALOG_TECH_MOUSE_INTERNAL_NOTES"));
+        assertTrue(ProductTechnicalData.schema(category("Mouse"),categories).campos().stream().anyMatch(field->field.key().equals("internal_notes")));
+    }
+
+    @Test void limpiezaParcialRechazaSkuDistintoOCamposNoDeclarados(){
+        var created=products.crearProducto(request(category("Mouse"),null));
+        var patch=new FichaProductoDto("mouse",null,Map.of("internal_notes","Comentario"));
+        assertThrows(BadRequestException.class,()->products.actualizarCamposFichaProducto(created.getId(),"OTRO",patch,List.of("internal_notes")));
+    }
+
+    @Test void skuYSlugEliminadosQuedanReservadosSinReactivacionPorImportacion(){
+        var dto=request(category("Mouse"),null);var created=products.crearProducto(dto);products.eliminarProducto(created.getId());
+        var skuError=assertThrows(com.ecommerce.backend.exception.ConflictException.class,()->products.crearProducto(dto));assertTrue(skuError.getMessage().contains("eliminado"));
+        dto.setSku("NEW-"+UUID.randomUUID());dto.setSlug(created.getSlug());
+        var slugError=assertThrows(com.ecommerce.backend.exception.ConflictException.class,()->products.crearProducto(dto));assertTrue(slugError.getMessage().contains("slug"));
+        assertTrue(productRepo.findById(created.getId()).orElseThrow().getIsDeleted());
+    }
+
+    @Test void completarDuplicadoConservaCeroFalseStockPublicacionYPrincipal(){
+        var dto=request(category("Procesadores"),new FichaProductoDto("cpu","https://example.com/old",Map.of("cores",6,"igpu",false,"tdp_w",0)));
+        dto.setPrecioBase(BigDecimal.ZERO);dto.setStockInicial(30);dto.setEstado("active");dto.setRequiereSerie(true);dto.setRequiereEnvio(false);
+        dto.setImagenes(List.of(ImagenProductoDto.builder().url("https://example.com/old.webp").principal(true).posicion(0).build()));
+        var created=products.crearProducto(dto);var before=imports.preview(created.getId());
+        var incoming=new ProductImportService.Data("Otro nombre","Descripción nueva",new BigDecimal("99"),null,
+            new FichaProductoDto("cpu","https://example.com/new",Map.of("cores",8,"igpu",true,"tdp_w",65,"threads",12)),
+            List.of(ImagenProductoDto.builder().url("https://example.com/old.webp").build(),ImagenProductoDto.builder().url("https://example.com/new.webp").build()));
+        var after=imports.resolve(created.getId(),new ProductImportService.Resolution(created.getSku(),before.revision(),"completar",Set.of(),incoming)).actual();
+        assertEquals(created.getId(),after.getId());assertEquals(created.getNombre(),after.getNombre());assertEquals(0,after.getPrecioBase().signum());
+        assertEquals(30,after.getStockDisponible());assertTrue(after.getActivo());assertTrue(after.getVendible());assertTrue(after.getRequiereSerie());assertFalse(after.getRequiereEnvio());
+        assertEquals("Descripción nueva",after.getDescripcion());assertEquals(false,after.getFichaTecnica().valores().get("igpu"));
+        assertEquals(6,((Number)after.getFichaTecnica().valores().get("cores")).intValue());assertEquals(0,((Number)after.getFichaTecnica().valores().get("tdp_w")).intValue());
+        assertEquals(12,((Number)after.getFichaTecnica().valores().get("threads")).intValue());assertEquals("https://example.com/old",after.getFichaTecnica().fuenteUrl());
+        assertEquals(2,after.getImagenes().size());assertEquals(created.getImagenes().getFirst().getId(),after.getImagenes().getFirst().getId());assertTrue(after.getImagenes().getFirst().getPrincipal());
+    }
+
+    @Test void reemplazaSoloCamposElegidosYBloqueaComparacionesObsoletasYSkuDistinto(){
+        var dto=request(category("Procesadores"),null);dto.setDescripcion("Conservar");dto.setStockInicial(30);dto.setRequiereEnvio(false);
+        var created=products.crearProducto(dto);var before=imports.preview(created.getId());
+        var incoming=new ProductImportService.Data("Nombre nuevo","No reemplazar",new BigDecimal("999"),null,null,List.of());
+        var after=imports.resolve(created.getId(),new ProductImportService.Resolution(created.getSku(),before.revision(),"actualizar",Set.of("nombre"),incoming)).actual();
+        assertEquals("Nombre nuevo",after.getNombre());assertEquals("Conservar",after.getDescripcion());assertEquals(0,BigDecimal.TEN.compareTo(after.getPrecioBase()));assertEquals(30,after.getStockDisponible());assertFalse(after.getRequiereEnvio());
+        assertThrows(com.ecommerce.backend.exception.ConflictException.class,()->imports.resolve(created.getId(),new ProductImportService.Resolution(created.getSku(),before.revision(),"actualizar",Set.of("nombre"),incoming)));
+    }
+
+    @Test void rechazaCamposProtegidosYNoUsaNombreParaVincular(){
+        var created=products.crearProducto(request(category("Mouse"),null));var before=imports.preview(created.getId());
+        var incoming=new ProductImportService.Data("Nuevo",null,BigDecimal.TEN,null,null,null);
+        assertThrows(BadRequestException.class,()->imports.resolve(created.getId(),new ProductImportService.Resolution(created.getSku(),before.revision(),"actualizar",Set.of("stockInicial"),incoming)));
+    }
+
+    @Test
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void falloDeGaleriaRevierteTambienLosDatosComercialesDelDuplicado(){
+        var dto=request(category("Mouse"),null);dto.setDescripcion(null);
+        dto.setImagenes(java.util.stream.IntStream.range(0,8).mapToObj(i->ImagenProductoDto.builder().url("https://example.com/"+i).principal(i==0).posicion(i).build()).toList());
+        var created=products.crearProducto(dto);var before=imports.preview(created.getId());
+        var incoming=new ProductImportService.Data(null,"No debe guardarse",null,null,null,List.of(ImagenProductoDto.builder().url("https://example.com/nueva").build()));
+        assertThrows(BadRequestException.class,()->imports.resolve(created.getId(),new ProductImportService.Resolution(created.getSku(),before.revision(),"completar",Set.of(),incoming)));
+        var after=products.obtenerPorIdAdmin(created.getId());assertNull(after.getDescripcion());assertEquals(8,after.getImagenes().size());
+    }
+
+    @Test void filtrosComercialesDependenDeCategoriaYValoresPublicadosSinMostrarMetadatos(){
+        var mouse=category("Mouse");
+        var first=products.crearProducto(request(mouse,new FichaProductoDto("mouse",null,Map.of("color","Negro","sensor","Óptico","max_dpi",8000,"variant_notes","Nota interna"))));
+        var second=products.crearProducto(request(mouse,new FichaProductoDto("mouse",null,Map.of("color","Blanco","max_dpi",16000))));
+        products.cambiarEstado(first.getId(),"publicar");products.cambiarEstado(second.getId(),"publicar");
+        products.crearProducto(request(mouse,new FichaProductoDto("mouse",null,Map.of("color","Color de borrador"))));
+        var keyboard=products.crearProducto(request(category("Teclados"),new FichaProductoDto("keyboard",null,Map.of("layout","Español"))));
+        products.cambiarEstado(keyboard.getId(),"publicar");
+        var facets=filters.obtenerFiltrosDisponibles(mouse.getSlug()).getAtributos();
+        var colors=facets.stream().filter(a->a.getCodigo().equals("CATALOG_TECH_MOUSE_COLOR")).findFirst().orElseThrow();
+        assertEquals(Set.of("Blanco","Negro"),new HashSet<>(colors.getValores()));assertEquals("Color",colors.getNombre());
+        assertTrue(facets.stream().noneMatch(a->Set.of("CATALOG_TECH_TYPE","CATALOG_TECH_STATUS","CATALOG_TECH_SOURCE","CATALOG_TECH_MOUSE_VARIANT_NOTES","CATALOG_TECH_KEYBOARD_LAYOUT").contains(a.getCodigo())));
+        var result=products.listarProductos(null,null,mouse.getSlug(),null,null,null,null,null,Map.of("CATALOG_TECH_MOUSE_COLOR",List.of("Negro")),0,12,"nombre","asc");
+        assertEquals(1,result.getTotalElements());assertEquals(first.getId(),result.getContent().getFirst().getId());
+        var both=products.listarProductos(null,null,mouse.getSlug(),null,null,null,null,null,Map.of("CATALOG_TECH_MOUSE_COLOR",List.of("Negro","Blanco")),0,12,"nombre","asc");
+        assertEquals(2,both.getTotalElements());
+        assertFalse(attributes.findByCodigo("CATALOG_TECH_MOUSE_COLOR").orElseThrow().getFiltrable());
+        assertThrows(BadRequestException.class,()->products.listarProductos(null,null,mouse.getSlug(),null,null,null,null,null,Map.of("CATALOG_TECH_STATUS",List.of("Pendiente")),0,12,"nombre","asc"));
+    }
 
     private void legacy(UUID id,String code,Object value,String unit){
         var attribute=attributes.findByCodigo(code).orElseGet(()->attributes.save(AtributoTecnico.builder().codigo(code).nombre(code).tipoDato(value instanceof Number?"NUMERO":value instanceof Boolean?"BOOLEANO":"TEXTO").unidad(unit).isDeleted(false).build()));

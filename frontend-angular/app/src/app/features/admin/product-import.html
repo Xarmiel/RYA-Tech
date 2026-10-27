@@ -18,6 +18,15 @@
     @if (error()) { <p class="import-error" role="alert">{{ error() }}</p> }
     @if (rows().length) {
       <p role="status">{{ rows().length }} filas · {{ selectedCount() }} listas y seleccionadas. Desmarca las que no quieras cargar. El primer enlace de cada galería será la imagen principal.</p>
+      <button type="button" class="import-button" [disabled]="busy() || referencesBusy()" (click)="showIssues(false, true)">Ver errores y requisitos pendientes</button>
+      @if(hasDuplicates()){
+        <fieldset id="import-duplicates" tabindex="-1" [disabled]="busy() || referencesBusy() || uncertain()">
+          <legend>Resolver duplicados por SKU exacto</legend>
+          <p>Conservar actual es la opción inicial. Completar respeta los datos existentes y agrega imágenes hasta ocho. Actualizar permite elegir los campos que se reemplazan. Stock, SKU, enlace, categoría, marca, publicación y relaciones se conservan.</p>
+          <label>Decisión para todos los SKU duplicados <select [ngModel]="bulkMode()" (ngModelChange)="bulkMode.set($event)"><option value="conservar">Conservar actuales</option><option value="completar">Completar datos faltantes</option><option value="actualizar">Comparar y elegir campos por producto</option></select></label>
+          <button type="button" class="import-button" (click)="applyResolutionToAll()">Preparar decisión para todos (sin guardar)</button>
+        </fieldset>
+      }
       <div class="import-scroll" tabindex="0" aria-label="Vista previa de importación">
         <table>
           <caption>Revisión del lote antes de guardar</caption>
@@ -25,18 +34,35 @@
           <tbody>
             @for (row of rows(); track $index; let i = $index) {
               <tr>
-                <td><input type="checkbox" [(ngModel)]="row.selected" [attr.aria-label]="'Incluir ' + row.product.nombre" [disabled]="busy() || uncertain() || row.state !== 'ready' || !!row.product.errors.length"></td>
+                <td><input type="checkbox" [(ngModel)]="row.selected" (ngModelChange)="confirmed=false" [attr.aria-label]="'Incluir ' + row.product.nombre" [disabled]="busy() || referencesBusy() || uncertain() || (!row.selected && (row.state !== 'ready' || !!row.product.errors.length))"></td>
                 <th scope="row"><strong>{{ row.product.nombre || 'Sin nombre' }}</strong><br><code>{{ row.product.sku }}</code>
-                  <small>Acción: {{row.product.accion==='actualizar-ficha'?'Actualizar solo ficha existente':row.product.accion==='agregar-imagenes'?'Agregar solo imágenes':'Crear borrador nuevo'}}</small>
+                  <small>Acción: {{row.duplicateId ? (row.resolution==='completar'?'Completar producto existente':row.resolution==='actualizar'?'Actualizar campos seleccionados':'Conservar producto existente') : row.product.accion==='actualizar-ficha'?'Actualizar solo ficha existente':row.product.accion==='agregar-imagenes'?'Agregar solo imágenes':'Crear borrador nuevo'}}</small>
+                  @if(row.duplicateId && row.state!=='saved'){
+                    <label [for]="'resolution-'+i">Decisión para este SKU</label>
+                    <select [id]="'resolution-'+i" [ngModel]="row.resolution||'conservar'" (ngModelChange)="chooseResolution(row,$event)" [disabled]="busy() || referencesBusy() || uncertain()">
+                      <option value="conservar">Conservar actual (omitir)</option><option value="completar">Completar datos faltantes</option><option value="actualizar">Actualizar campos seleccionados</option>
+                    </select>
+                    @if(row.comparison && row.resolution!=='conservar'){
+                      <div class="comparison" role="group" [attr.aria-label]="'Comparación de '+row.product.sku">
+                        @for(change of changes(row);track change.key){
+                          <section [class.change-pending]="change.changed">
+                            @if(row.resolution==='actualizar'){
+                              <label><input type="checkbox" [ngModel]="row.fields?.includes(change.key)||false" (ngModelChange)="toggleResolutionField(row,change.key,$event)" [disabled]="busy() || referencesBusy() || uncertain() || !change.available || !change.changed"> {{change.label}}</label>
+                            }@else{<strong>{{change.label}}</strong>}
+                            <details><summary>{{change.changed?'Ver Actual → Propuesto':'Sin cambios'}}</summary><p>Actual</p><pre>{{change.before}}</pre><p>Propuesto</p><pre>{{change.after}}</pre></details>
+                          </section>
+                        }
+                      </div>
+                    }
+                  }
                   @if (row.product.mpn) { <small>MPN: {{ row.product.mpn }}</small> }
-                  @for (error of row.product.errors; track $index) { <p class="import-error">{{ error }}</p> }
-                  @for (error of technicalErrors(row); track $index) { <p class="import-error">{{error}}</p> }
+                  @for (error of requirements(row); track $index) { <p class="import-error">{{ error }}</p> }
                   @if(row.product.fichaTecnica){<small>Incluye ficha técnica · {{row.product.fichaTecnica.tipo}} · pendiente de revisión</small>}
                   @for (warning of row.product.warnings; track $index) { <small>{{ warning }}</small> }
-                  <p [class.import-error]="row.state === 'error' || row.state === 'uncertain'" role="status">{{ row.message }}</p>
+                  @if(row.state==='ready'||row.state==='saved'){<p role="status">{{ row.message }}</p>}
                 </th>
                 <td>
-                  @if(row.product.accion==='agregar-imagenes'){<p>Vínculo por SKU exacto. No se cambian categoría ni marca.</p>}@else{
+                  @if(row.product.accion==='agregar-imagenes'||row.duplicateId){<p>Vínculo por SKU exacto. Se conservan categoría y marca actuales.</p>}@else{
                   <label [for]="'import-category-' + i">Categoría (archivo: {{ row.product.categoria || 'sin indicar' }})</label>
                   <select [id]="'import-category-' + i" [(ngModel)]="row.categoriaId" [disabled]="busy() || uncertain() || row.state !== 'ready'">
                     <option value="">Selecciona una categoría</option>
@@ -49,7 +75,7 @@
                   </select>
                   }
                 </td>
-                <td>@if(row.product.accion==='actualizar-ficha'){<strong>Precio, stock e imágenes actuales: sin cambios</strong>}@else if(row.product.accion==='agregar-imagenes'){<strong>{{row.product.imagenes.length}} enlaces para agregar</strong><p>Precio, stock y ficha: sin cambios.</p>}@else{S/ {{ row.product.precio }}<br>{{ row.product.stockInicial }} unidades<br>{{ row.product.imagenes.length }} imágenes}
+                <td>@if(row.duplicateId){<strong>Stock y publicación actuales: sin cambios</strong><p>Revisa los campos comerciales e imágenes en la comparación.</p>}@else if(row.product.accion==='actualizar-ficha'){<strong>Precio, stock e imágenes actuales: sin cambios</strong>}@else if(row.product.accion==='agregar-imagenes'){<strong>{{row.product.imagenes.length}} enlaces para agregar</strong><p>Precio, stock y ficha: sin cambios.</p>}@else{S/ {{ row.product.precio }}<br>{{ row.product.stockInicial }} unidades<br>{{ row.product.imagenes.length }} imágenes}
                   @for (url of row.product.imagenes; track $index) { <a [href]="row.product.errors.length ? null : url" target="_blank" rel="noopener noreferrer">Imagen {{ $index + 1 }}{{ $index === 0 && row.product.accion==='crear' ? ' · principal' : '' }}</a> }
                 </td>
               </tr>
@@ -58,7 +84,19 @@
         </table>
       </div>
       <label class="import-confirm"><input type="checkbox" [(ngModel)]="confirmed" [disabled]="busy() || uncertain()"> He revisado las acciones seleccionadas, modelos, imágenes y su permiso de uso, precios, stock, categorías y fichas. Se guardan en la BD conectada aunque trabaje localmente. Crear guarda sin publicar; actualizar-ficha reemplaza solo la ficha comercial; agregar-imagenes conserva las existentes sin modificar la ficha ni los datos comerciales. Las fichas no certifican compatibilidad.</label>
-      <button type="button" class="import-button" [disabled]="!canSave()" (click)="save()">Aplicar {{ selectedCount() }} acciones revisadas (altas sin publicar)</button>
+      <button type="button" class="import-button" [disabled]="busy() || referencesBusy() || uncertain() || !confirmed" (click)="save()">Aplicar {{ selectedCount() }} acciones revisadas (altas sin publicar)</button>
     }
   }
 </section>
+<dialog #issueDialog class="import-issues" aria-labelledby="import-issues-title" aria-describedby="import-issues-description" (cancel)="$event.preventDefault(); closeIssues()">
+  <header><h2 id="import-issues-title">Requisitos pendientes de importación</h2><button type="button" class="import-button" aria-label="Cerrar revisión de errores" (click)="closeIssues()" autofocus>✕</button></header>
+  <p id="import-issues-description">Corrige los puntos indicados y vuelve a validar. Puedes crear marcas y categorías sin perder el lote, o desmarcar los productos bloqueados para aplicar solo los demás. Cada producto se guarda por separado; los guardados confirmados se conservan si el lote se detiene.</p>
+  <div class="issue-list">
+    @for (item of report(); track $index) {
+      <section><h3>{{item.name}}</h3>@if(item.sku){<code>{{item.sku}}</code>}
+        <ul>@for(issue of item.issues; track $index){<li>{{issue}}</li>}</ul>
+      </section>
+    }
+  </div>
+  <footer>@if(hasDuplicates()){<button type="button" class="import-button" (click)="reviewDuplicates()">Resolver duplicados</button>}<button type="button" class="import-button" (click)="resolveReferences()" [disabled]="busy() || referencesBusy()">Gestionar marcas y categorías</button><button type="button" class="import-button" (click)="closeIssues()">Volver a la revisión</button></footer>
+</dialog>
