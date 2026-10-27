@@ -190,6 +190,53 @@ class ProductTechnicalDataIntegrationTest {
         }
     }
 
+    @Test void nuevasFamiliasSeGuardanSeRecuperanYSePublicanSinInventarDatos(){
+        var names=List.of("Audífonos","Micrófonos","Cámaras web","Mousepads","Monitores","Volantes","Simulación","Refrigeración","Iluminación");
+        var types=List.of("headset","microphone","webcam","mousepad","monitor","racing","simulation","cooler","lighting");
+        var fields=List.of("impedance_ohm","sensitivity","video_modes","width_mm","refresh_hz","force_feedback","axes","fan_count","temperature_min_k");
+        var samples=List.<Object>of(120,"-36 dBV/Pa","4K30; 1080p60",450,144,false,0,0,3200);
+        for(int idx=0;idx<names.size();idx++){
+            var category=category(names.get(idx));var schema=ProductTechnicalData.schema(category,categories);
+            assertEquals(types.get(idx),schema.tipo());assertTrue(schema.campos().stream().map(ProductTechnicalData.Field::key).toList().contains(fields.get(idx)));
+            Map<String,Object> data=new LinkedHashMap<>();data.put(fields.get(idx),samples.get(idx));data.put("internal_notes","Solo administración");
+            var created=products.crearProducto(request(category,new FichaProductoDto(types.get(idx),"https://example.com/spec",data)));
+            var saved=products.obtenerPorIdAdmin(created.getId()).getFichaTecnica();assertEquals(types.get(idx),saved.tipo());
+            assertEquals(2,saved.valores().size());assertNotNull(saved.valores().get(fields.get(idx))); // No defaults are written for other fields.
+            products.cambiarEstado(created.getId(),"publicar");var published=products.obtenerPorId(created.getId());
+            String code="CATALOG_TECH_"+types.get(idx).toUpperCase(Locale.ROOT)+"_"+fields.get(idx).toUpperCase(Locale.ROOT);
+            assertTrue(published.getAtributos().stream().anyMatch(attr->attr.getCodigo().equals(code)));
+            assertFalse(published.getAtributos().stream().anyMatch(attr->attr.getCodigo().endsWith("_INTERNAL_NOTES")));
+        }
+    }
+    @Test void categoriasEspecificasHeredanEsquemaYLasMixtasNoLoAdivinan(){
+        var root=category("Audífonos");var child=categories.save(Categoria.builder().nombre("Referencia abiertos").slug("ref-"+UUID.randomUUID()).parentId(root.getId()).build());
+        assertEquals("headset",ProductTechnicalData.schema(child,categories).tipo());
+        assertNull(ProductTechnicalData.schema(category("Periféricos"),categories));assertNull(ProductTechnicalData.schema(category("Cámaras e iluminación"),categories));
+        var accent=category("Iluminación");assertEquals("lighting",ProductTechnicalData.schema(accent,categories).tipo());
+    }
+    @Test void importarFichaDeAudifonosConservaDatosComercialesYLosCamposAnteriores(){
+        var created=products.crearProducto(request(category("Audífonos"),new FichaProductoDto("headset",null,Map.of("design","Abierto","microphone",false))));
+        var before=imports.preview(created.getId());
+        var incoming=new ProductImportService.Data(null,null,null,null,new FichaProductoDto("headset","https://example.com/spec",Map.of("impedance_ohm",120,"microphone",true)),null);
+        var result=imports.resolve(created.getId(),new ProductImportService.Resolution(created.getSku(),before.revision(),"completar",Set.of(),incoming)).actual();
+        assertEquals("Abierto",result.getFichaTecnica().valores().get("design"));assertEquals(false,result.getFichaTecnica().valores().get("microphone"));
+        assertEquals(120,((Number)result.getFichaTecnica().valores().get("impedance_ohm")).intValue());assertEquals(created.getPrecioBase(),result.getPrecioBase());assertEquals(created.getStockDisponible(),result.getStockDisponible());
+    }
+    @Test void intervalosInversosYCamposDeOtraFamiliaSeRechazan(){
+        var created=products.crearProducto(request(category("Micrófonos"),null));var product=productRepo.findById(created.getId()).orElseThrow();var service=new ProductTechnicalData(attributes,values,categories);
+        assertThrows(BadRequestException.class,()->service.save(product,new FichaProductoDto("microphone",null,Map.of("frequency_min_hz",20000,"frequency_max_hz",20))));
+        assertThrows(BadRequestException.class,()->service.save(product,new FichaProductoDto("microphone",null,Map.of("cores",8))));
+        assertThrows(BadRequestException.class,()->service.save(product,new FichaProductoDto("microphone",null,Map.of("impedance_ohm",-1))));
+        assertDoesNotThrow(()->service.save(product,new FichaProductoDto("microphone",null,Map.of("sensitivity","-36 dBV/Pa"))));
+    }
+    @Test void tecladosYMouseAmplianCamposSinCambiarClavesPrevias(){
+        assertTrue(ProductTechnicalData.isPublicFilterCode("CATALOG_TECH_HEADSET_IMPEDANCE_OHM"));
+        assertFalse(ProductTechnicalData.isPublicFilterCode("CATALOG_TECH_MICROPHONE_SENSITIVITY"));
+        assertFalse(ProductTechnicalData.isPublicFilterCode("CATALOG_TECH_LIGHTING_MEASUREMENT_CONDITIONS"));
+        var keyboard=ProductTechnicalData.schema(category("Teclados"),categories);var mouse=ProductTechnicalData.schema(category("Mouse"),categories);
+        assertTrue(keyboard.campos().stream().anyMatch(f->f.key().equals("switch_type")));assertTrue(keyboard.campos().stream().anyMatch(f->f.key().equals("layout")));
+        assertTrue(mouse.campos().stream().anyMatch(f->f.key().equals("weight_g")));assertTrue(mouse.campos().stream().anyMatch(f->f.key().equals("max_dpi")));
+    }
     private Categoria category(String name){return categories.save(Categoria.builder().nombre(name).slug("tech-"+UUID.randomUUID()).build());}
     private AdminProductoDto request(Categoria category,FichaProductoDto technical){
         var type=types.save(TipoProducto.builder().codigo("T"+UUID.randomUUID().toString().substring(0,8)).descripcion("Prueba").build());
@@ -200,7 +247,7 @@ class ProductTechnicalDataIntegrationTest {
         for(int i=0;i<names.size();i++){var schema=ProductTechnicalData.schema(category(names.get(i)),categories);assertNotNull(schema);assertEquals(expected.get(i),schema.tipo());assertFalse(schema.campos().isEmpty());}
     }
     @Test void subcategoriaHeredaEsquemaSinInventarTipoParaPerifericos(){
-        var parent=category("Procesadores");var child=category("AMD AM4");child.setParentId(parent.getId());categories.save(child);assertEquals("cpu",ProductTechnicalData.schema(child,categories).tipo());assertNull(ProductTechnicalData.schema(category("Audífonos"),categories));
+        var parent=category("Procesadores");var child=category("AMD AM4");child.setParentId(parent.getId());categories.save(child);assertEquals("cpu",ProductTechnicalData.schema(child,categories).tipo());assertNull(ProductTechnicalData.schema(category("Periféricos"),categories));
     }
     @Test void crearLeerYEditarPersisteValoresYReutilizaFilasEliminadas(){
         var request=request(category("Procesadores"),new FichaProductoDto("cpu","https://example.com/manufacturer",Map.of("socket","AM4","cores",6,"tdp_w",65,"igpu",false)));

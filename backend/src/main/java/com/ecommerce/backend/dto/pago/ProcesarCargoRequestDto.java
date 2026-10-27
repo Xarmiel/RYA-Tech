@@ -17,6 +17,9 @@ public class ProcesarCargoRequestDto {
     @NotNull(message = "El ID del pedido es obligatorio")
     private UUID pedidoId;
 
+    @jakarta.validation.constraints.Size(max=100)
+    private String savedCardId;
+
     private String token; // Token de tarjeta generado por Brick
 
     private String paymentMethodId; // visa, master, yape, etc.

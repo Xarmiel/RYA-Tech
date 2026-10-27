@@ -29,6 +29,17 @@ public class MercadoPagoOrdersClient {
         requireCredentials();return client.post().uri("/v1/orders").headers(h->h.setBearerAuth(config.getAccessToken()))
             .header("X-Idempotency-Key",key).contentType(org.springframework.http.MediaType.APPLICATION_JSON).body(body).retrieve().body(JsonNode.class);
     }
+    public JsonNode customerCreate(String email) {
+        requireCredentials();return client.post().uri("/v1/customers").headers(h->h.setBearerAuth(config.getAccessToken()))
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON).body(Map.of("email",email)).retrieve().body(JsonNode.class);
+    }
+    public JsonNode cards(String customer) {
+        requireCredentials();return client.get().uri("/v1/customers/{customer}/cards",customer).headers(h->h.setBearerAuth(config.getAccessToken())).retrieve().body(JsonNode.class);
+    }
+    public JsonNode saveCard(String customer,String token) {
+        requireCredentials();return client.post().uri("/v1/customers/{customer}/cards",customer).headers(h->h.setBearerAuth(config.getAccessToken()))
+            .contentType(org.springframework.http.MediaType.APPLICATION_JSON).body(Map.of("token",token)).retrieve().body(JsonNode.class);
+    }
     public JsonNode get(String id) {
         requireCredentials();if(id==null||!id.matches("[A-Za-z0-9_-]{1,64}"))throw new IllegalArgumentException("Identificador de order inválido");
         return client.get().uri("/v1/orders/{id}",id).headers(h->h.setBearerAuth(config.getAccessToken())).retrieve().body(JsonNode.class);

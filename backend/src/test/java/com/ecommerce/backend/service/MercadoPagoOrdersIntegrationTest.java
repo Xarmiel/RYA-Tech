@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.*;
 @SpringBootTest @ActiveProfiles("test")
 class MercadoPagoOrdersIntegrationTest {
     @Autowired PagoService service;
+    @Autowired ClientePagoRepository customerBindings;
     @Autowired PedidoRepository pedidos;
     @Autowired PagoRepository pagos;
     @Autowired ObjectMapper mapper;
@@ -68,11 +69,14 @@ class MercadoPagoOrdersIntegrationTest {
         var product=products.crearProducto(com.ecommerce.backend.dto.AdminProductoDto.builder().nombre("Mouse de prueba").sku("ORDER-"+UUID.randomUUID()).categoriaId(category.getId()).tipoId(type.getId()).precioBase(new BigDecimal("95.00")).stockInicial(30).estado("active").build());
         when(items.findByCarritoIdAndIsDeletedFalseOrderByCreatedAtAsc(cart.getId())).thenReturn(List.of(ItemCarrito.builder().producto(productRepo.findById(product.getId()).orElseThrow()).cantidad(1).build()));
         var method=mock(MetodoPago.class);when(method.getCodigo()).thenReturn("MP_CARDS");when(method.getNombre()).thenReturn("Tarjeta");
-        var rate=mock(TarifaEnvio.class);UUID rateId=UUID.randomUUID();when(rate.getId()).thenReturn(rateId);when(rate.getCosto()).thenReturn(new BigDecimal("5.00"));
+        var rate=mock(TarifaEnvio.class);UUID rateId=UUID.randomUUID();when(rate.getActivo()).thenReturn(true);when(rate.getModalidad()).thenReturn("DOMICILIO");when(rate.getNombreServicio()).thenReturn("Courier de prueba");when(rate.getId()).thenReturn(rateId);when(rate.getCosto()).thenReturn(new BigDecimal("5.00"));
         UUID methodId=UUID.randomUUID();when(methods.findByIdAndActivoTrueAndIsDeletedFalse(methodId)).thenReturn(Optional.of(method));when(shipping.findByIdAndIsDeletedFalse(rateId)).thenReturn(Optional.of(rate));
         var customer=new com.ecommerce.backend.dto.ValidarCheckoutRequestDto.Cliente();customer.setNombre("Cliente prueba");customer.setEmail("buyer@example.test");customer.setTipoDocumento("DNI");customer.setNumeroDocumento("12345678");customer.setTelefono("999999999");
-        var delivery=new com.ecommerce.backend.dto.ValidarCheckoutRequestDto.Entrega();delivery.setTarifaEnvioId(rateId);delivery.setDireccion("Dirección de prueba");
+        var delivery=new com.ecommerce.backend.dto.ValidarCheckoutRequestDto.Entrega();delivery.setDepartamento("Lima");delivery.setProvincia("Lima");delivery.setDistrito("Miraflores");delivery.setTarifaEnvioId(rateId);delivery.setDireccion("Dirección de prueba");
         var response=service.iniciarPago("session",user,CrearPedidoPagoRequestDto.builder().cliente(customer).entrega(delivery).metodoPagoId(methodId).build());
+        var saved=pedidos.findById(response.getPedidoId()).orElseThrow();
+        assertEquals("DOMICILIO", saved.getModalidadEntrega());assertTrue(saved.getEntregaSnapshot().contains("Courier de prueba"));
+        when(rate.getNombreServicio()).thenReturn("Nombre posterior");assertTrue(pedidos.findById(saved.getId()).orElseThrow().getEntregaSnapshot().contains("Courier de prueba"));
         assertEquals(0,new BigDecimal("100.00").compareTo(response.getTotal()));assertEquals("MP_CARDS",response.getMetodoPagoCodigo());
         assertEquals(1,purchases.detalle(user,response.getPedidoId()).productos().size());assertEquals(response.getNumeroPedido(),purchases.detalle(user,response.getPedidoId()).codigo());
         verify(client,never()).create(anyString(),anyMap());verify(checkout).validar(eq("session"),eq(user),any());
@@ -86,6 +90,15 @@ class MercadoPagoOrdersIntegrationTest {
         when(client.get(paid.getMpOrderId())).thenReturn(response(pagos.findByPedidoIdOrderByCreatedAtDesc(p.getId()).getFirst().getId().toString(),"processed"));
         service.procesarCargo("",p.getUsuarioId(),request(p));verify(client,times(1)).create(anyString(),anyMap());
         var stored=pagos.findByPedidoIdOrderByCreatedAtDesc(p.getId());assertEquals(1,stored.size());assertNull(stored.getFirst().getRawResponse());
+    }
+    @Test void tarjetaGuardadaSeVerificaEnLaCuentaAntesDeCrearLaOrder()throws Exception{
+        var p=pedido("MP_CARDS");var binding=new com.ecommerce.backend.entity.ClientePago();binding.setId(UUID.randomUUID());binding.setUsuarioId(p.getUsuarioId());
+        var scope="test:"+java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(config.getPublicKey().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        binding.setEntorno(scope);binding.setCustomerId("owned-customer");customerBindings.saveAndFlush(binding);
+        when(client.cards("owned-customer")).thenReturn(mapper.readTree("[{\"id\":\"saved1\",\"last_four_digits\":\"9876\",\"expiration_month\":12,\"expiration_year\":2035,\"payment_method\":{\"id\":\"visa\",\"name\":\"Visa\",\"payment_type_id\":\"debit_card\"}}]"));
+        var req=request(p);req.setSavedCardId("saved1");req.setPaymentMethodId("tampered");req.setPaymentTypeId("credit_card");
+        when(client.create(anyString(),anyMap())).thenAnswer(call->{var body=(Map<?,?>)call.getArgument(1);assertEquals("owned-customer",((Map<?,?>)body.get("payer")).get("customer_id"));var payments=(java.util.List<?>)((Map<?,?>)body.get("transactions")).get("payments");var method=(Map<?,?>)((Map<?,?>)payments.getFirst()).get("payment_method");assertEquals("visa",method.get("id"));assertEquals("debit_card",method.get("type"));return response(call.getArgument(0),"processed");});
+        assertTrue(service.procesarCargo("",p.getUsuarioId(),req).isExitoso());
     }
     @Test void pedidoAjenoNoPuedeSerPagadoNiConsultado(){
         var p=pedido("MP_CARDS");assertThrows(ResourceNotFoundException.class,()->service.procesarCargo("",UUID.randomUUID(),request(p)));

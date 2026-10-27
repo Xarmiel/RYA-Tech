@@ -38,6 +38,31 @@ describe('Category-specific technical form',()=>{
   it('validates HTTPS sources without credentials',()=>{
     const component=setup().componentInstance;for(const source of ['http://example.com','javascript:alert(1)','https://user:pass@example.com']){component.source=source;expect(component.canSave()).toBe(false);}component.source='https://example.com/spec';expect(component.canSave()).toBe(true);
   });
+  it('renders saved headphones as audio fields and keeps unknown values empty',()=>{
+    const fixture=setup();const schema:TechnicalSchema={tipo:'headset',nombre:'Audífonos',campos:[
+      {key:'impedance_ohm',label:'Impedancia',type:'number',unit:'Ω',integer:false,positive:false},
+      {key:'microphone',label:'Micrófono integrado',type:'boolean',unit:null,integer:false,positive:false},
+      {key:'sensitivity',label:'Sensibilidad con referencia',type:'text',unit:null,integer:false,positive:false}
+    ]};
+    fixture.componentRef.setInput('schema',schema);fixture.componentRef.setInput('value',{tipo:'headset',valores:{impedance_ohm:120,microphone:false}});fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Impedancia (Ω)');expect(fixture.nativeElement.querySelector('input[type="number"]').value).toBe('120');expect(fixture.nativeElement.querySelector('select').value).toBe('false');expect(fixture.componentInstance.values['sensitivity']).toBeUndefined();expect(fixture.nativeElement.textContent).not.toContain('TDP, potencia máxima');
+  });
+  it('accepts signed microphone sensitivity as text and rejects reversed frequency intervals',()=>{
+    const fixture=setup();fixture.componentRef.setInput('schema',{tipo:'microphone',nombre:'Micrófono',campos:[
+      {key:'sensitivity',label:'Sensibilidad',type:'text',unit:null,integer:false,positive:false},
+      {key:'frequency_min_hz',label:'Frecuencia mínima',type:'number',unit:'Hz',integer:false,positive:false},
+      {key:'frequency_max_hz',label:'Frecuencia máxima',type:'number',unit:'Hz',integer:false,positive:false}
+    ]});fixture.detectChanges();const component=fixture.componentInstance;component.values={sensitivity:'-36 dBV/Pa',frequency_min_hz:20,frequency_max_hz:20000};expect(component.canSave()).toBe(true);component.values={frequency_min_hz:20000,frequency_max_hz:20};expect(component.issues().join(' ')).toContain('mínimo no puede superar');
+  });
+  it('uses custom field examples as placeholders without filling product values',()=>{
+    const fixture=setup();fixture.componentRef.setInput('schema',{tipo:'custom',nombre:'Instrumento nuevo',campos:[{key:'extra_measure',label:'Temperatura',type:'number',unit:'°C',integer:false,positive:false,example:'-10.5',custom:true}]});fixture.detectChanges();
+    const input=fixture.nativeElement.querySelector('input[type="number"]');expect(input.placeholder).toBe('Ej. -10.5');expect(input.value).toBe('');expect(input.getAttribute('min')).toBeNull();expect(fixture.componentInstance.values).toEqual({});
+    input.value='-12.5';input.dispatchEvent(new Event('input'));expect(fixture.componentInstance.canSave()).toBe(true);expect(fixture.componentInstance.values['extra_measure']).toBe(-12.5);
+  });
+  it('enforces numeric magnitude and integer format for signed custom fields',()=>{
+    const fixture=setup();fixture.componentRef.setInput('schema',{tipo:'custom',nombre:'Nuevo',campos:[{key:'extra_count',label:'Cantidad relativa',type:'number',unit:null,integer:true,positive:false,custom:true}]});fixture.detectChanges();
+    const component=fixture.componentInstance;component.values={extra_count:-2};expect(component.canSave()).toBe(true);component.values={extra_count:-2.5};expect(component.canSave()).toBe(false);component.values={extra_count:-1e12};expect(component.canSave()).toBe(false);
+  });
   it('does not carry CPU values into a PSU schema',()=>{
     const fixture=setup();fixture.componentRef.setInput('value',{tipo:'cpu',valores:{cores:6}});fixture.detectChanges();fixture.componentRef.setInput('schema',{tipo:'psu',nombre:'Fuente',campos:[]});fixture.detectChanges();expect(fixture.componentInstance.values).toEqual({});
   });

@@ -8,6 +8,7 @@ export interface OrderItem {
 }
 export interface Order {
   id: string; codigo: string; estado: string; moneda: string; subtotal: number; descuento: number;
+  entrega?: {modalidad:string;direccion:string;referencia:string;descripcion:string;estado:string;transportista:string;codigoSeguimiento:string};
   envio: number; total: number; fecha: string; metodoPago: string | null; productos: OrderItem[];
 }
 export interface OrderPage { content: Order[]; page: number; size: number; totalElements: number; totalPages: number; }

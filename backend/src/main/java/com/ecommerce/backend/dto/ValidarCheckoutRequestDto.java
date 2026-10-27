@@ -28,7 +28,10 @@ public class ValidarCheckoutRequestDto {
     @Data
     public static class Entrega {
         @NotNull private UUID tarifaEnvioId;
-        @NotBlank @Size(min = 5, max = 300) private String direccion;
+        @Size(max = 300) private String direccion;
+        @Size(max = 100) private String departamento;
+        @Size(max = 100) private String provincia;
+        @Size(max = 100) private String distrito;
         @Size(max = 300) private String referencia;
     }
 }

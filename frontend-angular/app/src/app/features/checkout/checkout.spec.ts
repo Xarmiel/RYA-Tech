@@ -17,7 +17,7 @@ describe('Checkout Orders',()=>{
   beforeEach(()=>{
     vi.stubGlobal('scrollTo',vi.fn());
     cart={cart:signal({items:[{id:'item',productId:'p',slug:'p',name:'Producto',sku:'SKU',quantity:1,availableStock:10,subtotal:100}],subtotal:100}),totalQuantity:()=>1,load:vi.fn(()=>of({}))};
-    api={getOptions:()=>of({paymentMethods:[],shippingRates:[]}),iniciarPago:vi.fn(()=>of(init)),procesarCargo:vi.fn(()=>of(pending)),consultarPago:vi.fn(()=>of(pending))};
+    api={savedCards:()=>of([]),getOptions:()=>of({paymentMethods:[],shippingRates:[]}),iniciarPago:vi.fn(()=>of(init)),procesarCargo:vi.fn(()=>of(pending)),consultarPago:vi.fn(()=>of(pending))};
     unmount=vi.fn();create=vi.fn((_kind,_id,options)=>{options.callbacks.onReady();return Promise.resolve({unmount});});yape=vi.fn(()=>({create:()=>Promise.resolve({id:'yape-token'})}));
     vi.stubGlobal('MercadoPago',vi.fn(function(){return{bricks:()=>({create}),yape};}));
     TestBed.configureTestingModule({imports:[Checkout],providers:[provideRouter([]),{provide:CheckoutService,useValue:api},{provide:CartService,useValue:cart}]});
@@ -26,12 +26,43 @@ describe('Checkout Orders',()=>{
     component.validation.set({valid:true,requiresAuthentication:false,total:100,subtotal:100,shipping:0,currency:'PEN',paymentMethod:'Tarjeta',delivery:'Entrega',messages:[]});fixture.detectChanges();
   });
   afterEach(()=>{TestBed.resetTestingModule();vi.unstubAllGlobals();});
-  it('uses cardPayment and sends the Orders payment type without a preference or frontend amount',async()=>{
+  it('sanitizes document input and updates its length when the document type changes',async()=>{
+    component.currentStep.set(1);fixture.detectChanges();await fixture.whenStable();
+    const input:HTMLInputElement=fixture.nativeElement.querySelector('[name="documentNumber"]');
+    const select:HTMLSelectElement=fixture.nativeElement.querySelector('[name="documentType"]');
+    input.value='12ab34567890';input.dispatchEvent(new Event('input',{bubbles:true}));fixture.detectChanges();
+    expect(component.customer.documentNumber).toBe('12345678');expect(input.value).toBe('12345678');expect(input.maxLength).toBe(8);expect(input.inputMode).toBe('numeric');
+    select.value='RUC';select.dispatchEvent(new Event('change',{bubbles:true}));fixture.detectChanges();
+    input.value='201234567890x';input.dispatchEvent(new Event('input',{bubbles:true}));fixture.detectChanges();
+    expect(component.customer.documentNumber).toBe('20123456789');expect(input.value).toBe('20123456789');expect(input.maxLength).toBe(11);
+    select.value='DNI';select.dispatchEvent(new Event('change',{bubbles:true}));fixture.detectChanges();await fixture.whenStable();
+    expect(component.customer.documentNumber).toBe('20123456');expect(input.value).toBe('20123456');
+    select.value='CE';select.dispatchEvent(new Event('change',{bubbles:true}));fixture.detectChanges();
+    input.value='AB-123456789012';input.dispatchEvent(new Event('input',{bubbles:true}));fixture.detectChanges();
+    expect(component.customer.documentNumber).toBe('AB1234567890');expect(input.maxLength).toBe(12);expect(input.inputMode).toBe('text');
+  });
+  it('filters delivery rates by location, clears selection and allows pickup without a home address',()=>{
+    const home={id:'home',carrier:'Courier',department:'Lima',province:'Lima',district:'San Miguel',cost:12,days:1,mode:'DOMICILIO'};
+    const wide={...home,id:'wide',province:null,district:null};
+    const pickup={...home,id:'pickup',mode:'RECOJO',pickupAddress:'Av. Tienda 123',pickupHours:'9 a 18',cost:0};
+    component.options.set({paymentMethods:[],shippingRates:[home,wide,pickup]});
+    component.delivery={shippingRateId:'',address:'',reference:'',department:'LIMA',province:'Lima',district:'San Miguel'};
+    expect(component.matchingRates().map((r:any)=>r.id)).toEqual(['home','wide']);
+    component.selectRate(home);component.delivery.district='Otro';component.resetDelivery();
+    expect(component.delivery.shippingRateId).toBe('');expect(component.matchingRates().map((r:any)=>r.id)).toEqual(['wide']);
+    component.delivery.department='Cusco';component.goToPayment();expect(component.errors()['shippingRate']).toBeTruthy();
+    component.resetDelivery('RECOJO');expect(component.matchingRates().map((r:any)=>r.id)).toEqual(['pickup']);
+    component.selectRate(pickup);expect(component.delivery.address).toBe('Av. Tienda 123');component.goToPayment();expect(component.currentStep()).toBe(3);
+  });
+  it('sends only the token and Orders metadata and retains pending status',async()=>{
     component.pagarConMercadoPago();await fixture.whenStable();
-    expect(create.mock.calls[0][0]).toBe('cardPayment');const settings=create.mock.calls[0][2];expect(settings.initialization).not.toHaveProperty('preferenceId');
-    await settings.callbacks.onSubmit({token:'token',payment_method_id:'visa',installments:1,payer:{email:'payer@example.test'}},{paymentTypeId:'credit_card'});
-    expect(api.procesarCargo).toHaveBeenCalledWith('pedido-1','payer@example.test',expect.objectContaining({paymentMethodId:'visa',paymentTypeId:'credit_card'}));
+    await component.submitOrder({token:'token',paymentMethodId:'visa',paymentTypeId:'debit_card'});
+    expect(api.procesarCargo).toHaveBeenCalledWith('pedido-1','buyer@example.test',expect.objectContaining({paymentMethodId:'visa',paymentTypeId:'debit_card'}));
     expect(api.procesarCargo.mock.calls[0][2]).not.toHaveProperty('amount');expect(component.pendingPayment()).toBeTruthy();expect(component.paymentSuccess()).toBeNull();
+  });
+  it('opens the secure card phase after validation without charging',()=>{
+    api.validate=vi.fn(()=>of(component.validation()));component.options.set({paymentMethods:[{id:'method-1',code:'MP_CARDS',name:'Tarjeta'}],shippingRates:[]});
+    component.validateOrder();expect(component.currentStep()).toBe(4);expect(api.iniciarPago).toHaveBeenCalledTimes(1);expect(api.procesarCargo).not.toHaveBeenCalled();
   });
   it('creates a PagoEfectivo code and displays pending instructions rather than a success receipt',()=>{
     api.iniciarPago.mockReturnValue(of({...init,metodoPagoCodigo:'MP_PAGOEFECTIVO'}));
@@ -46,13 +77,13 @@ describe('Checkout Orders',()=>{
   });
   it('locks an uncertain response until its status is checked, without automatically submitting again',async()=>{
     component.pagarConMercadoPago();await fixture.whenStable();api.procesarCargo.mockReturnValue(throwError(()=>({status:0})));
-    const submit=create.mock.calls[0][2].callbacks.onSubmit;await expect(submit({token:'token',payment_method_id:'visa'},{paymentTypeId:'credit_card'})).rejects.toThrow();
-    await expect(submit({token:'token2',payment_method_id:'visa'},{paymentTypeId:'credit_card'})).rejects.toThrow();expect(api.procesarCargo).toHaveBeenCalledTimes(1);expect(component.paymentUncertain()).toBe(true);
+    const submit=(token:string)=>component.submitOrder({token,paymentMethodId:'visa',paymentTypeId:'credit_card'});await expect(submit('token')).rejects.toThrow();
+    await expect(submit('token2')).rejects.toThrow();expect(api.procesarCargo).toHaveBeenCalledTimes(1);expect(component.paymentUncertain()).toBe(true);
     component.checkPayment();expect(api.consultarPago).toHaveBeenCalledWith('pedido-1');
   });
-  it('keeps the paid receipt visible after the cart empties and destroys the Brick',async()=>{
+  it('keeps the paid receipt visible after the cart empties',async()=>{
     component.pagarConMercadoPago();await fixture.whenStable();api.procesarCargo.mockReturnValue(of({...pending,exitoso:true,pendiente:false,estadoPedido:'PAGADO'}));
-    await create.mock.calls[0][2].callbacks.onSubmit({token:'t',payment_method_id:'visa'},{paymentTypeId:'credit_card'});cart.cart.set({items:[],subtotal:0});fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Gracias por tu compra');expect(fixture.nativeElement.textContent).not.toContain('Tu carrito está vacío');expect(unmount).toHaveBeenCalled();
+    await component.submitOrder({token:'t',paymentMethodId:'visa',paymentTypeId:'credit_card'});cart.cart.set({items:[],subtotal:0});fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Gracias por tu compra');expect(fixture.nativeElement.textContent).not.toContain('Tu carrito está vacío');
   });
 });

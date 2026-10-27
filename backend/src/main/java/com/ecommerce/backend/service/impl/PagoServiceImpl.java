@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 public class PagoServiceImpl implements PagoService {
     private final MercadoPagoProperties config;
     private final MercadoPagoOrdersClient orders;
+    private final TarjetasPagoService cards;
     private final MercadoPagoWebhookVerifier signatures;
     private final ObjectMapper mapper;
     private final PlatformTransactionManager transactionManager;
@@ -69,6 +70,7 @@ public class PagoServiceImpl implements PagoService {
         if(!METHODS.contains(method.getCodigo()))throw new BadRequestException("Ese método no está integrado con Orders.");
         var shipping=tarifaEnvioRepository.findByIdAndIsDeletedFalse(request.getEntrega().getTarifaEnvioId())
             .orElseThrow(()->new BadRequestException("Tarifa de envío no disponible."));
+        com.ecommerce.backend.service.EntregaRules.validar(shipping, request.getEntrega());
         var snapshots=new ArrayList<PedidoItem>();var subtotal=BigDecimal.ZERO;
         for(var item:items){
             var product=productoRepository.findConDetallesPorId(item.getProducto().getId())
@@ -87,7 +89,9 @@ public class PagoServiceImpl implements PagoService {
             .subtotal(subtotal).costoEnvio(shipping.getCosto()).total(total)
             .tipoDocumento(customer.getTipoDocumento()).numeroDocumento(customer.getNumeroDocumento()).nombreCompleto(customer.getNombre())
             .email(customer.getEmail()).telefono(customer.getTelefono()).tarifaEnvioId(shipping.getId())
-            .direccionEnvio(delivery.getDireccion()).referenciaEnvio(delivery.getReferencia())
+            .direccionEnvio(com.ecommerce.backend.service.EntregaRules.recojo(shipping) ? shipping.getDireccionRecojo() : delivery.getDireccion()).referenciaEnvio(delivery.getReferencia())
+            .modalidadEntrega(java.util.Objects.toString(shipping.getModalidad(), "DOMICILIO")).estadoEntrega("PENDIENTE")
+            .entregaSnapshot(com.ecommerce.backend.service.EntregaRules.descripcion(shipping, delivery) + " · " + java.util.Objects.toString(shipping.getNombreServicio(), "Servicio de entrega") + (shipping.getPlazoDias() == null ? " · Plazo por confirmar" : " · Plazo: " + shipping.getPlazoDias() + " días"))
             .metodoPagoCodigo(method.getCodigo()).metodoPagoSnapshot(method.getNombre()).build();
         snapshots.forEach(item->item.setPedido(pedido));pedido.setItems(snapshots);pedidoRepository.save(pedido);
         return IniciarPagoResponseDto.builder().pedidoId(pedido.getId()).numeroPedido(pedido.getNumeroPedido())
@@ -155,6 +159,12 @@ public class PagoServiceImpl implements PagoService {
 
     private Map<String,Object> body(Pedido pedido,ProcesarCargoRequestDto request){
         String method=request.getPaymentMethodId(), type=request.getPaymentTypeId();
+        TarjetasPagoService.OwnedCard saved=null;
+        if(request.getSavedCardId()!=null){
+            if(!"MP_CARDS".equals(pedido.getMetodoPagoCodigo()))throw new BadRequestException("Este pedido no utiliza tarjetas.");
+            saved=cards.owned(pedido.getUsuarioId(),request.getSavedCardId());
+            method=saved.card().paymentMethodId();type=saved.card().paymentTypeId();
+        }
         if(method==null||!method.matches("[a-zA-Z0-9_]{1,64}"))throw new BadRequestException("Falta un medio de pago válido.");
         if("MP_YAPE".equals(pedido.getMetodoPagoCodigo())){
             if(!"yape".equals(method))throw new BadRequestException("Este pedido requiere Yape.");
@@ -176,6 +186,7 @@ public class PagoServiceImpl implements PagoService {
             }
         }
         var payer=new LinkedHashMap<String,Object>();payer.put("email",request.getEmail());
+        if(saved!=null)payer.put("customer_id",saved.customerId());
         String docType=request.getIdentificationType(),doc=request.getIdentificationNumber();
         if(docType!=null&&doc!=null&&!doc.isBlank()){
             if(!docType.matches("[A-Za-z_]{1,20}")||!doc.matches("[A-Za-z0-9]{1,20}"))throw new BadRequestException("Identificación del pagador inválida.");

@@ -77,6 +77,17 @@ public class Pedido {
     @Column(name = "referencia_envio", columnDefinition = "TEXT")
     private String referenciaEnvio;
 
+    @Column(name = "modalidad_entrega")
+    private String modalidadEntrega;
+    @Column(name = "entrega_snapshot", columnDefinition = "TEXT")
+    private String entregaSnapshot;
+    @Column(name = "estado_entrega")
+    private String estadoEntrega;
+    @Column(name = "transportista_seguimiento")
+    private String transportistaSeguimiento;
+    @Column(name = "codigo_seguimiento")
+    private String codigoSeguimiento;
+
     @Column(name = "preference_id", length = 128)
     private String preferenceId;
 

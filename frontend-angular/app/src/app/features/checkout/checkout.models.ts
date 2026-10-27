@@ -7,9 +7,10 @@ export interface CheckoutCustomer {
   email: string;
   phone: string;
 }
-export interface CheckoutDelivery { shippingRateId: string; address: string; reference: string; }
+export interface CheckoutDelivery { shippingRateId: string; address: string; reference: string; department?: string; province?: string; district?: string; }
 export interface PaymentMethod { id: string; code: string; name: string; }
 export interface ShippingRate {
+  mode?: 'DOMICILIO'|'RECOJO'; pickupAddress?: string; pickupHours?: string;
   id: string; carrier: string; department: string | null; province: string | null;
   district: string | null; cost: number; days: number | null;
 }
@@ -45,8 +46,13 @@ export interface ResultadoPago {
 }
 
 export interface OrdersPaymentData {
-  token?:string;paymentMethodId:string;paymentTypeId?:string;installments?:number;
+  savedCardId?:string;token?:string;paymentMethodId:string;paymentTypeId?:string;installments?:number;
   identificationType?:string;identificationNumber?:string;
 }
 
 
+
+export interface SavedPaymentCard {
+ id:string;lastFour:string;brand:string;paymentMethodId:string;paymentTypeId:'credit_card'|'debit_card';
+ expirationMonth:number;expirationYear:number;securityCodeLength:number;
+}

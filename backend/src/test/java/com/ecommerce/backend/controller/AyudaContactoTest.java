@@ -8,15 +8,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 class AyudaContactoTest {
+    private com.ecommerce.backend.service.AdminContentService content(){var service=mock(com.ecommerce.backend.service.AdminContentService.class);org.mockito.Mockito.when(service.contact()).thenReturn(java.util.Map.of());return service;}
+
     @Test
     void telefonoProvisionalNoGeneraEnlaceDeLlamada() {
         var config = new SoporteProperties(); config.setTelefono("000 000 000");
-        var result = new AyudaController(mock(AyudaService.class),config).contacto();
+        var result = new AyudaController(mock(AyudaService.class),config,content()).contacto();
         assertEquals("000 000 000",result.telefono()); assertNull(result.telefonoUrl());
     }
     @Test
     void noInventaCanalesCuandoNoEstanConfigurados() {
-        var result = new AyudaController(mock(AyudaService.class),new SoporteProperties()).contacto();
+        var result = new AyudaController(mock(AyudaService.class),new SoporteProperties(),content()).contacto();
         assertNull(result.email()); assertNull(result.telefonoUrl()); assertNull(result.whatsappUrl()); assertNull(result.horario());
     }
     @Test
@@ -24,7 +26,7 @@ class AyudaContactoTest {
         var config = new SoporteProperties();
         config.setEmail("contacto@example.test"); config.setTelefono("+51 999 123 456");
         config.setWhatsapp("51999123456"); config.setHorario("Horario de prueba");
-        var result = new AyudaController(mock(AyudaService.class),config).contacto();
+        var result = new AyudaController(mock(AyudaService.class),config,content()).contacto();
         assertEquals("tel:+51999123456",result.telefonoUrl());
         assertEquals("https://wa.me/51999123456",result.whatsappUrl());
         assertEquals(config.getEmail(),result.email()); assertEquals(config.getHorario(),result.horario());

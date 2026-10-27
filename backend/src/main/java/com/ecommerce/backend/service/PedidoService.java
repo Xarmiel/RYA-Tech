@@ -43,7 +43,9 @@ public class PedidoService {
         return new PedidoDto(rs.getObject("id", UUID.class), rs.getString("codigo"), rs.getString("estado"),
                 rs.getString("moneda").trim(), rs.getBigDecimal("subtotal"), rs.getBigDecimal("descuento"),
                 rs.getBigDecimal("envio"), rs.getBigDecimal("monto_total"), rs.getObject("created_at", OffsetDateTime.class),
-                rs.getString("metodo_pago_snapshot"), List.of());
+                rs.getString("metodo_pago_snapshot"), List.of(), new PedidoDto.Entrega(rs.getString("modalidad_entrega"),
+                rs.getString("direccion_envio"), rs.getString("referencia_envio"), rs.getString("entrega_snapshot"),
+                rs.getString("estado_entrega"), rs.getString("transportista_seguimiento"), rs.getString("codigo_seguimiento")));
     }
 
     private List<PedidoDto> completar(UUID usuario, List<PedidoDto> pedidos) {
@@ -70,6 +72,6 @@ public class PedidoService {
                 items.computeIfAbsent(rs.getObject("pedido_id", UUID.class), key -> new ArrayList<>()).add(item);
             });
         return pedidos.stream().map(p -> new PedidoDto(p.id(), p.codigo(), p.estado(), p.moneda(), p.subtotal(),
-                p.descuento(), p.envio(), p.total(), p.fecha(), p.metodoPago(), items.getOrDefault(p.id(), List.of()))).toList();
+                p.descuento(), p.envio(), p.total(), p.fecha(), p.metodoPago(), items.getOrDefault(p.id(), List.of()), p.entrega())).toList();
     }
 }

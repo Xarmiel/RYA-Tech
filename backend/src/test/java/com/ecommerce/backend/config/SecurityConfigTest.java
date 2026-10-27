@@ -18,6 +18,13 @@ import java.util.Map;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityConfigTest {
+    @Test void enviosExigenAdministradorYValidanCampos() throws Exception {
+        String path="/api/v1/admin/envios";
+        mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(path).with(jwt())).andExpect(status().isForbidden());
+        mockMvc.perform(post(path).with(jwt().jwt(token->token.claim("app_metadata",Map.of("role","admin")))).contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        mockMvc.perform(get(path+"/pedidos").with(jwt().jwt(token->token.claim("app_metadata",Map.of("role","admin"))))).andExpect(status().isOk());
+    }
     @Test void cobrosYConsultaDeEstadoRequierenSesion()throws Exception{
         mockMvc.perform(post("/api/v1/pagos/iniciar").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/v1/pagos/procesar").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());

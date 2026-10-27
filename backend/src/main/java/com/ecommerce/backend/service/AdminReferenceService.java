@@ -19,17 +19,17 @@ public class AdminReferenceService {
     private final CategoriaRepository categorias;
     private final MarcaRepository marcas;
     private final ProductoRepository productos;
-    public record Item(UUID id, String nombre, String slug, boolean eliminada) {}
+    public record Item(UUID id, String nombre, String slug, boolean eliminada, ProductTechnicalData.Schema fichaEsquema) {}
     public record Listado(List<Item> categorias, List<Item> marcas) {}
 
     public Listado listar(boolean incluirEliminadas) {
         var cats = categorias.findAll().stream()
                 .filter(c -> incluirEliminadas || !Boolean.TRUE.equals(c.getIsDeleted()))
-                .map(c -> new Item(c.getId(), c.getNombre(), c.getSlug(), Boolean.TRUE.equals(c.getIsDeleted())))
+                .map(c -> new Item(c.getId(), c.getNombre(), c.getSlug(), Boolean.TRUE.equals(c.getIsDeleted()), Boolean.TRUE.equals(c.getIsDeleted())?null:ProductTechnicalData.schema(c,categorias)))
                 .sorted(Comparator.comparing(Item::nombre, String.CASE_INSENSITIVE_ORDER)).toList();
         var brands = marcas.findAll().stream()
                 .filter(m -> incluirEliminadas || !Boolean.TRUE.equals(m.getIsDeleted()))
-                .map(m -> new Item(m.getId(), m.getNombre(), m.getSlug(), Boolean.TRUE.equals(m.getIsDeleted())))
+                .map(m -> new Item(m.getId(), m.getNombre(), m.getSlug(), Boolean.TRUE.equals(m.getIsDeleted()),null))
                 .sorted(Comparator.comparing(Item::nombre, String.CASE_INSENSITIVE_ORDER)).toList();
         return new Listado(cats, brands);
     }

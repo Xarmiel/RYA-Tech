@@ -1,0 +1,32 @@
+<section class="card-wallet" aria-label="Tarjetas de débito o crédito">
+ @if(error()){<p class="card-message" role="status">{{error()}}</p>}
+ @if(loading()){<p role="status">Consultando tus tarjetas…</p>}
+ @else {
+  @if(cards().length){<h3>Tus tarjetas</h3><div class="saved-cards">@for(card of cards();track card.id){
+   <button type="button" class="saved-card" [class.selected]="selected()?.id===card.id" [attr.aria-pressed]="selected()?.id===card.id" (click)="choose(card)" [disabled]="busy()||disabled()">
+    <span class="material-symbols-rounded" aria-hidden="true">credit_card</span><span><strong>{{card.brand}}</strong><span>XXXX-XXXX-XXXX-{{card.lastFour}}</span><small>{{card.paymentTypeId==='debit_card'?'Débito':'Crédito'}} · Vence {{card.expirationMonth}}/{{card.expirationYear}}</small></span>
+   </button>
+  }</div>} @else {<p>Agrega una tarjeta de débito o crédito para realizar tu compra.</p>}
+  <div class="wallet-actions"><button type="button" class="button button-secondary" (click)="openNew()" [disabled]="busy()||disabled()||uncertain()"><span class="material-symbols-rounded" aria-hidden="true">add_card</span>{{cards().length?'Agregar otra tarjeta':'Agregar tarjeta'}}</button><button type="button" class="text-action" (click)="refresh()" [disabled]="busy()||disabled()">Actualizar tarjetas</button></div>
+  @if(selected();as card){<div class="saved-payment"><label for="rya-saved-cvv">Código de seguridad (CVV)</label><div id="rya-saved-cvv" class="secure-field"></div><p>Mercado Pago solicita el CVV en cada compra. Pago en una cuota.</p><button type="button" class="button button-primary" (click)="paySaved()" [disabled]="busy()||disabled()">{{busy()||disabled()?'Procesando…':'Pagar'}} {{session().total | currency:'PEN':'symbol':'1.2-2':'es-PE'}}</button></div>}
+ }
+ @if(drawer()){
+  <div class="card-overlay" (click)="closeDrawer()"></div>
+  <section class="card-drawer" role="dialog" aria-modal="true" aria-labelledby="card-drawer-title">
+   <header><h3 id="card-drawer-title" tabindex="-1">Agregar tarjeta</h3><button type="button" aria-label="Cerrar formulario de tarjeta" (click)="closeDrawer()" [disabled]="busy()||disabled()"><span class="material-symbols-rounded" aria-hidden="true">close</span></button></header>
+   <p>Los datos de tu tarjeta se envían directamente a Mercado Pago.</p>
+   @if(error()){<p role="alert" class="card-message">{{error()}}</p>}
+   <form id="rya-new-card"><fieldset [disabled]="busy()||disabled()||uncertain()">
+    <label>Número de tarjeta<div id="rya-card-number" class="secure-field"></div></label>
+    <div class="card-grid"><label>Vencimiento<div id="rya-card-expiration" class="secure-field"></div></label><label>Código de seguridad<div id="rya-card-cvv" class="secure-field"></div></label></div>
+    <label>Titular<input id="rya-card-name" autocomplete="cc-name"></label>
+    <label>Correo del titular<input id="rya-card-email" type="email" [value]="email()" autocomplete="email"></label>
+    <div class="card-grid"><label>Documento<select id="rya-card-doc-type"></select></label><label>Número<input id="rya-card-doc" autocomplete="off"></label></div>
+    <label>Banco emisor<select id="rya-card-issuer"></select></label><label>Cuotas<select id="rya-card-installments"></select></label>
+    <label class="remember"><input type="checkbox" [(ngModel)]="remember" [ngModelOptions]="{standalone:true}">Guardar esta tarjeta en Mercado Pago para mis próximas compras</label>
+    <p>RYA Tech no guarda el número completo ni el CVV. Guardar la tarjeta no realiza el pago.</p>
+    <button class="button button-primary" type="submit">{{busy()||disabled()?'Procesando…':remember?'Guardar tarjeta y continuar':'Pagar '+(session().total | currency:'PEN':'symbol':'1.2-2':'es-PE')}}</button>
+   </fieldset></form>
+  </section>
+ }
+</section>

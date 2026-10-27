@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface ResenaProductoRepository extends JpaRepository<ResenaProducto, UUID> {
     @Query(value = """
-            SELECT r.id AS id,
+            SELECT CAST(r.id AS varchar) AS id,
                    r.calificacion AS calificacion,
                    r.comentario AS comentario,
                    COALESCE(NULLIF(TRIM(u.nombre), ''), 'Cliente verificado') AS autor,

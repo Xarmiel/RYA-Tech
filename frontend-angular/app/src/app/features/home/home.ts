@@ -1,9 +1,10 @@
+import {EditorialContent} from '../../shared/editorial-content/editorial-content';
 import { Component, DestroyRef, OnInit, afterNextRender, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink],
+  imports: [RouterLink, EditorialContent],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   host: { '[style.--store-header-height.px]': 'headerHeight()' },

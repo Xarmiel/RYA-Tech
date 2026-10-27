@@ -266,7 +266,11 @@ export class ProductImport {
     } catch (err: any) { this.error.set(err?.error?.message || err?.message || 'No se pudo volver a verificar el catálogo.'); }
     finally { this.setBusy(false); if (saved) this.saved.emit(); this.showIssues(); }
   }
-  @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent) {
+  canLeave(): boolean {
+    if (this.busy() || this.referencesBusy()) return false;
+    return !this.rows().some(row=>row.state!=='saved') || window.confirm('Hay productos revisados sin guardar o sin confirmar. ¿Quieres salir de la importación?');
+  }
+  @HostListener('window:beforeunload' , ['$event']) beforeUnload(event: BeforeUnloadEvent) {
     if (this.busy() || this.referencesBusy()) { event.preventDefault(); event.returnValue = ''; }
   }
 }

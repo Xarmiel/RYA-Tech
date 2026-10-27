@@ -12,6 +12,16 @@ describe('Storefront specifications without destructive changes',()=>{
     expect(usesComponentConfigurator([attribute('CATALOG_TECH_TYPE','board')])).toBe(true);
     expect(usesComponentConfigurator([])).toBe(false);
   });
+  it.each(['HEADSET','MICROPHONE','WEBCAM','MOUSEPAD','MONITOR','RACING','SIMULATION','COOLER','LIGHTING'])('shows %s commercial fields but hides internal notes and keeps review status',family=>{
+    const specs=productSpecifications([attribute(`CATALOG_TECH_${family}_CONNECTIONS`,'USB-C','Ficha · Conexiones'),attribute(`CATALOG_TECH_${family}_INTERNAL_NOTES`,'Solo administración'),attribute('CATALOG_TECH_TYPE',family.toLowerCase())]);
+    expect(specs).toHaveLength(1);expect(specs[0]).toMatchObject({name:'Conexiones',value:'USB-C',pendingReview:true});
+    expect(usesComponentConfigurator([attribute('CATALOG_TECH_TYPE',family.toLowerCase())])).toBe(family==='COOLER');
+  });
+  it('displays custom-category values without treating them as component compatibility',()=>{
+    const rows=[attribute('CATALOG_TECH_TYPE','custom'),attribute('CATALOG_TECH_CUSTOM_EXTRA_123','-12.5','Ficha · Temperatura','°C'),attribute('CATALOG_TECH_CUSTOM_INTERNAL_NOTES','Solo administración')];
+    expect(productSpecifications(rows)).toEqual([expect.objectContaining({name:'Temperatura',value:'-12.5',unit:'°C',pendingReview:true})]);expect(usesComponentConfigurator(rows)).toBe(false);
+  });
+  it('continues hiding unsupported internal namespaces',()=>{expect(productSpecifications([attribute('CATALOG_TECH_UNKNOWN_SECRET','No mostrar')])).toEqual([]);});
   it('shows the legacy and commercial CPU fields only once, regardless of response order',()=>{
     const old=[attribute('socket_cpu','AM4','Socket'),attribute('nucleos_cpu','6','Núcleos'),attribute('cache_l3_kb','8192','Caché L3 Total','KB'),attribute('graficos_integrados_cpu','No','Gráficos integrados')];
     const manual=[attribute('CATALOG_TECH_CPU_SOCKET','AM4','Ficha · Socket'),attribute('CATALOG_TECH_CPU_CORES','6','Ficha · Núcleos'),attribute('CATALOG_TECH_CPU_L3_MB','8','Ficha · Caché L3','MB'),attribute('CATALOG_TECH_CPU_IGPU','No','Ficha · Gráficos integrados')];

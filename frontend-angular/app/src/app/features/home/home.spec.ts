@@ -1,3 +1,5 @@
+import {provideHttpClient} from '@angular/common/http';
+import {provideHttpClientTesting} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,7 +9,7 @@ describe('Home typewriter', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('matchMedia', vi.fn(() => ({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn()})));
-    TestBed.configureTestingModule({imports:[Home],providers:[provideRouter([])]});
+    TestBed.configureTestingModule({imports:[Home],providers:[provideRouter([]),provideHttpClient(),provideHttpClientTesting()]});
   });
   afterEach(() => { TestBed.resetTestingModule(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 

@@ -41,7 +41,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .map(item -> CheckoutOpcionesDto.TarifaEnvioDto.builder().id(item.getId())
                         .transportista(item.getTransportista()).departamento(item.getDepartamento())
                         .provincia(item.getProvincia()).distrito(item.getDistrito()).costo(item.getCosto())
-                        .plazoDias(item.getPlazoDias()).build())
+                        .plazoDias(item.getPlazoDias()).modalidad(item.getModalidad()).direccionRecojo(item.getDireccionRecojo()).horarioRecojo(item.getHorarioRecojo()).build())
                 .toList();
         return CheckoutOpcionesDto.builder().metodosPago(pagos).tarifasEnvio(tarifas).build();
     }
@@ -75,11 +75,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .orElseThrow(() -> new BadRequestException("El método de pago ya no está disponible"));
         TarifaEnvio tarifa = tarifaEnvioRepository.findByIdAndIsDeletedFalse(request.getEntrega().getTarifaEnvioId())
                 .orElseThrow(() -> new BadRequestException("La tarifa de envío ya no está disponible"));
+        com.ecommerce.backend.service.EntregaRules.validar(tarifa, request.getEntrega());
         BigDecimal envio = tarifa.getCosto();
         BigDecimal total = carrito.getSubtotal().add(envio);
-        String destino = Stream.of(tarifa.getDepartamento(), tarifa.getProvincia(), tarifa.getDistrito())
-                .filter(value -> value != null && !value.isBlank()).reduce((left, right) -> left + ", " + right)
-                .orElse("Cobertura general");
+        String destino = com.ecommerce.backend.service.EntregaRules.descripcion(tarifa, request.getEntrega());
         mensajes.add("Precios, stock, envío y método de pago fueron revalidados.");
         boolean requiereAutenticacion = usuarioId == null;
         if (requiereAutenticacion) {

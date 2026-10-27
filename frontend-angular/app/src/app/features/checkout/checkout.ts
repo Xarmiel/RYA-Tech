@@ -9,11 +9,12 @@ import { CartService } from '../../core/cart/cart.service';
 import { CheckoutCustomer, CheckoutDelivery, CheckoutOptions, CheckoutValidation, ShippingRate } from './checkout.models';
 import { CheckoutService } from './checkout.service';
 import { LoadingState } from '../../shared/loading-state/loading-state';
+import { CardCheckout } from './card-checkout';
 import { RequestError } from '../../shared/request-error/request-error';
 
 @Component({
   selector: 'app-checkout',
-  imports: [CurrencyPipe, FormsModule, RouterLink, LoadingState, RequestError],
+  imports: [CurrencyPipe, FormsModule, RouterLink, LoadingState, RequestError, CardCheckout],
   templateUrl: './checkout.html',
   styleUrl: './checkout.scss',
 })
@@ -28,11 +29,13 @@ export class Checkout implements OnInit {
   protected readonly updating = signal<Set<string>>(new Set());
   protected readonly validating = signal(false);
   protected readonly processingPayment = signal(false);
+  protected readonly cardPreparing = signal(false);
   protected readonly paymentSuccess = signal<import('./checkout.models').ResultadoPago | null>(null);
   protected readonly message = signal('');
   protected readonly errors = signal<Record<string, string>>({});
   protected paymentMethodId = '';
   protected customer: CheckoutCustomer = { documentType: 'DNI', documentNumber: '', name: '', email: '', phone: '' };
+  protected deliveryMode: 'DOMICILIO'|'RECOJO' = 'DOMICILIO';
   protected delivery: CheckoutDelivery = { shippingRateId: '', address: '', reference: '' };
   private activePedidoId = '';
 
@@ -55,20 +58,14 @@ export class Checkout implements OnInit {
   protected readonly paymentUncertain = signal(false);
   protected yapePhone = '';
   protected yapeOtp = '';
-  private brickController?: {unmount:()=>void|Promise<void>};
-  private brickGeneration=0;
   private destroyed=false;
 
   constructor(){
-    this.destroyRef.onDestroy(()=>{this.destroyed=true;this.unmountBrick();this.yapeOtp='';});
-  }
-  private unmountBrick():void{
-    this.brickGeneration++;
-    void this.brickController?.unmount();this.brickController=undefined;
+    this.destroyRef.onDestroy(()=>{this.destroyed=true;this.yapeOtp='';});
   }
   protected changePayment():void{
-    if(this.processingPayment()||this.pendingPayment()||this.paymentUncertain())return;
-    this.unmountBrick();this.paymentSession.set(null);this.currentStep.set(3);
+    if(this.processingPayment()||this.cardPreparing()||this.pendingPayment()||this.paymentUncertain())return;
+    this.paymentSession.set(null);this.currentStep.set(3);
   }
   protected pagarConMercadoPago():void{
     if(!this.paymentMethodId||!this.validation()||this.processingPayment()||this.paymentSession())return;
@@ -76,7 +73,7 @@ export class Checkout implements OnInit {
     this.checkout.iniciarPago(this.customer,this.delivery,this.paymentMethodId).pipe(timeout(30000),takeUntilDestroyed(this.destroyRef)).subscribe({
       next:response=>{
         this.activePedidoId=response.pedidoId;this.paymentSession.set(response);
-        if(response.metodoPagoCodigo==='MP_CARDS')void this.mountCard(response);
+        if(response.metodoPagoCodigo==='MP_CARDS')this.processingPayment.set(false);
         else if(response.metodoPagoCodigo==='MP_PAGOEFECTIVO'){
           this.processingPayment.set(false);
           void this.submitOrder({paymentMethodId:'pagoefectivo_atm',paymentTypeId:'atm'}).catch(()=>undefined);
@@ -90,27 +87,8 @@ export class Checkout implements OnInit {
     if(!constructor)throw new Error('El formulario de Mercado Pago no está disponible. Revisa tu conexión.');
     return new constructor(publicKey,{locale:'es-PE'});
   }
-  private async mountCard(response:import('./checkout.models').IniciarPagoResponse):Promise<void>{
-    this.unmountBrick();const generation=this.brickGeneration;
-    try{
-      const mp=this.sdk(response.publicKey);
-      const controller=await mp.bricks().create('cardPayment','paymentBrick_container',{
-        initialization:{amount:response.total,payer:{email:this.customer.email}},
-        callbacks:{
-          onReady:()=>{if(!this.destroyed&&generation===this.brickGeneration)this.processingPayment.set(false);},
-          onSubmit:(form:any,additional:any)=>this.submitOrder({
-            token:form.token,paymentMethodId:form.payment_method_id,paymentTypeId:additional?.paymentTypeId,
-            installments:form.installments,identificationType:form.payer?.identification?.type,
-            identificationNumber:form.payer?.identification?.number
-          },form.payer?.email||this.customer.email),
-          onError:()=>{this.processingPayment.set(false);this.message.set('No se pudo preparar el formulario de tarjeta. Revisa tu conexión y los datos.');}
-        }
-      });
-      if(this.destroyed||generation!==this.brickGeneration){void controller.unmount();return;}
-      this.brickController=controller;
-    }catch(error:any){
-      if(!this.destroyed){this.processingPayment.set(false);this.message.set(error?.message||'No se pudo cargar el formulario de tarjeta.');this.paymentSession.set(null);}
-    }
+  protected payCard(data:import('./checkout.models').OrdersPaymentData):void{
+    void this.submitOrder(data).catch(()=>undefined);
   }
   protected async payYape():Promise<void>{
     if(this.processingPayment()||this.pendingPayment()||this.paymentUncertain())return;
@@ -143,11 +121,10 @@ export class Checkout implements OnInit {
   private acceptPaymentResult(result:import('./checkout.models').ResultadoPago):void{
     this.paymentUncertain.set(false);
     if(result.exitoso){
-      this.pendingPayment.set(null);this.paymentSuccess.set(result);this.unmountBrick();
+      this.pendingPayment.set(null);this.paymentSuccess.set(result);
       this.cart.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({error:()=>undefined});this.scrollTop();
     }else{
       this.pendingPayment.set(result.pendiente?result:null);this.message.set(result.mensaje||'El pago no se completó.');
-      if(result.pendiente)this.unmountBrick();
     }
   }
   protected checkPayment():void{
@@ -166,8 +143,12 @@ export class Checkout implements OnInit {
   }
   protected goToPayment(): void {
     const next: Record<string, string> = {};
-    if (!this.delivery.shippingRateId) next['shippingRate'] = 'Selecciona una tarifa de envío disponible.';
-    if (this.delivery.address.trim().length < 5) next['address'] = 'Ingresa una dirección completa.';
+    const selected = this.matchingRates().find(rate => rate.id === this.delivery.shippingRateId);
+    if (!selected) next['shippingRate'] = 'Selecciona una opción disponible para tu ubicación.';
+    if (this.deliveryMode === 'DOMICILIO') {
+      if (![this.delivery.department, this.delivery.province, this.delivery.district].every(v => v?.trim())) next['location'] = 'Completa departamento, provincia y distrito.';
+      if (this.delivery.address.trim().length < 5) next['address'] = 'Ingresa una dirección completa.';
+    }
     this.errors.set(next);
     if (Object.keys(next).length) return;
     this.currentStep.set(3); this.scrollTop();
@@ -177,12 +158,41 @@ export class Checkout implements OnInit {
     this.validating.set(true); this.message.set(''); this.errors.set({});
     this.checkout.validate(this.customer, this.delivery, this.paymentMethodId)
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: result => { this.validation.set(result); this.validating.set(false); this.currentStep.set(4); this.scrollTop(); },
+        next: result => {
+          this.validation.set(result); this.validating.set(false); this.currentStep.set(4); this.scrollTop();
+          const code=this.options().paymentMethods.find(method=>method.id===this.paymentMethodId)?.code;
+          if(!result.requiresAuthentication&&['MP_CARDS','MP_YAPE'].includes(code??''))this.pagarConMercadoPago();
+        },
         error: error => { this.validating.set(false); this.message.set(error?.error?.message ?? 'No se pudo validar la compra.'); },
       });
   }
 
-  protected selectRate(rate: ShippingRate): void { this.delivery.shippingRateId = rate.id; this.errors.set({}); }
+  protected selectRate(rate: ShippingRate): void {
+    this.delivery.shippingRateId = rate.id;
+    if (this.deliveryMode === 'RECOJO') this.delivery.address = rate.pickupAddress ?? '';
+    this.errors.set({}); this.validation.set(null);
+  }
+  protected resetDelivery(mode = this.deliveryMode): void {
+    const changed = this.deliveryMode !== mode;
+    this.deliveryMode = mode; this.delivery.shippingRateId = '';
+    if (changed) { this.delivery.address = ''; this.delivery.reference = ''; }
+    this.validation.set(null); this.errors.set({});
+  }
+  private normalized(value?: string|null): string { return (value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+  protected locationValues(field: 'department'|'province'|'district'): string[] {
+    return [...new Set(this.options().shippingRates.filter(rate => (rate.mode ?? 'DOMICILIO') === 'DOMICILIO')
+      .filter(rate => field === 'department' || !rate.department || this.normalized(rate.department) === this.normalized(this.delivery.department))
+      .filter(rate => field !== 'district' || !rate.province || this.normalized(rate.province) === this.normalized(this.delivery.province))
+      .map(rate => rate[field]).filter((v): v is string => !!v))].sort();
+  }
+  protected matchingRates(): ShippingRate[] {
+    return this.options().shippingRates.filter(rate => {
+      if ((rate.mode ?? 'DOMICILIO') !== this.deliveryMode) return false;
+      if (this.deliveryMode === 'RECOJO') return true;
+      if (![this.delivery.department, this.delivery.province, this.delivery.district].every(v => v?.trim())) return false;
+      return (['department','province','district'] as const).every(field => !rate[field] || this.normalized(rate[field]) === this.normalized(this.delivery[field]));
+    });
+  }
   protected rateLabel(rate: ShippingRate): string {
     return [rate.department, rate.province, rate.district].filter(Boolean).join(', ') || 'Cobertura general';
   }
@@ -192,6 +202,16 @@ export class Checkout implements OnInit {
   }
   protected remove(item: CartItem): void {
     if (!this.paymentSession() && !this.updating().has(item.id)) this.run(item.id, this.cart.remove(item.id));
+  }
+
+  protected get documentMaxLength(): number {
+    return { DNI: 8, RUC: 11, CE: 12 }[this.customer.documentType];
+  }
+
+  protected normalizeDocument(value: string): void {
+    const unsupported = this.customer.documentType === 'CE' ? /[^a-zA-Z0-9]/g : /[^0-9]/g;
+    this.customer.documentNumber = value.replace(unsupported, '').slice(0, this.documentMaxLength);
+    this.errors.update(({ document, ...remaining }) => remaining);
   }
 
   private validateCustomer(): boolean {

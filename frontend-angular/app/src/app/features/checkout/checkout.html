@@ -7,27 +7,54 @@
   @else {
     <div class="checkout-layout">
       <section class="checkout-process">
-        <ol class="checkout-stepper" aria-label="Progreso de compra">@for (label of ['Datos','Entrega','Pago','Confirmación']; track label; let index=$index) { <li [class.is-active]="currentStep() === index + 1" [class.is-done]="currentStep() > index + 1"><span>{{ currentStep() > index + 1 ? '✓' : index + 1 }}</span><small>{{ label }}</small></li> }</ol>
+        <ol class="checkout-stepper" aria-label="Progreso de compra">@for (label of ['Datos','Entrega','Método de pago','Pago seguro']; track label; let index=$index) { <li [class.is-active]="currentStep() === index + 1" [class.is-done]="currentStep() > index + 1"><span>{{ currentStep() > index + 1 ? '✓' : index + 1 }}</span><small>{{ label }}</small></li> }</ol>
         @switch (currentStep()) {
           @case (1) {
             <div class="step-content"><div class="step-title"><span class="material-symbols-rounded">person</span><div><h2>Datos del cliente</h2><p>Los usaremos para identificar la compra y enviarte actualizaciones.</p></div></div>
-              <div class="form-grid"><label>Tipo de documento<select [(ngModel)]="customer.documentType" name="documentType"><option value="DNI">DNI</option><option value="RUC">RUC</option><option value="CE">Carné de extranjería</option></select></label><label>Número de documento<input [(ngModel)]="customer.documentNumber" name="documentNumber" autocomplete="off" maxlength="12" placeholder="Documento"><small class="field-error">{{ errors()['document'] }}</small></label><label class="full-field">Nombre completo o razón social<input [(ngModel)]="customer.name" name="name" autocomplete="name" placeholder="Nombre completo"><small class="field-error">{{ errors()['name'] }}</small></label><label>Correo electrónico<input [(ngModel)]="customer.email" name="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com"><small class="field-error">{{ errors()['email'] }}</small></label><label>Teléfono<input [(ngModel)]="customer.phone" name="phone" inputmode="numeric" maxlength="9" autocomplete="tel" placeholder="999999999"><small class="field-error">{{ errors()['phone'] }}</small></label></div>
-              <footer class="step-actions"><a class="button button-secondary" routerLink="/catalogo">Seguir comprando</a><button class="button button-primary" type="button" (click)="goToDelivery()">Continuar a entrega <span>→</span></button></footer>
+              <div class="form-grid"><label>Tipo de documento<select [(ngModel)]="customer.documentType" name="documentType" (ngModelChange)="normalizeDocument(customer.documentNumber)"><option value="DNI">DNI</option><option value="RUC">RUC</option><option value="CE">Carné de extranjería</option></select></label><label>Número de documento<input [ngModel]="customer.documentNumber" (ngModelChange)="normalizeDocument($event)" #documentInput (input)="documentInput.value = customer.documentNumber" name="documentNumber" autocomplete="off" [attr.inputmode]="customer.documentType === 'CE' ? 'text' : 'numeric'" [maxlength]="documentMaxLength" placeholder="Documento" [attr.aria-invalid]="!!errors()['document']" aria-describedby="document-error"><small id="document-error" class="field-error">{{ errors()['document'] }}</small></label><label class="full-field">Nombre completo o razón social<input [(ngModel)]="customer.name" name="name" autocomplete="name" placeholder="Nombre completo"><small class="field-error">{{ errors()['name'] }}</small></label><label>Correo electrónico<input [(ngModel)]="customer.email" name="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com"><small class="field-error">{{ errors()['email'] }}</small></label><label>Teléfono<input [(ngModel)]="customer.phone" name="phone" inputmode="numeric" maxlength="9" autocomplete="tel" placeholder="999999999"><small class="field-error">{{ errors()['phone'] }}</small></label></div>
+              <footer class="step-actions"><a class="button button-secondary" routerLink="/catalogo">Seguir comprando</a><button class="button button-primary" type="button" (click)="goToDelivery()">Continuar a entrega</button></footer>
             </div>
           }
           @case (2) {
             <div class="step-content"><div class="step-title"><span class="material-symbols-rounded">local_shipping</span><div><h2>Método de entrega</h2><p>Las tarifas mostradas proceden de la base de datos.</p></div></div>
-              @if (options().shippingRates.length) { <div class="option-grid shipping-options">@for (rate of options().shippingRates; track rate.id) { <button type="button" class="option-card" [class.is-selected]="delivery.shippingRateId === rate.id" (click)="selectRate(rate)"><span class="material-symbols-rounded">local_shipping</span><strong>{{ rate.carrier }}</strong><b>{{ rateLabel(rate) }}</b><small>{{ rate.days !== null ? rate.days + ' días estimados' : 'Plazo por confirmar' }}</small><em>{{ rate.cost | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</em></button> }</div><small class="field-error block-error">{{ errors()['shippingRate'] }}</small><div class="form-grid delivery-fields"><label class="full-field">Dirección exacta<input [(ngModel)]="delivery.address" name="address" autocomplete="street-address" placeholder="Avenida, calle, número y distrito"><small class="field-error">{{ errors()['address'] }}</small></label><label class="full-field">Referencia opcional<input [(ngModel)]="delivery.reference" name="reference" placeholder="Urbanización, piso o referencia"></label></div> }
-              @else { <div class="inline-empty"><span class="material-symbols-rounded">local_shipping</span><div><strong>No hay tarifas de envío publicadas</strong><p>Agrega tarifas reales en la base de datos para habilitar esta etapa.</p></div></div> }
-              <footer class="step-actions"><button class="button button-secondary" type="button" (click)="goToCustomer()">← Volver</button><button class="button button-primary" type="button" (click)="goToPayment()" [disabled]="!options().shippingRates.length">Continuar a pago <span>→</span></button></footer>
+              <div class="delivery-modes" role="group" aria-label="Tipo de entrega">
+                <button type="button" class="button button-secondary" [class.is-selected]="deliveryMode === 'DOMICILIO'" [attr.aria-pressed]="deliveryMode === 'DOMICILIO'" (click)="resetDelivery('DOMICILIO')">Entrega a domicilio</button>
+                <button type="button" class="button button-secondary" [class.is-selected]="deliveryMode === 'RECOJO'" [attr.aria-pressed]="deliveryMode === 'RECOJO'" (click)="resetDelivery('RECOJO')">Recojo en tienda</button>
+              </div>
+              @if (deliveryMode === 'DOMICILIO') {
+                <div class="form-grid location-fields">
+                  <label>Departamento<input name="department" list="shipping-departments" [(ngModel)]="delivery.department" (ngModelChange)="delivery.province=''; delivery.district=''; resetDelivery()" maxlength="100" autocomplete="address-level1"><datalist id="shipping-departments">@for (value of locationValues('department'); track value) { <option [value]="value"></option> }</datalist></label>
+                  <label>Provincia<input name="province" list="shipping-provinces" [(ngModel)]="delivery.province" (ngModelChange)="delivery.district=''; resetDelivery()" maxlength="100" autocomplete="address-level2"><datalist id="shipping-provinces">@for (value of locationValues('province'); track value) { <option [value]="value"></option> }</datalist></label>
+                  <label>Distrito<input name="district" list="shipping-districts" [(ngModel)]="delivery.district" (ngModelChange)="resetDelivery()" maxlength="100" autocomplete="address-level3"><datalist id="shipping-districts">@for (value of locationValues('district'); track value) { <option [value]="value"></option> }</datalist></label>
+                </div>
+                <p class="location-hint">Selecciona una sugerencia o escribe tu ubicación. Las tarifas pueden cubrir un distrito, una provincia o todo un departamento.</p>
+                <small class="field-error">{{ errors()['location'] }}</small>
+              }
+              @if (matchingRates().length) {
+                <div class="option-grid shipping-options">@for (rate of matchingRates(); track rate.id) {
+                  <button type="button" class="option-card" [class.is-selected]="delivery.shippingRateId === rate.id" [attr.aria-pressed]="delivery.shippingRateId === rate.id" (click)="selectRate(rate)">
+                    <span class="material-symbols-rounded" aria-hidden="true">{{ deliveryMode === 'RECOJO' ? 'storefront' : 'local_shipping' }}</span>
+                    <strong>{{ rate.carrier }}</strong><b>{{ deliveryMode === 'RECOJO' ? rate.pickupAddress : rateLabel(rate) }}</b>
+                    @if (deliveryMode === 'RECOJO') { <small>Horario: {{ rate.pickupHours }}</small> }
+                    <small>{{ rate.days !== null ? 'Preparación / entrega: ' + rate.days + ' días estimados' : 'Plazo por confirmar' }}</small><em>{{ rate.cost | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</em>
+                  </button>
+                }</div>
+              } @else {
+                <div class="inline-empty" role="status"><span class="material-symbols-rounded" aria-hidden="true">location_off</span><div><strong>{{ deliveryMode === 'RECOJO' ? 'No hay puntos de recojo disponibles' : 'No hay tarifas para esta ubicación' }}</strong><p>{{ deliveryMode === 'RECOJO' ? 'Puedes consultar las opciones de entrega a domicilio.' : 'Completa tu ubicación o prueba con recojo en tienda. No podrás continuar sin una opción disponible.' }}</p></div></div>
+              }
+              <small class="field-error">{{ errors()['shippingRate'] }}</small>
+              @if (deliveryMode === 'DOMICILIO') {
+                <div class="form-grid delivery-fields"><label class="full-field">Dirección exacta<input [(ngModel)]="delivery.address" name="address" maxlength="300" autocomplete="street-address" placeholder="Avenida, calle, número, piso"><small class="field-error">{{ errors()['address'] }}</small></label><label class="full-field">Referencia opcional<input [(ngModel)]="delivery.reference" name="reference" maxlength="300" placeholder="Urbanización o referencia"></label></div>
+              }
+              <footer class="step-actions"><button class="button button-secondary" type="button" (click)="goToCustomer()">← Volver</button><button class="button button-primary" type="button" (click)="goToPayment()" [disabled]="!matchingRates().length || !delivery.shippingRateId">Continuar a pago</button></footer>
             </div>
           }
           @case (3) {
-            <div class="step-content"><div class="step-title"><span class="material-symbols-rounded">payments</span><div><h2>Método de pago</h2><p>No recopilamos números de tarjeta ni CVV. El cobro se realizará posteriormente mediante una pasarela segura.</p></div></div>
+            <div class="step-content"><div class="step-title"><span class="material-symbols-rounded">payments</span><div><h2>Método de pago</h2><p>Selecciona cómo deseas pagar. En el siguiente paso podrás ingresar tu tarjeta de forma segura.</p></div></div>
               @if (options().paymentMethods.length) { <div class="option-grid">@for (method of options().paymentMethods; track method.id) { <button type="button" class="option-card payment-option" [class.is-selected]="paymentMethodId === method.id" (click)="paymentMethodId = method.id; errors.set({})"><span class="material-symbols-rounded">account_balance_wallet</span><strong>{{ method.name }}</strong><small>{{ method.code }}</small></button> }</div><small class="field-error block-error">{{ errors()['payment'] }}</small> }
               @else { <div class="inline-empty"><span class="material-symbols-rounded">credit_card_off</span><div><strong>No hay métodos de pago activos</strong><p>Activa al menos uno en <code>rya.metodos_pago</code>.</p></div></div> }
-              <div class="security-note"><span class="material-symbols-rounded">verified_user</span><p><strong>Validación segura</strong> En el siguiente paso se revisarán otra vez el precio, stock y disponibilidad. No se creará un pedido ni se cobrará dinero todavía.</p></div>
-              <footer class="step-actions"><button class="button button-secondary" type="button" (click)="currentStep.set(2)">← Volver</button><button class="button button-primary" type="button" (click)="validateOrder()" [disabled]="validating() || !options().paymentMethods.length">{{ validating() ? 'Validando…' : 'Revisar compra' }} <span>→</span></button></footer>
+              <div class="security-note"><span class="material-symbols-rounded">verified_user</span><p><strong>Validación segura</strong> En el siguiente paso se revisarán otra vez el precio, stock y disponibilidad. Se preparará el pedido al abrir el pago seguro; solo se cobrará al presionar Pagar.</p></div>
+              <footer class="step-actions"><button class="button button-secondary" type="button" (click)="currentStep.set(2)">← Volver</button><button class="button button-primary" type="button" (click)="validateOrder()" [disabled]="validating() || !options().paymentMethods.length">{{ validating() ? 'Validando…' : 'Continuar al pago seguro' }}</button></footer>
             </div>
           }
           @case (4) {
@@ -53,17 +80,19 @@
               </div>
             } @else if (validation(); as result) {
               <div class="step-content confirmation">
-                <div class="validation-icon"><span class="material-symbols-rounded">task_alt</span></div>
-                <div class="step-title centered"><div><p class="eyebrow">VALIDACIÓN COMPLETADA</p><h2>Tu compra está lista para confirmar</h2><p>El cobro se procesará de forma segura a través de Mercado Pago.</p></div></div>
+                <div class="step-title"><span class="material-symbols-rounded" aria-hidden="true">credit_card</span><div><p class="eyebrow">PAGO SEGURO</p><h2>{{paymentSession()?.metodoPagoCodigo==='MP_CARDS'?'Elige o agrega tu tarjeta':'Completa tu pago'}}</h2><p>Revisa el importe y autoriza el pago con Mercado Pago.</p></div></div>
                 <div class="review-grid"><div><small>Cliente</small><strong>{{ customer.name }}</strong><span>{{ customer.email }}</span></div><div><small>Entrega</small><strong>{{ result.delivery }}</strong><span>{{ delivery.address }}</span></div><div><small>Pago</small><strong>{{ result.paymentMethod }}</strong><span>Procesado mediante pasarela segura</span></div><div><small>Total validado</small><strong>{{ result.total | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</strong><span>Incluye envío</span></div></div>
                 @if(result.requiresAuthentication){
                   <div class="auth-required"><span class="material-symbols-rounded">lock</span><div><strong>Falta iniciar sesión</strong><p>Inicia sesión para vincular el carrito y continuar con el pedido.</p></div></div>
                 }@else{
-                  <div class="auth-required"><span class="material-symbols-rounded">verified_user</span><div><strong>Identidad verificada</strong><p>El carrito ya está asociado a tu cuenta. Haz clic en "Continuar a pagar" para abrir el formulario seguro de Mercado Pago.</p></div></div>
+                  <div class="auth-required"><span class="material-symbols-rounded">verified_user</span><div><strong>Sesión iniciada</strong><p>El pedido está asociado a tu cuenta. Completa el medio de pago para autorizar la compra.</p></div></div>
                 }
 
-                <!-- Contenedor del componente Embebido de Mercado Pago Brick -->
-                <div id="paymentBrick_container" class="payment-brick-box" [attr.inert]="pendingPayment()||paymentUncertain()?'':null"></div>
+                @if(paymentSession();as session){
+                  @if(session.metodoPagoCodigo==='MP_CARDS'&&!pendingPayment()&&!paymentUncertain()){
+                    <app-card-checkout [session]="session" [email]="customer.email" [disabled]="processingPayment()" (busyChange)="cardPreparing.set($event)" (pay)="payCard($event)" />
+                  }
+                }
                 @if(paymentSession()?.metodoPagoCodigo==='MP_YAPE' && !pendingPayment() && !paymentUncertain()){
                   <div class="form-grid" aria-label="Pago con Yape">
                     <label>Celular de Yape<input [(ngModel)]="yapePhone" name="yape-phone" inputmode="numeric" maxlength="9" autocomplete="tel" [disabled]="processingPayment()"></label>
@@ -82,12 +111,12 @@
                 }
 
                 <footer class="step-actions">
-                  <button class="button button-secondary" type="button" (click)="changePayment()" [disabled]="processingPayment() || !!pendingPayment() || paymentUncertain()">← Cambiar pago</button>
+                  <button class="button button-secondary" type="button" (click)="changePayment()" [disabled]="processingPayment() || cardPreparing() || !!pendingPayment() || paymentUncertain()">← Cambiar pago</button>
                   @if(result.requiresAuthentication){
                     <a class="button button-primary" routerLink="/login" [queryParams]="{returnUrl:'/checkout'}">Iniciar sesión</a>
-                  }@else{
+                  }@else if(!paymentSession()){
                     <button class="button button-primary" type="button" (click)="pagarConMercadoPago()" [disabled]="processingPayment() || !!paymentSession() || paymentUncertain()">
-                      {{ processingPayment() ? 'Procesando…' : paymentSession() ? 'Formulario preparado' : 'Continuar a pagar con Mercado Pago' }} <span>🔒</span>
+                      {{ processingPayment() ? 'Procesando…' : 'Abrir pago seguro' }} <span>🔒</span>
                     </button>
                   }
                 </footer>
@@ -98,7 +127,7 @@
 
         }
       </section>
-      <aside class="order-summary"><header><h2>Resumen del pedido</h2><a routerLink="/catalogo">Editar</a></header><div class="summary-items">@for (item of cart.cart()?.items ?? []; track item.id) { <article><a [routerLink]="['/producto',item.slug]" class="summary-image">@if (item.image) { <img [src]="item.image" [alt]="item.name"> } @else { <span class="material-symbols-rounded">memory</span> }</a><div><strong>{{ item.name }}</strong><small>{{ item.sku }}</small><div class="mini-quantity"><button type="button" (click)="changeQuantity(item,item.quantity-1)" [disabled]="item.quantity<=1 || updating().has(item.id)">−</button><span>{{ item.quantity }}</span><button type="button" (click)="changeQuantity(item,item.quantity+1)" [disabled]="item.quantity>=item.availableStock || updating().has(item.id)">+</button><button type="button" class="remove-item" (click)="remove(item)" [disabled]="updating().has(item.id)">Eliminar</button></div></div><b>{{ item.subtotal | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</b></article> }</div><div class="totals"><p><span>Productos</span><b>{{ cart.totalQuantity() }}</b></p><p><span>Subtotal</span><b>{{ (validation()?.subtotal ?? cart.cart()?.subtotal) | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</b></p><p><span>Envío</span><b>{{ validation() ? (validation()!.shipping | currency:'PEN':'symbol':'1.2-2':'es-PE') : 'Por calcular' }}</b></p><p class="grand-total"><span>Total</span><b>{{ validation() ? (validation()!.total | currency:'PEN':'symbol':'1.2-2':'es-PE') : (cart.cart()?.subtotal | currency:'PEN':'symbol':'1.2-2':'es-PE') }}</b></p></div><div class="guarantees"><span><i class="material-symbols-rounded">database</i>Datos vigentes de la base de datos</span><span><i class="material-symbols-rounded">shield_lock</i>Pago externo seguro</span><span><i class="material-symbols-rounded">inventory_2</i>Stock revalidado antes de confirmar</span></div></aside>
+      <aside class="order-summary"><header><h2>Resumen del pedido</h2><a routerLink="/catalogo">Editar</a></header><div class="summary-items">@for (item of cart.cart()?.items ?? []; track item.id) { <article><a [routerLink]="['/producto',item.slug]" class="summary-image">@if (item.image) { <img [src]="item.image" [alt]="item.name"> } @else { <span class="material-symbols-rounded">memory</span> }</a><div><strong>{{ item.name }}</strong><small>{{ item.sku }}</small><div class="mini-quantity"><button type="button" [attr.aria-label]="'Reducir cantidad de ' + item.name" (click)="changeQuantity(item,item.quantity-1)" [disabled]="item.quantity<=1 || updating().has(item.id)">−</button><span>{{ item.quantity }}</span><button type="button" [attr.aria-label]="'Aumentar cantidad de ' + item.name" (click)="changeQuantity(item,item.quantity+1)" [disabled]="item.quantity>=item.availableStock || updating().has(item.id)">+</button><button type="button" class="remove-item" [attr.aria-label]="'Eliminar ' + item.name + ' del carrito'" title="Eliminar del carrito" (click)="remove(item)" [disabled]="updating().has(item.id)"><span class="material-symbols-rounded" aria-hidden="true">delete</span></button></div></div><b>{{ item.subtotal | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</b></article> }</div><div class="totals"><p><span>Productos</span><b>{{ cart.totalQuantity() }}</b></p><p><span>Subtotal</span><b>{{ (validation()?.subtotal ?? cart.cart()?.subtotal) | currency:'PEN':'symbol':'1.2-2':'es-PE' }}</b></p><p><span>Envío</span><b>{{ validation() ? (validation()!.shipping | currency:'PEN':'symbol':'1.2-2':'es-PE') : 'Por calcular' }}</b></p><p class="grand-total"><span>Total</span><b>{{ validation() ? (validation()!.total | currency:'PEN':'symbol':'1.2-2':'es-PE') : (cart.cart()?.subtotal | currency:'PEN':'symbol':'1.2-2':'es-PE') }}</b></p></div><div class="guarantees"><span><i class="material-symbols-rounded">database</i>Datos vigentes de la base de datos</span><span><i class="material-symbols-rounded">shield_lock</i>Pago externo seguro</span><span><i class="material-symbols-rounded">inventory_2</i>Stock revalidado antes de confirmar</span></div></aside>
     </div>
   }
 </section>

@@ -762,7 +762,7 @@ public class ProductoServiceImpl implements ProductoService {
 
         var technical = new com.ecommerce.backend.service.ProductTechnicalData(atributoTecnicoRepository, valorAtributoProductoRepository, categoriaRepository,attributeRestorer::restore);
         var nextSchema = com.ecommerce.backend.service.ProductTechnicalData.schema(producto.getCategoria(), categoriaRepository);
-        if (dto.getFichaTecnica() == null && !Objects.equals(previousSchema, nextSchema)) technical.clear(producto);
+        if (dto.getFichaTecnica() == null && !Objects.equals(previousSchema, nextSchema)) technical.retainForSchema(producto,nextSchema);
         technical.save(producto, dto.getFichaTecnica());
         return construirAdminDetalleDto(productoRepository.save(producto));
     }

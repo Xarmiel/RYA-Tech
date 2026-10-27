@@ -18,16 +18,27 @@ import { CatalogReferences } from './catalog-references';
 import { ProductTechnicalForm } from './product-technical-form';
 import { ProductTechnicalFicha } from './product-technical.models';
 import { AdminReferenceItem } from './admin.service';
+import { TechnicalFieldManager } from './technical-field-manager';
+import { OperationsAdmin } from './operations-admin';
+import { ShippingAdmin } from './shipping-admin';
 import { SidebarResize } from './sidebar-resize';
 
 @Component({
   selector: 'app-admin-page',
   encapsulation: ViewEncapsulation.None,
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus, ProductImport, CatalogReferences, ProductTechnicalForm, SidebarResize],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus, ProductImport, CatalogReferences, ProductTechnicalForm, SidebarResize, ShippingAdmin, OperationsAdmin, TechnicalFieldManager],
   styleUrls: ['./admin.scss', './sidebar-resize.scss'],
   templateUrl: './admin-page.html',
 })
 export class AdminPage implements OnInit {
+  @ViewChild(TechnicalFieldManager) technicalFieldManager?: TechnicalFieldManager;
+  @ViewChild(CatalogReferences) referencesEditor?: CatalogReferences;
+  protected readonly customFieldsBusy = signal(false);
+  protected customSchemaChanged(event:{categoryId:string;schema:import('./product-technical.models').TechnicalSchema|null}){
+    this.categories.update(rows=>rows.map(row=>row.id===event.categoryId?{...row,fichaEsquema:event.schema}:row));
+  }
+  @ViewChild(OperationsAdmin) operationsAdmin?: OperationsAdmin;
+  @ViewChild(ShippingAdmin) shippingAdmin?: ShippingAdmin;
   @ViewChild(ProductTechnicalForm) technicalForm?: ProductTechnicalForm;
   protected technicalSchema(){return this.categories().find(category=>category.id===this.formData().categoriaId)?.fichaEsquema??null;}
   protected setTechnical(value:ProductTechnicalFicha){this.formData.update(data=>({...data,fichaTecnica:value}));}
@@ -326,7 +337,7 @@ export class AdminPage implements OnInit {
   protected loadItems(): void {
     this.listSub?.unsubscribe();
     this.items.set([]); this.totalItems.set(0); this.totalPages.set(0); this.isLoading.set(false);
-    if (!this.section || this.section === 'carga-tecnica') return;
+    if (!this.section || this.section === 'carga-tecnica' || (!this.design && ['envios','pedidos','resenas','contenido','compatibilidad','calidad','importacion','postventa','reportes'].includes(this.section))) return;
 
     this.isLoading.set(true);
     this.serverError.set(null);
@@ -650,15 +661,18 @@ export class AdminPage implements OnInit {
   }
 
   protected onCategorySelect(event: Event): void {
+    if(this.technicalFieldManager && !this.technicalFieldManager.canLeave()){(event.target as HTMLSelectElement).value=this.formData().categoriaId??'';return;}
     const val = (event.target as HTMLSelectElement).value;
     if (val === '__NEW__') {
       this.isCreatingCategory.set(true);
       return;
     }
     const cat = this.categories().find(c => c.id === val || c.nombre === val);
-    if(this.formData().fichaTecnica && this.formData().fichaTecnica?.tipo!==cat?.fichaEsquema?.tipo){
-      if(!window.confirm('La categoría nueva usa otros campos técnicos. ¿Descartar la ficha técnica de este formulario? Los datos certificados del configurador no se modificarán.')){(event.target as HTMLSelectElement).value=this.formData().categoriaId??'';return;}
-      this.formData.update(data=>({...data,fichaTecnica:undefined}));
+    const ficha=this.formData().fichaTecnica;
+    const allowed=new Set(cat?.fichaEsquema?.campos.map(field=>field.key)??[]);
+    if(ficha && (ficha.tipo!==cat?.fichaEsquema?.tipo || Object.keys(ficha.valores).some(key=>!allowed.has(key)))){
+      if(!window.confirm('La nueva categoría usa otros campos técnicos. ¿Descartar los campos que no le corresponden? Los campos compartidos se conservan y los datos certificados del configurador no se modificarán.')){(event.target as HTMLSelectElement).value=this.formData().categoriaId??'';return;}
+      this.formData.update(data=>({...data,fichaTecnica:ficha.tipo===cat?.fichaEsquema?.tipo?{...ficha,valores:Object.fromEntries(Object.entries(ficha.valores).filter(([key])=>allowed.has(key)))}:undefined}));
     }
     this.formData.update(data => ({
       ...data,
@@ -823,6 +837,11 @@ export class AdminPage implements OnInit {
   }
 
   canLeave(): boolean {
+    if (this.technicalFieldManager && !this.technicalFieldManager.canLeave()) return false;
+    if (this.referencesEditor && !this.referencesEditor.canLeave()) return false;
+    if (this.operationsAdmin && !this.operationsAdmin.canLeave()) return false;
+    if (this.productImporter && !this.productImporter.canLeave()) return false;
+    if (this.shippingAdmin && !this.shippingAdmin.canLeave()) return false;
     if (this.importBusy()) { this.notifications.show('Espera a que termine la importación.', 'info'); return false; }
     if (this.stockUncertain()) { this.notifications.show('Reintenta el movimiento pendiente antes de salir para no duplicarlo.', 'info'); return false; }
     if (this.isSaving() || this.savingReference() || this.isSavingStock() || this.pendingRows().size > 0) { this.notifications.show('Espera a que termine el guardado.', 'info'); return false; }
@@ -832,7 +851,8 @@ export class AdminPage implements OnInit {
   }
 
   protected closeForm(): boolean {
-    if (this.isSaving() || this.savingReference()) {
+    if(this.technicalFieldManager && !this.technicalFieldManager.canLeave())return false;
+    if (this.isSaving() || this.savingReference() || this.customFieldsBusy()) {
       return false;
     }
     const dirty = JSON.stringify(this.formData()) !== this.formBaseline || JSON.stringify(this.productMediaComponent?.snapshot() ?? []) !== this.galleryBaseline || (this.isCreatingCategory() && !!this.newCategoryName().trim()) || (this.isCreatingBrand() && !!this.newBrandName().trim());
@@ -850,13 +870,15 @@ export class AdminPage implements OnInit {
   }
 
   protected saveAsDraft(form?: NgForm): void {
-    if (this.isSaving() || this.savingReference()) return;
+    if (this.isSaving() || this.savingReference() || this.customFieldsBusy()) return;
     this.formData.update(data => ({ ...data, estado: 'draft' }));
     this.submitForm(form);
   }
 
   protected submitForm(form?: NgForm): void {
-    if (this.isSaving() || this.savingReference()) return;
+    if(this.customFieldsBusy())return;
+    if(this.technicalFieldManager?.hasPendingChanges()){this.formError.set('Guarda el campo técnico adicional o limpia su editor antes de guardar el producto.');return;}
+    if (this.isSaving() || this.savingReference() || this.customFieldsBusy()) return;
     if (!this.design && this.section !== 'catalogo') return;
     if (form?.invalid) { form.control.markAllAsTouched(); this.formError.set('Revisa los campos obligatorios y los valores numéricos.'); return; }
     if (this.technicalForm && !this.technicalForm.canSave()) {this.formError.set('Revisa los valores de la ficha técnica del componente.');return;}
@@ -1629,7 +1651,7 @@ export class AdminPage implements OnInit {
 
   @HostListener('window:beforeunload', ['$event'])
   protected warnPendingStock(event: BeforeUnloadEvent): void {
-    if (this.isSavingStock() || this.stockUncertain()) { event.preventDefault(); event.returnValue=''; }
+    if (this.isSavingStock() || this.stockUncertain() || this.shippingAdmin?.hasPendingChanges() || this.operationsAdmin?.hasPendingChanges() || this.technicalFieldManager?.hasPendingChanges()) { event.preventDefault(); event.returnValue=''; }
   }
 
   private stockPendingKey(): string | null {

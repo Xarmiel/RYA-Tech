@@ -7,7 +7,8 @@ import java.util.UUID;
 
 public record PedidoDto(UUID id, String codigo, String estado, String moneda,
         BigDecimal subtotal, BigDecimal descuento, BigDecimal envio, BigDecimal total,
-        OffsetDateTime fecha, String metodoPago, List<Item> productos) {
+        OffsetDateTime fecha, String metodoPago, List<Item> productos, Entrega entrega) {
+    public record Entrega(String modalidad, String direccion, String referencia, String descripcion, String estado, String transportista, String codigoSeguimiento) {}
     public record Item(UUID id, UUID productoId, String nombre, String sku, int cantidad,
             BigDecimal precioUnitario, BigDecimal descuentoUnitario, BigDecimal subtotal,
             String slug, String imagen) {}
