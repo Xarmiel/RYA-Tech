@@ -75,11 +75,16 @@ class MercadoPagoOrdersIntegrationTest {
         var delivery=new com.ecommerce.backend.dto.ValidarCheckoutRequestDto.Entrega();delivery.setDepartamento("Lima");delivery.setProvincia("Lima");delivery.setDistrito("Miraflores");delivery.setTarifaEnvioId(rateId);delivery.setDireccion("Dirección de prueba");
         var response=service.iniciarPago("session",user,CrearPedidoPagoRequestDto.builder().cliente(customer).entrega(delivery).metodoPagoId(methodId).build());
         var saved=pedidos.findById(response.getPedidoId()).orElseThrow();
-        assertEquals("DOMICILIO", saved.getModalidadEntrega());assertTrue(saved.getEntregaSnapshot().contains("Courier de prueba"));
+        assertEquals("PENDIENTE",saved.getEstado());assertEquals("DOMICILIO", saved.getModalidadEntrega());assertTrue(saved.getEntregaSnapshot().contains("Courier de prueba"));
         when(rate.getNombreServicio()).thenReturn("Nombre posterior");assertTrue(pedidos.findById(saved.getId()).orElseThrow().getEntregaSnapshot().contains("Courier de prueba"));
         assertEquals(0,new BigDecimal("100.00").compareTo(response.getTotal()));assertEquals("MP_CARDS",response.getMetodoPagoCodigo());
         assertEquals(1,purchases.detalle(user,response.getPedidoId()).productos().size());assertEquals(response.getNumeroPedido(),purchases.detalle(user,response.getPedidoId()).codigo());
         verify(client,never()).create(anyString(),anyMap());verify(checkout).validar(eq("session"),eq(user),any());
+    }
+    @Test void pedidoPendienteDeLaBaseActualPuedePagarse(){
+        var p=pedido("MP_CARDS");p.setEstado("PENDIENTE");pedidos.saveAndFlush(p);
+        when(client.create(anyString(),anyMap())).thenAnswer(call->response(call.getArgument(0),"processed"));
+        assertTrue(service.procesarCargo("",p.getUsuarioId(),request(p)).isExitoso());assertEquals("PAGADO",pedidos.findById(p.getId()).orElseThrow().getEstado());
     }
     @Test void creaOrderConImporteDelServidorYNoRepiteUnCobroAprobado(){
         var p=pedido("MP_CARDS");when(client.create(anyString(),anyMap())).thenAnswer(call->{

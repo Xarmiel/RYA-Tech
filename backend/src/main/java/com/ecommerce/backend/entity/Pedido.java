@@ -33,7 +33,7 @@ public class Pedido {
 
     @Column(nullable = false, length = 30)
     @Builder.Default
-    private String estado = "PENDIENTE_PAGO";
+    private String estado = "PENDIENTE";
 
     @Column(nullable = false, length = 3)
     @Builder.Default

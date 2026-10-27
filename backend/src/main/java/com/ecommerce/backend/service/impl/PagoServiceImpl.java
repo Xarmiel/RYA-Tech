@@ -56,7 +56,7 @@ public class PagoServiceImpl implements PagoService {
         checkout.validar(sessionKey,usuarioId,validation);
         // A pending/uncertain attempt must never be bypassed by creating another local order.
         for(var prior:pedidoRepository.findByUsuarioIdOrderByCreatedAtDesc(usuarioId)){
-            if(!"PENDIENTE_PAGO".equals(prior.getEstado()))continue;
+            if(!pendingOrder(prior))continue;
             var attempts=pagoRepository.findByPedidoIdOrderByCreatedAtDesc(prior.getId());
             if(attempts.stream().anyMatch(p->!FINAL_FAILED.contains(p.getEstado())))
                 throw new ConflictException("Ya existe un pago pendiente para "+prior.getNumeroPedido()+". Consulta su estado en Mis compras antes de iniciar otro cobro.");
@@ -85,7 +85,7 @@ public class PagoServiceImpl implements PagoService {
         if(total.signum()<=0)throw new BadRequestException("El importe a pagar debe ser mayor que cero.");
         var customer=request.getCliente();var delivery=request.getEntrega();
         var pedido=Pedido.builder().numeroPedido("RYA-"+UUID.randomUUID().toString().replace("-","").substring(0,24))
-            .usuarioId(usuarioId).sessionKey(sessionKey).estado("PENDIENTE_PAGO").moneda("PEN")
+            .usuarioId(usuarioId).sessionKey(sessionKey).estado("PENDIENTE").moneda("PEN")
             .subtotal(subtotal).costoEnvio(shipping.getCosto()).total(total)
             .tipoDocumento(customer.getTipoDocumento()).numeroDocumento(customer.getNumeroDocumento()).nombreCompleto(customer.getNombre())
             .email(customer.getEmail()).telefono(customer.getTelefono()).tarifaEnvioId(shipping.getId())
@@ -119,7 +119,7 @@ public class PagoServiceImpl implements PagoService {
         var attempt=tx(()->{
             var pedido=owned(request.getPedidoId(),usuarioId,true);
             var old=pagoRepository.findByPedidoIdOrderByCreatedAtDesc(pedido.getId());
-            if(!"PENDIENTE_PAGO".equals(pedido.getEstado())||old.stream().anyMatch(p->!FINAL_FAILED.contains(p.getEstado())))
+            if(!pendingOrder(pedido)||old.stream().anyMatch(p->!FINAL_FAILED.contains(p.getEstado())))
                 return new Attempt(null,pedido.getId(),null,old.isEmpty()?null:old.getFirst().getMpOrderId());
             for(var item:pedido.getItems()){
                 var product=productoRepository.findConDetallesPorId(item.getProductoId()).orElseThrow(()->new BadRequestException("Producto no disponible."));
@@ -197,6 +197,7 @@ public class PagoServiceImpl implements PagoService {
         body.put("transactions",Map.of("payments",List.of(Map.of("amount",money(pedido.getTotal()),"payment_method",pm))));
         return body;
     }
+    private static boolean pendingOrder(Pedido pedido){return Set.of("PENDIENTE","PENDIENTE_PAGO").contains(pedido.getEstado());}
     private static String money(BigDecimal n){return n.setScale(2,RoundingMode.UNNECESSARY).toPlainString();}
     private static String text(JsonNode node,String field){return node.path(field).asText("");}
     private static boolean equalAmount(JsonNode node,BigDecimal expected){
@@ -234,7 +235,9 @@ public class PagoServiceImpl implements PagoService {
             :"refunded".equals(status)?"Mercado Pago confirmó el reembolso de esta order."
             :FINAL_FAILED.contains(status)?"El pago no se completó. Puedes revisar los datos e intentar nuevamente."
             :"Tu pago está pendiente. No se marcará como pagado hasta recibir la confirmación de Mercado Pago.");
-        if(paid&&"PENDIENTE_PAGO".equals(pedido.getEstado())){
+        // Flush verified payment evidence before the database validates the order transition.
+        pagoRepository.saveAndFlush(payment);
+        if(paid&&pendingOrder(pedido)){
             pedido.setEstado("PAGADO");clearPurchasedItems(pedido);pedidoRepository.save(pedido);
         }else if("refunded".equals(status)&&"PAGADO".equals(pedido.getEstado())){
             pedido.setEstado("REEMBOLSADO");pedidoRepository.save(pedido);

@@ -37,3 +37,11 @@ La validación automatizada usa respuestas de prueba de la API, sin enviar tarje
 ## MCP de desarrollo
 
 Registrado globalmente como `mercadopago` en Codex, URL `https://mcp.mercadopago.com/mcp`. No es una dependencia del ecommerce. La autenticación OAuth no se completó: Codex rechazó la respuesta porque el origen del endpoint de autorización no coincidía con el del servidor OAuth. No se desactivó esa validación ni se introdujeron tokens manualmente. Se consultó la documentación oficial vía web como alternativa.
+
+## Compatibilidad con los estados de pedido de la BD existente
+
+El backend crea pedidos en `PENDIENTE`, estado exigido por el trigger real. Acepta también pedidos históricos `PENDIENTE_PAGO` al consultar/reconciliar. El error «Pedido debe iniciar PENDIENTE» ocurre antes de abrir el formulario y no representa un cobro.
+
+Aplicar además `backend/db/manual/pedidos-estados-orders.sql` para que el trigger reconozca la evidencia de pago de Orders en `rya.pagos`, conservando el flujo anterior en `rya.intentos_pago`. No permite marcar PAGADO sin un registro confirmado, acreditado, con Order ID y monto/moneda coincidentes. El backend guarda esa evidencia antes de cambiar el estado del pedido. La migración no modifica pedidos ni pagos existentes.
+
+Validación local del 27/10/2026: ajuste de estados aplicado con autorización en Supabase; apertura del formulario verificada con campos de `secure-fields.mercadopago.com` y opción voluntaria de guardado. No se introdujeron datos de tarjeta ni se realizaron cobros. La corrección del estado inicial requiere desplegar el backend actualizado.
