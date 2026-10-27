@@ -18,6 +18,11 @@ import java.util.Map;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityConfigTest {
+    @Test void cobrosYConsultaDeEstadoRequierenSesion()throws Exception{
+        mockMvc.perform(post("/api/v1/pagos/iniciar").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/pagos/procesar").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/pagos/pedidos/11111111-1111-4111-8111-111111111111")).andExpect(status().isUnauthorized());
+    }
     @Test void resolverDuplicadosRequiereAdministradorConfiable() throws Exception {
         String path="/api/v1/admin/productos/11111111-1111-4111-8111-111111111111/importacion";
         mockMvc.perform(get(path)).andExpect(status().isUnauthorized());

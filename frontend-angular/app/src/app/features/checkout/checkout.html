@@ -3,7 +3,7 @@
   @if (message()) { <p class="checkout-message" role="alert">{{ message() }}</p> }
   @if (state() === 'loading') { <app-loading-state label="Preparando checkout" layout="rows" /> }
   @else if (state() === 'error') { <app-request-error title="No pudimos preparar la compra" (retry)="load()" /> }
-  @else if (!cart.cart()?.items?.length) { <div class="empty-state"><span class="material-symbols-rounded">shopping_cart</span><h2>Tu carrito está vacío</h2><p>Añade al menos un producto disponible antes de continuar.</p><a class="button button-primary" routerLink="/catalogo">Ver catálogo</a></div> }
+  @else if (!cart.cart()?.items?.length && !paymentSuccess() && !pendingPayment() && !paymentUncertain()) { <div class="empty-state"><span class="material-symbols-rounded">shopping_cart</span><h2>Tu carrito está vacío</h2><p>Añade al menos un producto disponible antes de continuar.</p><a class="button button-primary" routerLink="/catalogo">Ver catálogo</a></div> }
   @else {
     <div class="checkout-layout">
       <section class="checkout-process">
@@ -44,7 +44,7 @@
                 <div class="review-grid">
                   <div><small>Número de Pedido</small><strong>{{ success.numeroPedido }}</strong></div>
                   <div><small>Total Cobrado</small><strong>{{ success.monto | currency:success.moneda:'symbol':'1.2-2':'es-PE' }}</strong></div>
-                  <div><small>ID Mercado Pago</small><span>{{ success.mpPaymentId || 'Aprobado' }}</span></div>
+                  <div><small>Order Mercado Pago</small><span>{{ success.mpOrderId || success.mpPaymentId || 'Confirmada' }}</span></div>
                   <div><small>Estado</small><span class="status-badge">{{ success.estadoPedido }}</span></div>
                 </div>
                 <footer class="step-actions centered">
@@ -63,15 +63,31 @@
                 }
 
                 <!-- Contenedor del componente Embebido de Mercado Pago Brick -->
-                <div id="paymentBrick_container" class="payment-brick-box"></div>
+                <div id="paymentBrick_container" class="payment-brick-box" [attr.inert]="pendingPayment()||paymentUncertain()?'':null"></div>
+                @if(paymentSession()?.metodoPagoCodigo==='MP_YAPE' && !pendingPayment() && !paymentUncertain()){
+                  <div class="form-grid" aria-label="Pago con Yape">
+                    <label>Celular de Yape<input [(ngModel)]="yapePhone" name="yape-phone" inputmode="numeric" maxlength="9" autocomplete="tel" [disabled]="processingPayment()"></label>
+                    <label>Código de aprobación de Yape<input [(ngModel)]="yapeOtp" name="yape-otp" type="password" inputmode="numeric" maxlength="6" autocomplete="one-time-code" [disabled]="processingPayment()"></label>
+                    <p class="full-field">Obtén el código en tu aplicación Yape. No lo compartas fuera de este formulario de pago.</p>
+                    <button type="button" class="button button-primary" (click)="payYape()" [disabled]="processingPayment()">Pagar con Yape</button>
+                  </div>
+                }
+                @if(pendingPayment()||paymentUncertain()){
+                  <section class="auth-required" aria-label="Pago pendiente de confirmación">
+                    <span class="material-symbols-rounded" aria-hidden="true">schedule</span><div><strong>Pago pendiente de confirmación</strong><p>No realices otro cobro mientras verificamos este pedido.</p>
+                    @if(pendingPayment()?.referenciaPago;as reference){<p>Código de pago: <strong>{{reference}}</strong></p>}
+                    @if(pendingPayment()?.instruccionesUrl;as url){<a class="button button-secondary" [href]="url" target="_blank" rel="noopener noreferrer">Ver instrucciones de PagoEfectivo</a>}
+                    <button type="button" class="button button-secondary" (click)="checkPayment()" [disabled]="processingPayment()">Consultar estado del pago</button><a routerLink="/compras">Mis compras</a></div>
+                  </section>
+                }
 
                 <footer class="step-actions">
-                  <button class="button button-secondary" type="button" (click)="currentStep.set(3)" [disabled]="processingPayment()">← Cambiar pago</button>
+                  <button class="button button-secondary" type="button" (click)="changePayment()" [disabled]="processingPayment() || !!pendingPayment() || paymentUncertain()">← Cambiar pago</button>
                   @if(result.requiresAuthentication){
                     <a class="button button-primary" routerLink="/login" [queryParams]="{returnUrl:'/checkout'}">Iniciar sesión</a>
                   }@else{
-                    <button class="button button-primary" type="button" (click)="pagarConMercadoPago()" [disabled]="processingPayment()">
-                      {{ processingPayment() ? 'Preparando pasarela…' : 'Continuar a pagar con Mercado Pago' }} <span>🔒</span>
+                    <button class="button button-primary" type="button" (click)="pagarConMercadoPago()" [disabled]="processingPayment() || !!paymentSession() || paymentUncertain()">
+                      {{ processingPayment() ? 'Procesando…' : paymentSession() ? 'Formulario preparado' : 'Continuar a pagar con Mercado Pago' }} <span>🔒</span>
                     </button>
                   }
                 </footer>

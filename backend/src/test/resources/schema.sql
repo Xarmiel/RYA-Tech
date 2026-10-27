@@ -259,3 +259,23 @@ CREATE TABLE IF NOT EXISTS rya.reglas_presupuesto_perfil (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Checkout Orders uses the canonical purchases tables above.
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS session_key varchar(128);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS tipo_documento varchar(10);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS numero_documento varchar(20);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS nombre_completo varchar(255);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS email varchar(255);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS telefono varchar(20);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS tarifa_envio_id uuid;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS direccion_envio text;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS referencia_envio text;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS preference_id varchar(128);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS metodo_pago_codigo varchar(40);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+CREATE TABLE IF NOT EXISTS rya.pagos (
+ id uuid PRIMARY KEY,pedido_id uuid NOT NULL,pasarela varchar(30) NOT NULL,
+ mp_payment_id varchar(64),mp_order_id varchar(64) UNIQUE,payment_method_id varchar(64),payment_type_id varchar(30),ultimos_digitos varchar(4),
+ monto numeric(12,2) NOT NULL,moneda varchar(3) NOT NULL,estado varchar(30) NOT NULL,status_detail varchar(100),codigo_respuesta varchar(100),
+ mensaje_respuesta text,raw_response text,instrucciones_url text,referencia_pago varchar(100),created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+

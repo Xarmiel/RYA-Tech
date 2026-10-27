@@ -22,7 +22,7 @@ export interface CheckoutValidation {
 export interface IniciarPagoResponse {
   pedidoId: string;
   numeroPedido: string;
-  preferenceId: string;
+  metodoPagoCodigo: 'MP_CARDS'|'MP_YAPE'|'MP_PAGOEFECTIVO';
   total: number;
   moneda: string;
   publicKey: string;
@@ -34,9 +34,19 @@ export interface ResultadoPago {
   numeroPedido: string;
   estadoPedido: string;
   mpPaymentId?: string;
+  mpOrderId?: string;
+  estadoPago?: string;
+  pendiente?: boolean;
+  instruccionesUrl?: string;
+  referenciaPago?: string;
   mensaje: string;
   monto: number;
   moneda: string;
+}
+
+export interface OrdersPaymentData {
+  token?:string;paymentMethodId:string;paymentTypeId?:string;installments?:number;
+  identificationType?:string;identificationNumber?:string;
 }
 
 

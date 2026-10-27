@@ -41,9 +41,16 @@ public class PagoController {
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(
             @RequestBody String payload,
-            @RequestHeader(value = "x-signature", required = false) String signature) {
-        pagoService.procesarWebhook(payload, signature);
+            @RequestHeader(value = "x-signature", required = false) String signature,
+            @RequestHeader(value = "x-request-id", required = false) String requestId,
+            @RequestParam(value="data.id",required=false) String dataId) {
+        pagoService.procesarWebhook(payload,signature,requestId,dataId);
         return ResponseEntity.ok().build();
+    }
+    @GetMapping("/pedidos/{id}")
+    public ResultadoPagoDto consultar(@PathVariable UUID id,Authentication authentication){
+        UUID user=authentication!=null&&authentication.getPrincipal() instanceof Jwt jwt?UUID.fromString(jwt.getSubject()):null;
+        return pagoService.consultarPago(id,user);
     }
 }
 

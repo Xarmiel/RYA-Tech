@@ -67,6 +67,8 @@ public class SecurityConfig {
                     boolean allowed = AdminPermissions.allowed(token.getToken());
                     return new org.springframework.security.authorization.AuthorizationDecision(allowed);
                 })
+                .requestMatchers(org.springframework.http.HttpMethod.POST,"/api/v1/pagos/webhook").permitAll()
+                .requestMatchers("/api/v1/pagos/**").authenticated()
                 .requestMatchers("/api/v1/cuenta/**", "/api/v1/pedidos/**", "/api/v1/favoritos/**",
                         "/api/v1/carrito/vincular", "/api/v1/pc-builder/configuraciones/**",
                         "/api/v1/pc-builder/configuraciones", "/api/v1/pc-builder/aplicar-cambio").authenticated()

@@ -18,6 +18,11 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponseDto> handleStatus(org.springframework.web.server.ResponseStatusException ex,HttpServletRequest request){
+        return ResponseEntity.status(ex.getStatusCode()).body(ErrorResponseDto.builder().timestamp(LocalDateTime.now())
+            .status(ex.getStatusCode().value()).error("Solicitud no completada").message(ex.getReason()).path(request.getRequestURI()).build());
+    }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponseDto> handleConflict(ConflictException ex, HttpServletRequest request) {

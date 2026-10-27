@@ -33,6 +33,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     public CheckoutOpcionesDto obtenerOpciones() {
         List<CheckoutOpcionesDto.MetodoPagoDto> pagos = metodoPagoRepository
                 .findByActivoTrueAndIsDeletedFalseOrderByNombreAsc().stream()
+                .filter(item -> java.util.Set.of("MP_CARDS","MP_YAPE","MP_PAGOEFECTIVO").contains(item.getCodigo()))
                 .map(item -> CheckoutOpcionesDto.MetodoPagoDto.builder()
                         .id(item.getId()).codigo(item.getCodigo()).nombre(item.getNombre()).build())
                 .toList();

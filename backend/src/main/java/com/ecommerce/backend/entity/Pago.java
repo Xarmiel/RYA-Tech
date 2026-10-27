@@ -30,6 +30,12 @@ public class Pago {
 
     @Column(name = "mp_payment_id", length = 64)
     private String mpPaymentId;
+    @Column(name = "mp_order_id", length = 64)
+    private String mpOrderId;
+    @Column(name = "instrucciones_url", columnDefinition = "TEXT")
+    private String instruccionesUrl;
+    @Column(name = "referencia_pago", length = 100)
+    private String referenciaPago;
 
     @Column(name = "payment_method_id", length = 64)
     private String paymentMethodId;

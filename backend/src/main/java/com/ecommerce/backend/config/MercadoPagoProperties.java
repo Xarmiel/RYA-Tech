@@ -14,4 +14,5 @@ public class MercadoPagoProperties {
     private String accessToken = "TEST-placeholder";
     private String webhookSecret = "";
     private String apiUrl = "https://api.mercadopago.com";
+    private boolean liveMode = false;
 }

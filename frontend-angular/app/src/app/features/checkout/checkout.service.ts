@@ -46,7 +46,7 @@ export class CheckoutService {
   procesarCargo(
     pedidoId: string,
     email: string,
-    paymentData: { token?: string; paymentMethodId?: string; installments?: number; issuerId?: string }
+    paymentData: import('./checkout.models').OrdersPaymentData
   ): Observable<import('./checkout.models').ResultadoPago> {
     return this.http.post<import('./checkout.models').ResultadoPago>('/api/v1/pagos/procesar', {
       pedidoId,
@@ -54,8 +54,13 @@ export class CheckoutService {
       token: paymentData.token,
       paymentMethodId: paymentData.paymentMethodId,
       installments: paymentData.installments,
-      issuerId: paymentData.issuerId,
+      paymentTypeId: paymentData.paymentTypeId,
+      identificationType: paymentData.identificationType,
+      identificationNumber: paymentData.identificationNumber,
     }, { headers: this.cart.requestHeaders() });
+  }
+  consultarPago(pedidoId:string):Observable<import('./checkout.models').ResultadoPago>{
+    return this.http.get<import('./checkout.models').ResultadoPago>(`/api/v1/pagos/pedidos/${encodeURIComponent(pedidoId)}`);
   }
 }
 

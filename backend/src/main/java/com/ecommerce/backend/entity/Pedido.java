@@ -22,7 +22,7 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(name = "numero_pedido", nullable = false, unique = true, length = 32)
+    @Column(name = "codigo", nullable = false, unique = true, length = 32)
     private String numeroPedido;
 
     @Column(name = "usuario_id")
@@ -42,12 +42,16 @@ public class Pedido {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
 
-    @Column(name = "costo_envio", nullable = false, precision = 12, scale = 2)
+    @Column(name = "envio", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal costoEnvio = BigDecimal.ZERO;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(name="monto_total",nullable = false, precision = 12, scale = 2)
     private BigDecimal total;
+    @Column(name="metodo_pago_codigo",length=40)
+    private String metodoPagoCodigo;
+    @Column(name="metodo_pago_snapshot",length=65)
+    private String metodoPagoSnapshot;
 
     @Column(name = "tipo_documento", nullable = false, length = 10)
     private String tipoDocumento;

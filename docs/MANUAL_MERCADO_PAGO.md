@@ -1,97 +1,75 @@
-# Manual de Integración: Mercado Pago (Perú)
+# Mercado Pago Perú — Checkout API con Orders
 
-Este documento detalla cómo crear tu cuenta de desarrollador, obtener tus credenciales de prueba (**sin necesidad de RUC**), vincularlas a **RYA-Tech** y realizar pagos de prueba utilizando tarjetas Visa y Mastercard.
+Esta integración utiliza Orders API, no Payments API ni Preferences. Las tarjetas usan Card Payment Brick; Yape genera su token con MercadoPago.js y PagoEfectivo muestra instrucciones hasta que Mercado Pago confirme la acreditación.
 
----
+## Crear la aplicación y obtener credenciales
+1. En Mercado Pago Developers, crea la aplicación con **Checkout API → API de Orders**.
+2. Configura una cuenta de prueba siguiendo las instrucciones actuales del portal. No determines el entorno solamente por el prefijo de las claves.
+3. Copia la Public Key y el Access Token de la integración de prueba. No compartas el token ni lo pongas en Vercel o en el código.
 
-## 1. Obtención de Credenciales de Prueba (Paso a Paso)
+## Variables locales y Render
+Configura en backend/.env para trabajar localmente; Spring también admite el .env de la raíz al arrancar desde ella. En Render usa las mismas variables en Environment:
+~~~env
+MERCADOPAGO_PUBLIC_KEY=
+MERCADOPAGO_ACCESS_TOKEN=
+MERCADOPAGO_WEBHOOK_SECRET=
+MERCADOPAGO_LIVE_MODE=false
+~~~
+La URL de la API predeterminada es https://api.mercadopago.com. La variable opcional MERCADOPAGO_API_URL solo debe cambiarse para pruebas controladas.
 
-> [!NOTE]  
-> Para el entorno de desarrollo y pruebas **NO es necesario RUC ni empresa constituida**. Puedes usar tu cuenta personal de Mercado Libre o crear una gratis con tu DNI / correo Gmail.
+MERCADOPAGO_LIVE_MODE valida el entorno declarado por la respuesta. **No convierte credenciales de producción en credenciales de prueba**. Usa las credenciales de la cuenta de prueba. Para pagos reales se requieren las credenciales correctas y LIVE_MODE=true.
 
-1. **Ingresar al portal de desarrolladores:**
-   * Entra a [https://www.mercadopago.com.pe/developers](https://www.mercadopago.com.pe/developers).
-   * Inicia sesión con tu cuenta de Mercado Libre / Mercado Pago.
+El frontend recibe la clave pública del backend. Reinicia el backend después de cambiar sus variables. Si faltan claves, se rechaza el inicio del pago: **no se simulan pedidos pagados ni se fabrican IDs**.
 
-2. **Crear una Aplicación:**
-   * Haz clic en tu perfil o en **"Tus integraciones"**.
-   * Presiona el botón **"Crear aplicación"**.
-   * Completa los campos:
-     * **Nombre de la app:** `RYA-Tech` (o el que desees).
-     * **Solución de pago:** Selecciona **"Checkout Pro y Bricks"** (o "Pagos online").
-     * **¿Qué plataforma estás integrando?:** Selecciona "Desarrollo propio".
-   * Acepta los términos y haz clic en **Crear aplicación**.
+## Preparación de la base de datos
+Conserva el esquema principal del proyecto y aplica, tras revisión y respaldo, **backend/db/manual/mercadopago-orders.sql**. Este archivo no se ejecuta automáticamente.
 
-3. **Copiar las Credenciales de Prueba:**
-   * Dentro de tu aplicación recién creada, en el menú lateral izquierdo haz clic en **"Credenciales de prueba"**.
-   * Encontrarás dos valores clave:
-     * **Public Key:** Inicia con `TEST-...`
-     * **Access Token:** Inicia con `TEST-...` (haz clic en el ícono de ojo para revelarlo o en copiar).
+La migración agrega los datos de checkout a las tablas existentes de Mis compras, conserva pedidos e ítems anteriores y agrega la referencia de Orders a los pagos. El antiguo script pedidos-y-pagos-mercadopago.sql por sí solo no adapta una tabla de pedidos que ya existe: CREATE TABLE IF NOT EXISTS no agrega las columnas faltantes.
 
----
+La migración registra MP_CARDS, MP_YAPE y MP_PAGOEFECTIVO si no existen; no reactiva referencias eliminadas. Comprueba que los métodos y las tarifas de envío estén activos antes de probar.
 
-## 2. Vinculación en RYA-Tech
+No se ejecutó esta migración automáticamente sobre Supabase.
 
-Abre tu archivo local de variables de entorno:
-* Ubicación: `backend/.env` (o `.env` en la raíz del repositorio).
+## Webhook de Orders
+En la aplicación de Mercado Pago, configura el evento **Order (Mercado Pago)** y la URL HTTPS:
+~~~text
+https://rya-tech-backend.onrender.com/api/v1/pagos/webhook
+~~~
+Configura la sección de pruebas para las credenciales de prueba y la sección de producción para las de producción. Copia la firma secreta generada en MERCADOPAGO_WEBHOOK_SECRET.
 
-Pega tus credenciales obtenidas:
+El backend exige x-signature, x-request-id y data.id, valida HMAC-SHA256 y consulta GET /v1/orders/{id} con el Access Token. No acepta como confirmación los importes o estados que vengan solamente en el cuerpo del webhook.
 
-```env
-# ==========================================
-# Pasarela de Pagos: Mercado Pago (Perú)
-# ==========================================
-MERCADOPAGO_PUBLIC_KEY=TEST-tu_public_key_aqui
-MERCADOPAGO_ACCESS_TOKEN=TEST-tu_access_token_aqui
-MERCADOPAGO_WEBHOOK_SECRET=tu_webhook_secret_opcional
-```
+Para pruebas locales, el webhook necesita una URL HTTPS pública que llegue al backend local; localhost no es accesible desde Mercado Pago. También puedes comprobar la sincronización en el servicio desplegado.
 
-> [!TIP]  
-> Si dejas los valores por defecto (`TEST-placeholder`), el backend entrará en **modo de simulación local segura**, permitiéndote probar la interfaz del checkout sin fallar incluso antes de poner tus claves reales.
+## Flujo y controles
+- POST /api/v1/pagos/iniciar requiere sesión, revalida el carrito ABIERTO y crea un pedido local con importes calculados por el servidor.
+- POST /api/v1/pagos/procesar exige que el pedido pertenezca al usuario autenticado.
+- Cada intento se registra antes de llamar a POST /v1/orders. Su UUID se usa como X-Idempotency-Key y external_reference.
+- Importe y monto de la transacción se envían como strings con dos decimales. El navegador no decide el total.
+- Solo se marca PAGADO si los estados de order y transacción indican processed/accredited y coinciden referencia, moneda, entorno e importes.
+- PagoEfectivo action_required/waiting_payment y otros estados intermedios se muestran como pendientes.
+- Ante timeout o resultado incierto, el intento queda bloqueado para evitar otro cobro. Consulta el estado y revisa Mercado Pago antes de abrir otro intento.
+- GET /api/v1/pagos/pedidos/{id} permite al propietario consultar y sincronizar el resultado.
+- Una notificación repetida no vuelve a limpiar el carrito. La limpieza conserva productos nuevos o cantidades que cambiaron.
+- Un reembolso completo confirmado actualiza el pedido a REEMBOLSADO. Los contracargos y reembolsos parciales requieren el flujo administrativo correspondiente.
+- Las credenciales y los datos de tarjeta no se guardan en el repositorio. El token y el OTP no se registran en los logs ni en la respuesta del pago.
 
----
+## Pruebas antes de usar pagos reales
+Usa exclusivamente cuentas y datos de prueba indicados por Mercado Pago para tu entorno:
+1. Tarjeta aprobada y rechazada.
+2. Yape: celular y código de aprobación de prueba; el OTP solo se entrega al SDK.
+3. PagoEfectivo pendiente y posterior confirmación por webhook.
+4. Consulta del pedido con otra cuenta: debe rechazarse.
+5. Notificación sin firma o modificada: debe rechazarse.
+6. Dos envíos simultáneos y repetición del webhook: no deben generar otro cobro.
+7. Timeout: debe mostrar pendiente de confirmación.
+8. Confirma que el pedido y sus productos aparezcan en Mis compras.
 
-## 3. Preparación de la Base de Datos
+Las pruebas automatizadas usan HTTP simulado y H2. No sustituyen una compra de prueba real contra Mercado Pago y no verifican la configuración de la cuenta o de Supabase remota.
 
-Antes de realizar compras en local, ejecuta el script de base de datos en tu panel SQL de **Supabase**:
-
-* Archivo: `backend/db/manual/pedidos-y-pagos-mercadopago.sql`
-
-Este script crea:
-* Las tablas `rya.pedidos`, `rya.pedido_items` y `rya.pagos`.
-* Los métodos de pago `MP_CARDS`, `MP_YAPE` y `MP_PAGOEFECTIVO` en la tabla `rya.metodos_pago`.
-
----
-
-## 4. Tarjetas de Prueba Oficiales (Visa y Mastercard)
-
-Para completar compras de prueba en el componente embebido (**Payment Brick**) de RYA-Tech, utiliza los siguientes datos de tarjeta de prueba.
-
-* **Fecha de vencimiento:** Cualquier mes y año futuro (ej. `12/30`).
-* **Código de seguridad (CVV):** Cualquier número de 3 dígitos (ej. `123`).
-* **Titular de la tarjeta:** `APRO` (o cualquier nombre para compras aprobadas).
-
-### Tarjetas para Pagos Aprobados
-
-| Marca | Número de Tarjeta | Estado Esperado |
-| :--- | :--- | :--- |
-| **Visa (Crédito/Débito)** | `4242 4242 4242 4242` | **Aprobado (approved)** |
-| **Mastercard (Crédito/Débito)** | `5252 5252 5252 5252` | **Aprobado (approved)** |
-
-### Tarjetas para Pruebas de Error / Rechazo
-
-Si deseas comprobar cómo responde el sistema ante rechazos o bloqueos bancarios:
-
-| Motivo de Prueba | Número de Tarjeta | Mensaje en Pantalla |
-| :--- | :--- | :--- |
-| **Fondos insuficientes** | `4023 2323 2323 2323` | Rechazo por falta de saldo en la cuenta. |
-| **Rechazo general / Seguridad** | `4060 6060 6060 6060` | Tarjeta no procesable, permite reintentar. |
-| **Rechazo por código de seguridad incorrecto** | `4044 4444 4444 4444` | Valida CVV inválido. |
-
----
-
-## 5. Pruebas de Billetera Digital (Yape / Transferencia)
-
-Dentro del Brick de Mercado Pago en Perú:
-* En el paso 4 del checkout, selecciona la opción de **Billeteras / Yape** o transferencia bancaria.
-* Puedes ingresar cualquier número celular de 9 dígitos (ej. `987654321`) y el código de aprobación de prueba (`123456`).
+## Documentación oficial
+- [Migración de Payments a Orders](https://www.mercadopago.com.pe/developers/es/docs/checkout-api-orders/resources/migrate-payments-to-orders)
+- [Tarjetas y Card Payment Brick](https://www.mercadopago.com.pe/developers/es/docs/checkout-api-orders/payment-integration/websites/cards)
+- [Yape](https://www.mercadopago.com.pe/developers/es/docs/checkout-api-orders/payment-integration/websites/yape)
+- [PagoEfectivo ATM](https://www.mercadopago.com.pe/developers/es/docs/checkout-api-orders/payment-integration/websites/pagoefectivo-atm)
+- [Notificaciones de Orders](https://www.mercadopago.com.pe/developers/es/docs/checkout-api-orders/notifications)
