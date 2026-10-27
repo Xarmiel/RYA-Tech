@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+@lombok.extern.slf4j.Slf4j
 @Service @RequiredArgsConstructor
 public class TarjetasPagoService {
  private final MercadoPagoOrdersClient client;
@@ -46,13 +47,32 @@ public class TarjetasPagoService {
    try{return new TransactionTemplate(transactions).execute(status->repository.saveAndFlush(binding).getId());}
    catch(org.springframework.dao.DataIntegrityViolationException e){return repository.findByUsuarioIdAndEntorno(user,scope()).orElseThrow(()->e).getId();}
   });
+  String[] phase={"customer"};
   try{new TransactionTemplate(transactions).executeWithoutResult(status->{
    var mapping=repository.lock(mappingId).orElseThrow();
    if(mapping.getCustomerId()==null){var customer=client.customerCreate(email);String id=customer==null?"":customer.path("id").asText();if(!id.matches("[A-Za-z0-9_-]{1,100}"))throw unavailable();mapping.setCustomerId(id);repository.saveAndFlush(mapping);}
   });
    var mapping=repository.findById(mappingId).orElseThrow();
+   phase[0]="card";
    var saved=card(client.saveCard(mapping.getCustomerId(),token));if(saved==null)throw unavailable();return saved;
-  }catch(org.springframework.web.client.RestClientException e){throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"No se confirmó el guardado en Mercado Pago. Actualiza tus tarjetas antes de volver a intentarlo.");}
+  }catch(org.springframework.web.client.RestClientResponseException e){
+   // Log only status, phase and provider codes. Response bodies can contain personal data.
+   String codes="unknown";
+   try{var body=new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.getResponseBodyAsString());
+    var safe=new ArrayList<String>();for(var cause:body.path("cause")){String code=cause.path("code").asText("");if(code.matches("[A-Za-z0-9_.-]{1,64}"))safe.add(code);}codes=String.join(",",safe);
+   }catch(Exception ignored){}
+   int status=e.getStatusCode().value();log.warn("Mercado Pago wallet rejected phase={} status={} codes={}",phase[0],status,codes);
+   if(status==400||status==422){
+    String reason=phase[0].equals("customer")
+     ? "Mercado Pago rechazó la creación del cliente. Revisa la cuenta y el correo del comprador; en pruebas puede requerir un usuario de prueba. Puedes pagar sin guardar la tarjeta."
+     : "Mercado Pago rechazó guardar la tarjeta. Vuelve a ingresar sus datos para obtener un token nuevo o paga sin guardarla.";
+    throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,reason);
+   }
+   if(status==401||status==403)throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Mercado Pago no autorizó el guardado. El administrador debe revisar las credenciales y permisos de la integración.");
+   throw unavailable();
+  }catch(org.springframework.web.client.RestClientException e){
+   log.warn("Mercado Pago wallet result unknown phase={} transport={}",phase[0],e.getClass().getSimpleName());
+   throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,"No se confirmó el guardado en Mercado Pago. Actualiza tus tarjetas antes de volver a intentarlo.");}
  }
  private Card card(JsonNode node){
   if(node==null)return null;var method=node.path("payment_method");String id=node.path("id").asText(""),last=node.path("last_four_digits").asText(""),type=method.path("payment_type_id").asText("");

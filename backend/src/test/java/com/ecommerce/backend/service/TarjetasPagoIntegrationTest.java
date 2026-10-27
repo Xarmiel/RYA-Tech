@@ -25,7 +25,7 @@ class TarjetasPagoIntegrationTest {
  String card="""
  {"id":"card1","last_four_digits":"1234","first_six_digits":"411111","expiration_month":12,"expiration_year":2035,"security_code":{"length":3},"payment_method":{"id":"visa","name":"Visa","payment_type_id":"debit_card"},"live_mode":false}
  """;
- @BeforeEach void setup()throws Exception{config.setPublicKey("public-wallet-test");config.setLiveMode(false);when(client.customerCreate(anyString())).thenReturn(mapper.readTree("{\"id\":\"customer1\"}"));when(client.saveCard(anyString(),anyString())).thenReturn(mapper.readTree(card));when(client.cards(anyString())).thenReturn(mapper.readTree("["+card+"]"));}
+ @BeforeEach void setup()throws Exception{repository.deleteAll();config.setPublicKey("public-wallet-test");config.setLiveMode(false);when(client.customerCreate(anyString())).thenReturn(mapper.readTree("{\"id\":\"customer1\"}"));when(client.saveCard(anyString(),anyString())).thenReturn(mapper.readTree(card));when(client.cards(anyString())).thenReturn(mapper.readTree("["+card+"]"));}
  @AfterEach void cleanup(){repository.deleteAll();}
  @Test void consentimientoYCuentaControlanElGuardadoSinPersistirDatosDeTarjeta(){
   assertThrows(BadRequestException.class,()->service.save(user,"owner@test.test","token",false));verify(client,never()).saveCard(anyString(),anyString());
@@ -52,5 +52,16 @@ class TarjetasPagoIntegrationTest {
   mvc.perform(get("/api/v1/pagos/tarjetas")).andExpect(status().isUnauthorized());
   mvc.perform(post("/api/v1/pagos/tarjetas").with(jwt().jwt(j->j.subject(user.toString()).claim("email","verified@test.test"))).contentType("application/json").content("{\"token\":\"token\",\"consentimiento\":true,\"email\":\"attacker@test.test\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.lastFour").value("1234")).andExpect(jsonPath("$.first_six_digits").doesNotExist());
   verify(client).customerCreate("verified@test.test");
+ }
+ @Test void rechazoDeClienteNoSeConfundeConGuardadoIncierto(){
+  when(client.customerCreate(anyString())).thenThrow(org.springframework.web.client.HttpClientErrorException.create(org.springframework.http.HttpStatus.BAD_REQUEST,"bad",null,"{\"cause\":[{\"code\":\"2067\"}]}".getBytes(),null));
+  var error=assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.save(user,"owner@test.test","private-token",true));
+  assertEquals(422,error.getStatusCode().value());assertTrue(error.getReason().contains("cliente"));assertFalse(error.getReason().contains("private-token"));
+  verify(client,never()).saveCard(anyString(),anyString());assertNull(repository.findAll().getFirst().getCustomerId());
+ }
+ @Test void rechazoDeTarjetaConservaClienteYPermiteNuevoToken(){
+  when(client.saveCard(anyString(),anyString())).thenThrow(org.springframework.web.client.HttpClientErrorException.create(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY,"bad",null,new byte[0],null));
+  var error=assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.save(user,"owner@test.test","private-token",true));
+  assertEquals(422,error.getStatusCode().value());assertTrue(error.getReason().contains("token nuevo"));assertEquals("customer1",repository.findAll().getFirst().getCustomerId());
  }
 }

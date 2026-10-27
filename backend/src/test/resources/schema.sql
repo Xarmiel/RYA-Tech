@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS rya.pagos (
  id uuid PRIMARY KEY,pedido_id uuid NOT NULL,pasarela varchar(30) NOT NULL,
  mp_payment_id varchar(64),mp_order_id varchar(64) UNIQUE,payment_method_id varchar(64),payment_type_id varchar(30),ultimos_digitos varchar(4),
  monto numeric(12,2) NOT NULL,moneda varchar(3) NOT NULL,estado varchar(30) NOT NULL,status_detail varchar(100),codigo_respuesta varchar(100),
- mensaje_respuesta text,raw_response text,instrucciones_url text,referencia_pago varchar(100),created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+ mensaje_respuesta text,raw_response jsonb,instrucciones_url text,referencia_pago varchar(100),created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 

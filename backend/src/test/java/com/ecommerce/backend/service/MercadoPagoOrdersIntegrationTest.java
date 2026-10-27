@@ -152,4 +152,27 @@ class MercadoPagoOrdersIntegrationTest {
             verify(client,times(1)).create(anyString(),anyMap());
         }finally{release.countDown();executor.shutdownNow();}
     }
+    @Test void respuestaJsonSePersisteComoJsonYNoComoTexto()throws Exception{
+        var order=pedido("MP_CARDS");
+        var payment=pagos.saveAndFlush(Pago.builder().pedido(order).monto(order.getTotal()).estado("processing").rawResponse("{\"status\":\"processing\"}").build());
+        assertEquals("processing",mapper.readTree(pagos.findById(payment.getId()).orElseThrow().getRawResponse()).path("status").asText());
+        verify(client,never()).create(anyString(),anyMap());
+    }
+    @Test void consultarPedidoSinIntentosIndicaQueElPagoNoSeInicio(){
+        var order=pedido("MP_CARDS");var result=service.consultarPago(order.getId(),order.getUsuarioId());
+        assertEquals("not_started",result.getEstadoPago());assertFalse(result.isPendiente());assertFalse(result.isExitoso());
+        verify(client,never()).create(anyString(),anyMap());verify(client,never()).get(anyString());
+    }
+    @Test void reconciliaRespuestaRealDeOrdersSinRepetirElCobro()throws Exception{
+        var p=pedido("MP_CARDS");when(client.create(anyString(),anyMap())).thenThrow(new ResourceAccessException("timeout"));
+        service.procesarCargo("",p.getUsuarioId(),request(p));
+        var attempt=pagos.findByPedidoIdOrderByCreatedAtDesc(p.getId()).getFirst();
+        var actual=(com.fasterxml.jackson.databind.node.ObjectNode)response(attempt.getId().toString(),"processed");
+        actual.remove(List.of("currency_id","live_mode"));actual.put("currency","PEN").put("id","ORDTSTverified");
+        when(client.search(eq(attempt.getId()),any())).thenReturn(mapper.createObjectNode().set("data",mapper.createArrayNode().add(actual)));
+        when(client.get("ORDTSTverified")).thenReturn(actual);
+        assertTrue(service.consultarPago(p.getId(),p.getUsuarioId()).isExitoso());
+        assertEquals("PAGADO",pedidos.findById(p.getId()).orElseThrow().getEstado());
+        verify(client,times(1)).create(anyString(),anyMap());verify(client).get("ORDTSTverified");
+    }
 }

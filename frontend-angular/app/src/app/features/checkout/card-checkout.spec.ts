@@ -39,7 +39,28 @@ describe('Secure card checkout',()=>{
   await component.submitNew();expect(component.uncertain()).toBe(true);component.openNew();expect(component.drawer()).toBe(false);expect(pay).not.toHaveBeenCalled();
   await component.refresh();expect(component.uncertain()).toBe(false);expect(component.selected()?.id).toBe(card.id);
  });
+ it.each(['credit_card','debit_card'])('accepts the SDK CardForm list response for %s',async type=>{
+  component.openNew();settings.callbacks.onPaymentMethodsReceived(null,[{id:'visa',payment_type_id:type}]);await component.submitNew();
+  expect(pay).toHaveBeenCalledWith(expect.objectContaining({paymentMethodId:'visa',paymentTypeId:type,token:'one-time-token'}));expect(component.error()).toBe('');
+ });
+ it('allows saving a card identified by the real SDK array response',async()=>{
+  component.openNew();settings.callbacks.onPaymentMethodsReceived(null,[{id:'visa',payment_type_id:'credit_card'}]);component.remember=true;await component.submitNew();
+  expect(api.saveCard).toHaveBeenCalledWith('one-time-token');expect(pay).not.toHaveBeenCalled();expect(component.selected()?.lastFour).toBe('1234');
+ });
+ it('does not use stale card metadata after reopening the drawer or a failed SDK lookup',async()=>{
+  component.openNew();settings.callbacks.onPaymentMethodsReceived(null,[{id:'visa',payment_type_id:'credit_card'}]);component.closeDrawer();component.openNew();await component.submitNew();expect(pay).not.toHaveBeenCalled();
+  settings.callbacks.onPaymentMethodsReceived(null,[{id:'visa',payment_type_id:'credit_card'}]);settings.callbacks.onPaymentMethodsReceived(new Error('lookup failed'),[{id:'visa',payment_type_id:'credit_card'}]);await component.submitNew();expect(pay).not.toHaveBeenCalled();expect(api.saveCard).not.toHaveBeenCalled();
+ });
+ it.each([null,{},[{id:'other',payment_type_id:'credit_card'}],[{id:'visa',payment_type_id:'ticket'}]])('rejects missing or incompatible SDK metadata without inventing a card type',async data=>{
+  component.openNew();settings.callbacks.onPaymentMethodsReceived(null,data);await component.submitNew();expect(pay).not.toHaveBeenCalled();expect(api.saveCard).not.toHaveBeenCalled();expect(component.error()).toContain('compatible');
+ });
  it('disables card changes and submission while a charge is running',async()=>{
   fixture.componentRef.setInput('disabled',true);fixture.detectChanges();component.openNew();await component.paySaved();expect(pay).not.toHaveBeenCalled();expect(component.drawer()).toBe(false);
+ });
+ it('shows a confirmed rejection and allows re-entering without reusing the token',async()=>{
+  api.saveCard.mockReturnValue(throwError(()=>({status:422,error:{message:'Mercado Pago rechazó la creación del cliente.'}})));
+  component.openNew();settings.callbacks.onPaymentMethodsReceived(null,[{id:'visa',payment_type_id:'debit_card'}]);component.remember=true;
+  await component.submitNew();expect(component.uncertain()).toBe(false);expect(component.error()).toContain('rechazó');expect(form.unmount).toHaveBeenCalled();expect(pay).not.toHaveBeenCalled();
+  component.openNew();expect(component.drawer()).toBe(true);expect(component.remember).toBe(false);
  });
 });

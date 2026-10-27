@@ -67,7 +67,8 @@ public class Pago {
     @Column(name = "mensaje_respuesta", columnDefinition = "TEXT")
     private String mensajeRespuesta;
 
-    @Column(name = "raw_response", columnDefinition = "TEXT")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "raw_response", columnDefinition = "jsonb")
     private String rawResponse;
 
     @Column(name = "created_at", nullable = false, updatable = false)

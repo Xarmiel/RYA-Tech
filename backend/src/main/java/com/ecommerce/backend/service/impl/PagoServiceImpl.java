@@ -141,7 +141,7 @@ public class PagoServiceImpl implements PagoService {
         }catch(Exception ex){
             boolean definite=ex instanceof RestClientResponseException http && http.getStatusCode().is4xxClientError()
                 && !Set.of(408,409,429).contains(http.getStatusCode().value());
-            log.warn("Orders: respuesta {} para intento {}",definite?"rechazada":"sin confirmar",attempt.id());
+            log.warn("Orders: respuesta {} para intento {} tipo={} http={}",definite?"rechazada":"sin confirmar",attempt.id(),ex.getClass().getSimpleName(),ex instanceof RestClientResponseException http?http.getStatusCode().value():0);
             return tx(()->{
                 var p=pagoRepository.findById(attempt.id()).orElseThrow();
                 pedidoRepository.findForPaymentUpdate(p.getPedido().getId());
@@ -208,10 +208,13 @@ public class PagoServiceImpl implements PagoService {
         var pedido=pedidoRepository.findForPaymentUpdate(payment.getPedido().getId()).orElseThrow();
         entityManager.refresh(payment);
         if(order==null||!text(order,"external_reference").equals(attemptId.toString())
-            ||!text(order,"id").matches("[A-Za-z0-9_-]{1,64}")||!text(order,"currency_id").equals(pedido.getMoneda())
-            ||!equalAmount(order.path("total_amount"),payment.getMonto())||!order.path("live_mode").isBoolean()
-            ||order.path("live_mode").asBoolean()!=config.isLiveMode())
+            ||!text(order,"id").matches("[A-Za-z0-9_-]{1,64}")||!text(order,order.has("currency")?"currency":"currency_id").equals(pedido.getMoneda())
+            ||!equalAmount(order.path("total_amount"),payment.getMonto())
+            ||(order.has("live_mode")&&(!order.path("live_mode").isBoolean()||order.path("live_mode").asBoolean()!=config.isLiveMode())))
             throw new BadRequestException("No coinciden los datos verificados de la order.");
+        // Orders uses currency and may omit live_mode. Test order IDs must never approve live purchases.
+        if(!order.has("live_mode") && (config.isLiveMode()==text(order,"id").startsWith("ORDTST")))
+            throw new BadRequestException("El entorno de la order no corresponde a esta integración.");
         if(payment.getMpOrderId()!=null&&!payment.getMpOrderId().equals(text(order,"id")))throw new BadRequestException("La order no corresponde a este intento.");
         var payments=order.path("transactions").path("payments");
         if(!payments.isArray()||payments.size()!=1||!equalAmount(payments.get(0).path("amount"),payment.getMonto()))
@@ -273,6 +276,17 @@ public class PagoServiceImpl implements PagoService {
             var pedido=owned(pedidoId,user,false);var all=pagoRepository.findByPedidoIdOrderByCreatedAtDesc(pedidoId);
             return new Attempt(all.isEmpty()?null:all.getFirst().getId(),pedidoId,null,all.isEmpty()?null:all.getFirst().getMpOrderId());
         });
+        if(snapshot.id()!=null&&snapshot.orderId()==null){
+            try{
+                var created=tx(()->pagoRepository.findById(snapshot.id()).orElseThrow().getCreatedAt());
+                var matches=orders.search(snapshot.id(),created);
+                var data=matches==null?null:matches.path("data");
+                if(data!=null&&data.isArray()){
+                    var exact=new ArrayList<JsonNode>();for(var candidate:data)if(snapshot.id().toString().equals(text(candidate,"external_reference")))exact.add(candidate);
+                    if(exact.size()==1){var verified=orders.get(text(exact.getFirst(),"id"));return tx(()->apply(snapshot.id(),verified));}
+                }
+            }catch(Exception ex){log.warn("Orders: reconciliación sin confirmar para intento {} tipo={}",snapshot.id(),ex.getClass().getSimpleName());}
+        }
         if(snapshot.orderId()!=null){
             try{var response=orders.get(snapshot.orderId());return tx(()->apply(snapshot.id(),response));}
             catch(Exception ex){log.warn("Orders: consulta sin confirmar para pedido {}",pedidoId);}

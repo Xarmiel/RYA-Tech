@@ -40,6 +40,14 @@ public class MercadoPagoOrdersClient {
         requireCredentials();return client.post().uri("/v1/customers/{customer}/cards",customer).headers(h->h.setBearerAuth(config.getAccessToken()))
             .contentType(org.springframework.http.MediaType.APPLICATION_JSON).body(Map.of("token",token)).retrieve().body(JsonNode.class);
     }
+    public JsonNode search(java.util.UUID reference,java.time.OffsetDateTime createdAt) {
+        requireCredentials();
+        return client.get().uri(uri->uri.path("/v1/orders")
+            .queryParam("external_reference",reference.toString())
+            .queryParam("begin_date",createdAt.minusDays(1).toInstant().toString())
+            .queryParam("end_date",java.time.Instant.now().plusSeconds(60).toString()).build())
+            .headers(h->h.setBearerAuth(config.getAccessToken())).retrieve().body(JsonNode.class);
+    }
     public JsonNode get(String id) {
         requireCredentials();if(id==null||!id.matches("[A-Za-z0-9_-]{1,64}"))throw new IllegalArgumentException("Identificador de order inválido");
         return client.get().uri("/v1/orders/{id}",id).headers(h->h.setBearerAuth(config.getAccessToken())).retrieve().body(JsonNode.class);

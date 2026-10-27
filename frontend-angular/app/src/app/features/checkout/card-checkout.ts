@@ -15,7 +15,7 @@ export class CardCheckout implements AfterViewInit,OnDestroy {
  protected remember=false;private mp:any;private cardForm:any;private cvv:any;private methods:any[]=[];private destroyed=false;private generation=0;private returnFocus:HTMLElement|null=null;
  ngAfterViewInit():void{void this.refresh();}
  ngOnDestroy():void{this.destroyed=true;this.generation++;this.cleanup();}
- private cleanup():void{try{this.cardForm?.unmount();this.cvv?.unmount();}catch{}this.cardForm=null;this.cvv=null;}
+ private cleanup():void{try{this.cardForm?.unmount();this.cvv?.unmount();}catch{}this.cardForm=null;this.cvv=null;this.methods=[];}
  private sdk():any{if(!this.mp){const ctor=(globalThis as any).MercadoPago;if(!ctor)throw new Error('No se pudo cargar el formulario seguro. Revisa tu conexión.');this.mp=new ctor(this.session().publicKey,{locale:'es-PE'});}return this.mp;}
  private setBusy(value:boolean):void{this.busy.set(value);this.busyChange.emit(value);}
  protected async refresh():Promise<void>{
@@ -36,7 +36,12 @@ export class CardCheckout implements AfterViewInit,OnDestroy {
    for(const [key,id,placeholder] of [['cardNumber','number','Número de tarjeta'],['expirationDate','expiration','MM/AA'],['securityCode','cvv','CVV'],['cardholderName','name','Nombre del titular'],['cardholderEmail','email','Correo electrónico'],['issuer','issuer','Banco emisor'],['installments','installments','Cuotas'],['identificationType','doc-type','Tipo de documento'],['identificationNumber','doc','Número de documento']])fields[key]={id:'rya-card-'+id,placeholder,...(['cardNumber','expirationDate','securityCode'].includes(key)?{style:this.fieldStyle()}: {})};
    this.cardForm=sdk.cardForm({amount:String(this.session().total),iframe:true,form:fields,callbacks:{
     onFormMounted:(error:any)=>{if(!this.destroyed&&generation===this.generation&&error)this.error.set('No se pudo preparar la tarjeta. Cierra y vuelve a abrir el formulario.');},
-    onPaymentMethodsReceived:(_error:any,data:any)=>{if(generation===this.generation)this.methods=data?.results??[];},
+    onPaymentMethodsReceived:(error:any,data:any)=>{
+     if(this.destroyed||generation!==this.generation)return;
+     // CardForm passes a list; direct getPaymentMethods responses wrap it in results.
+     this.methods=error?[]:Array.isArray(data)?data:Array.isArray(data?.results)?data.results:[];
+     if(error)this.error.set('No se pudo identificar la tarjeta. Revisa sus datos o prueba con otra.');
+    },
     onError:()=>{if(!this.destroyed&&generation===this.generation){this.setBusy(false);this.error.set('Revisa los datos de la tarjeta y vuelve a intentarlo.');}},
     onSubmit:(event:Event)=>{event.preventDefault();if(generation===this.generation)void this.submitNew();}
    }});
@@ -68,7 +73,14 @@ export class CardCheckout implements AfterViewInit,OnDestroy {
    this.setBusy(true);
    try{const card=await firstValueFrom(this.api.saveCard(form.token).pipe(timeout(20000),takeUntilDestroyed(this.destroyRef)));if(this.destroyed)return;
     this.setBusy(false);this.cards.update(cards=>[card,...cards.filter(c=>c.id!==card.id)]);this.choose(card);this.error.set('Tarjeta guardada. Ingresa nuevamente el CVV para autorizar este pago.');
-   }catch{if(!this.destroyed){this.setBusy(false);this.uncertain.set(true);this.generation++;this.cleanup();this.drawer.set(false);this.error.set('No se confirmó el guardado. Actualiza tus tarjetas antes de volver a guardar.');}}
+   }catch(failure:any){if(!this.destroyed){
+    this.setBusy(false);
+    const rejected=[400,401,403,404,409,422].includes(failure?.status);
+    this.uncertain.set(!rejected);this.generation++;this.cleanup();this.drawer.set(false);
+    this.error.set(rejected&&typeof failure?.error?.message==='string'
+     ? failure.error.message
+     : 'No se confirmó el guardado. Actualiza tus tarjetas antes de volver a guardar.');
+   }}
   }else{
    this.pay.emit({token:form.token,paymentMethodId:form.paymentMethodId,paymentTypeId:type,installments:Number(form.installments)||1,identificationType:form.identificationType,identificationNumber:form.identificationNumber});
   }

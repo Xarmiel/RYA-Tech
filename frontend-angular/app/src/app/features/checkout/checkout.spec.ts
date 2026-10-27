@@ -79,7 +79,9 @@ describe('Checkout Orders',()=>{
     component.pagarConMercadoPago();await fixture.whenStable();api.procesarCargo.mockReturnValue(throwError(()=>({status:0})));
     const submit=(token:string)=>component.submitOrder({token,paymentMethodId:'visa',paymentTypeId:'credit_card'});await expect(submit('token')).rejects.toThrow();
     await expect(submit('token2')).rejects.toThrow();expect(api.procesarCargo).toHaveBeenCalledTimes(1);expect(component.paymentUncertain()).toBe(true);
-    component.checkPayment();expect(api.consultarPago).toHaveBeenCalledWith('pedido-1');
+    fixture.detectChanges();expect(fixture.nativeElement.textContent).toContain('No pudimos confirmar si el pago se inició');
+    api.consultarPago.mockReturnValue(of({...pending,pendiente:false,estadoPago:'not_started',mensaje:'Todavía no se ha enviado un pago.'}));
+    component.checkPayment();expect(api.consultarPago).toHaveBeenCalledWith('pedido-1');expect(component.paymentUncertain()).toBe(false);expect(component.pendingPayment()).toBeNull();expect(component.message()).toContain('Todavía no se ha enviado');
   });
   it('keeps the paid receipt visible after the cart empties',async()=>{
     component.pagarConMercadoPago();await fixture.whenStable();api.procesarCargo.mockReturnValue(of({...pending,exitoso:true,pendiente:false,estadoPedido:'PAGADO'}));
