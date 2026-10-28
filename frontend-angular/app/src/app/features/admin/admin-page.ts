@@ -27,7 +27,7 @@ import { SidebarResize } from './sidebar-resize';
   selector: 'app-admin-page',
   encapsulation: ViewEncapsulation.None,
   imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, TechnicalEditor, ProductMedia, DialogFocus, ProductImport, CatalogReferences, ProductTechnicalForm, SidebarResize, ShippingAdmin, OperationsAdmin, TechnicalFieldManager],
-  styleUrls: ['./admin.scss', './sidebar-resize.scss'],
+  styleUrls: ['./admin.scss', './sidebar-resize.scss', './admin-filter.scss'],
   templateUrl: './admin-page.html',
 })
 export class AdminPage implements OnInit {
