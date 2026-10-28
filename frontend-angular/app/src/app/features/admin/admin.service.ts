@@ -195,8 +195,8 @@ export class AdminService {
 
   isModuleConnected(moduleId: string): boolean { return ['catalogo', 'inventario', 'contenido', 'asesorias', 'clientes'].includes(moduleId); }
 
-  getPreviewItems(moduleId: string, query = '', page = 0, pageSize = 10, status = ''): Observable<AdminPagedResult> {
-    return this.getLocalItems(moduleId, query, page, pageSize, status);
+  getPreviewItems(moduleId: string, query = '', page = 0, pageSize = 10, status = '', categoriaFilter = ''): Observable<AdminPagedResult> {
+    return this.getLocalItems(moduleId, query, page, pageSize, status, categoriaFilter);
   }
 
   getPreviewStats(): Observable<AdminStats> {
@@ -231,9 +231,9 @@ export class AdminService {
   /**
    * Obtiene listado paginado y filtrado para cualquier módulo administrativo
    */
-  getItems(moduleId: string, query = '', page = 0, pageSize = 10, statusFilter = ''): Observable<AdminPagedResult> {
+  getItems(moduleId: string, query = '', page = 0, pageSize = 10, statusFilter = '', categoriaFilter = ''): Observable<AdminPagedResult> {
     if (moduleId === 'catalogo') {
-      return this.getCatalogItems(query, page, pageSize, statusFilter);
+      return this.getCatalogItems(query, page, pageSize, statusFilter, categoriaFilter);
     }
     if (moduleId === 'inventario') {
       return this.getInventoryReal(query, page, pageSize, statusFilter);
@@ -341,7 +341,7 @@ export class AdminService {
   /**
    * Consulta real al endpoint administrativo de productos con filtros y paginación en servidor
    */
-  private getCatalogItems(query: string, page: number, pageSize: number, statusFilter: string): Observable<AdminPagedResult> {
+  private getCatalogItems(query: string, page: number, pageSize: number, statusFilter: string, categoriaFilter = ''): Observable<AdminPagedResult> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', pageSize.toString())
@@ -353,6 +353,9 @@ export class AdminService {
     }
     if (statusFilter) {
       params = params.set('estado', statusFilter);
+    }
+    if (categoriaFilter) {
+      params = params.set('categoriaId', categoriaFilter);
     }
 
     return this.http.get<any>('/api/v1/admin/productos', { params }).pipe(
@@ -809,13 +812,13 @@ export class AdminService {
   /**
    * Manejo de lista local con filtrado y paginación
    */
-  private getLocalItems(moduleId: string, query: string, page: number, pageSize: number, statusFilter: string): Observable<AdminPagedResult> {
+  private getLocalItems(moduleId: string, query: string, page: number, pageSize: number, statusFilter: string, categoriaFilter = ''): Observable<AdminPagedResult> {
     const list = this.localStore.get(moduleId) || [];
-    const filtered = this.filterList(list, query, statusFilter);
+    const filtered = this.filterList(list, query, statusFilter, categoriaFilter);
     return of(this.paginateList(filtered, page, pageSize));
   }
 
-  private filterList(items: AdminRow[], query: string, statusFilter: string): AdminRow[] {
+  private filterList(items: AdminRow[], query: string, statusFilter: string, categoriaFilter = ''): AdminRow[] {
     const q = query.toLowerCase().trim();
     return items.filter(it => {
       const matchQuery = !q ||
@@ -825,7 +828,11 @@ export class AdminService {
         (it.tag && it.tag.toLowerCase().includes(q));
 
       const matchStatus = !statusFilter || it.status === statusFilter;
-      return matchQuery && matchStatus;
+      const matchCategory = !categoriaFilter ||
+        it.rawData?.categoriaId === categoriaFilter ||
+        it.rawData?.categoria?.id === categoriaFilter ||
+        it.tag === categoriaFilter;
+      return matchQuery && matchStatus && matchCategory;
     });
   }
 

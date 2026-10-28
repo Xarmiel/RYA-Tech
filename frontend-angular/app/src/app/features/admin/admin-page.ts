@@ -84,6 +84,8 @@ export class AdminPage implements OnInit {
   protected readonly pageSize = signal(10);
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal('');
+  protected readonly categoriaFilter = signal('');
+  protected readonly filterMenuOpen = signal(false);
   protected readonly isLoading = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
@@ -269,6 +271,8 @@ export class AdminPage implements OnInit {
       this.currentPage.set(0);
       this.searchTerm.set('');
       this.statusFilter.set('');
+      this.categoriaFilter.set('');
+      this.filterMenuOpen.set(false);
       this.loadItems();
     });
   }
@@ -311,7 +315,8 @@ export class AdminPage implements OnInit {
           this.searchTerm(),
           this.currentPage(),
           this.pageSize(),
-          this.statusFilter()
+          this.statusFilter(),
+          this.categoriaFilter()
         );
       }
       if (this.section === 'inventario' && typeof this.adminService.getInventoryReal === 'function') {
@@ -327,7 +332,8 @@ export class AdminPage implements OnInit {
         this.searchTerm(),
         this.currentPage(),
         this.pageSize(),
-        this.statusFilter()
+        this.statusFilter(),
+        this.categoriaFilter()
       );
     };
 
@@ -357,12 +363,37 @@ export class AdminPage implements OnInit {
     this.onSearchInput('');
   }
 
-  protected resetFilters(): void { this.statusFilter.set(''); this.onSearchInput(''); }
+  protected resetFilters(): void {
+    this.statusFilter.set('');
+    this.categoriaFilter.set('');
+    this.onSearchInput('');
+  }
 
   protected setStatusFilter(status: string): void {
     this.statusFilter.set(status);
     this.currentPage.set(0);
     this.loadItems();
+  }
+
+  protected setCategoriaFilter(catId: string): void {
+    this.categoriaFilter.set(catId);
+    this.currentPage.set(0);
+    this.loadItems();
+  }
+
+  protected toggleFilterMenu(): void {
+    this.filterMenuOpen.update(v => !v);
+  }
+
+  protected closeFilterMenu(): void {
+    this.filterMenuOpen.set(false);
+  }
+
+  protected getActiveFilterCount(): number {
+    let count = 0;
+    if (this.statusFilter()) count++;
+    if (this.categoriaFilter()) count++;
+    return count;
   }
 
   protected changePageSize(size: string | number): void {

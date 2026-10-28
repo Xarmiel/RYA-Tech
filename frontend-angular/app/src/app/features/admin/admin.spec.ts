@@ -283,6 +283,33 @@ describe('Admin service and listings', () => {
     expect(result.items[0].status).toBe('alert');
   });
 
+  it('filters catalog items by category correctly in request params', async () => {
+    const service = TestBed.inject(AdminService);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    let result: any = null;
+    service.getItems('catalogo', '', 0, 10, 'active', 'cat-uuid-123').subscribe(res => result = res);
+
+    const req = httpMock.expectOne(r =>
+      r.url.includes('/api/v1/admin/productos') &&
+      r.params.get('categoriaId') === 'cat-uuid-123' &&
+      r.params.get('estado') === 'active'
+    );
+    req.flush({
+      content: [
+        { id: 'p3', sku: 'RYZEN-5', nombre: 'AMD Ryzen 5 7600', marca: 'AMD', categoria: 'Procesadores', precioBase: 899.00, stockDisponible: 18 }
+      ],
+      totalElements: 1,
+      page: 0,
+      size: 10,
+      totalPages: 1
+    });
+
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].code).toBe('RYZEN-5');
+    expect(result.items[0].tag).toBe('Procesadores');
+  });
+
   it('saves new items and confirms server operation with feedback message', async () => {
     const service = TestBed.inject(AdminService);
     const httpMock = TestBed.inject(HttpTestingController);

@@ -111,41 +111,123 @@
             }
           </div>
 
-          <div class="filter-pills" aria-label="Filtro de estado">
-            <button
-              type="button"
-              class="filter-pill"
-              [class.is-active]="statusFilter() === ''"
-              (click)="setStatusFilter('')"
-            >
-              Todos
-            </button>
-            <button
-              type="button"
-              class="filter-pill"
-              [class.is-active]="statusFilter() === 'active'"
-              (click)="setStatusFilter('active')"
-            >
-              {{ section === 'inventario' ? 'Stock suficiente (>3)' : (section === 'clientes' ? 'Administradores' : 'Activos') }}
-            </button>
-            <button
-              type="button"
-              class="filter-pill"
-              [class.is-active]="statusFilter() === 'alert'"
-              (click)="setStatusFilter('alert')"
-            >
-              {{ section === 'clientes' ? 'Usuarios' : 'Alertas / Stock bajo' }}
-            </button>
-            @if (section !== 'clientes') {
+          <div class="filter-actions-group">
+            <!-- BOTÓN Y MENÚ DESPLEGABLE DE FILTRO (CATEGORÍA Y PUBLICACIÓN) -->
+            @if (section === 'catalogo') {
+              <div class="filter-dropdown-container">
+                <button
+                  type="button"
+                  id="filter-options-button"
+                  class="filter-dropdown-btn"
+                  [class.is-active]="getActiveFilterCount() > 0 || filterMenuOpen()"
+                  (click)="toggleFilterMenu()"
+                  aria-haspopup="dialog"
+                  [attr.aria-expanded]="filterMenuOpen()"
+                >
+                  <span class="material-symbols-rounded">filter_list</span>
+                  <span>Filtros</span>
+                  @if (getActiveFilterCount() > 0) {
+                    <span class="filter-badge">{{ getActiveFilterCount() }}</span>
+                  }
+                  <span class="material-symbols-rounded chevron">{{ filterMenuOpen() ? 'expand_less' : 'expand_more' }}</span>
+                </button>
+
+                @if (filterMenuOpen()) {
+                  <div class="filter-dropdown-backdrop" (click)="closeFilterMenu()"></div>
+                  <div class="filter-dropdown-menu" role="dialog" aria-label="Opciones de filtro">
+                    <div class="filter-menu-header">
+                      <strong>Filtros de catálogo</strong>
+                      @if (statusFilter() || categoriaFilter()) {
+                        <button type="button" class="filter-reset-link" (click)="resetFilters()">
+                          Limpiar
+                        </button>
+                      }
+                    </div>
+
+                    <!-- FILTRO: CATEGORÍA -->
+                    <div class="filter-menu-group">
+                      <label for="filter-category-select" class="filter-group-label">
+                        <span class="material-symbols-rounded">category</span>
+                        Categoría
+                      </label>
+                      <select
+                        id="filter-category-select"
+                        class="filter-select"
+                        [value]="categoriaFilter()"
+                        (change)="setCategoriaFilter($any($event.target).value)"
+                      >
+                        <option value="">Todas las categorías</option>
+                        @for (cat of categories(); track cat.id) {
+                          <option [value]="cat.id">{{ cat.nombre }}</option>
+                        }
+                      </select>
+                    </div>
+
+                    <!-- FILTRO: PUBLICACIÓN / ESTADO -->
+                    <div class="filter-menu-group">
+                      <label for="filter-status-select" class="filter-group-label">
+                        <span class="material-symbols-rounded">visibility</span>
+                        Publicación
+                      </label>
+                      <select
+                        id="filter-status-select"
+                        class="filter-select"
+                        [value]="statusFilter()"
+                        (change)="setStatusFilter($any($event.target).value)"
+                      >
+                        <option value="">Todos los estados</option>
+                        <option value="active">Activos (Publicados)</option>
+                        <option value="draft">No publicados (Borrador)</option>
+                        <option value="alert">Alertas / Stock bajo</option>
+                      </select>
+                    </div>
+
+                    <div class="filter-menu-footer">
+                      <button type="button" class="filter-apply-btn" (click)="closeFilterMenu()">
+                        Listo
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="filter-pills" aria-label="Filtro de estado">
               <button
                 type="button"
                 class="filter-pill"
-                [class.is-active]="statusFilter() === (section === 'inventario' ? 'agotado' : 'draft')"
-                (click)="setStatusFilter(section === 'inventario' ? 'agotado' : 'draft')"
+                [class.is-active]="statusFilter() === '' && (section !== 'catalogo' || categoriaFilter() === '')"
+                (click)="resetFilters()"
               >
-                {{ section === 'inventario' ? 'Agotados' : 'No publicados' }}
+                Todos
               </button>
-            }
+              <button
+                type="button"
+                class="filter-pill"
+                [class.is-active]="statusFilter() === 'active'"
+                (click)="setStatusFilter('active')"
+              >
+                {{ section === 'inventario' ? 'Stock suficiente (>3)' : (section === 'clientes' ? 'Administradores' : 'Activos') }}
+              </button>
+              <button
+                type="button"
+                class="filter-pill"
+                [class.is-active]="statusFilter() === 'alert'"
+                (click)="setStatusFilter('alert')"
+              >
+                {{ section === 'clientes' ? 'Usuarios' : 'Alertas / Stock bajo' }}
+              </button>
+              @if (section !== 'clientes') {
+                <button
+                  type="button"
+                  class="filter-pill"
+                  [class.is-active]="statusFilter() === (section === 'inventario' ? 'agotado' : 'draft')"
+                  (click)="setStatusFilter(section === 'inventario' ? 'agotado' : 'draft')"
+                >
+                  {{ section === 'inventario' ? 'Agotados' : 'No publicados' }}
+                </button>
+              }
+            </div>
           </div>
         </div>
 
