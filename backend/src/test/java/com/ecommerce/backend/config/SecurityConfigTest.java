@@ -18,6 +18,25 @@ import java.util.Map;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class SecurityConfigTest {
+    @Test void enviosExigenAdministradorYValidanCampos() throws Exception {
+        String path="/api/v1/admin/envios";
+        mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(path).with(jwt())).andExpect(status().isForbidden());
+        mockMvc.perform(post(path).with(jwt().jwt(token->token.claim("app_metadata",Map.of("role","admin")))).contentType("application/json").content("{}")).andExpect(status().isBadRequest());
+        mockMvc.perform(get(path+"/pedidos").with(jwt().jwt(token->token.claim("app_metadata",Map.of("role","admin"))))).andExpect(status().isOk());
+    }
+    @Test void cobrosYConsultaDeEstadoRequierenSesion()throws Exception{
+        mockMvc.perform(post("/api/v1/pagos/iniciar").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/pagos/procesar").contentType("application/json").content("{}")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/pagos/pedidos/11111111-1111-4111-8111-111111111111")).andExpect(status().isUnauthorized());
+    }
+    @Test void resolverDuplicadosRequiereAdministradorConfiable() throws Exception {
+        String path="/api/v1/admin/productos/11111111-1111-4111-8111-111111111111/importacion";
+        mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(path).with(jwt().jwt(token->token.claim("user_metadata",Map.of("role","admin"))))).andExpect(status().isForbidden());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path).with(jwt())).andExpect(status().isForbidden());
+        mockMvc.perform(get(path).with(jwt().jwt(token->token.claim("app_metadata",Map.of("role","admin"))))).andExpect(status().isNotFound());
+    }
     @Test void agregarImagenesRequiereAdminConfiable() throws Exception {
         String path="/api/v1/admin/productos/11111111-1111-4111-8111-111111111111/imagenes";
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(path)).andExpect(status().isUnauthorized());

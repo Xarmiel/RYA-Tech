@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { adminGuard } from './features/admin/admin-access';
 import { technicalEntryGuard, adminLeaveGuard, adminSectionLeaveGuard } from './features/admin/technical-entry';
+import { categoryPresentation } from './features/catalog/catalog-categories';
 
 export const routes: Routes = [
   { path: 'admin/diseno', title: 'Diseño administrador | RYA', data: {design:true}, canDeactivate:[adminLeaveGuard], loadComponent: () => import('./features/admin/admin-page').then(m=>m.AdminPage) },
@@ -10,6 +11,7 @@ export const routes: Routes = [
   { path: 'admin/:section', title: 'Administrador | RYA', canActivate:[adminSectionLeaveGuard,technicalEntryGuard,adminGuard], canDeactivate:[adminLeaveGuard], loadComponent: () => import('./features/admin/admin-page').then(m=>m.AdminPage) },
   { path: '', title: 'RYA Tech', loadComponent: () => import('./features/home/home').then(m => m.Home) },
   { path: 'catalogo', title: 'Catálogo | RYA Tech', loadComponent: () => import('./features/catalog/catalog').then(m => m.Catalog) },
+  { path: 'catalogo/:categoria', title: route => `${categoryPresentation(route.paramMap.get('categoria') ?? '')?.name ?? 'Categoría'} | RYA Tech`, loadComponent: () => import('./features/catalog/catalog').then(m => m.Catalog) },
   { path: 'producto/:slug', title: 'Producto | RYA Tech', loadComponent: () => import('./features/product-detail/product-detail').then(m => m.ProductDetailComponent) },
   { path: 'login', title: 'Iniciar sesión | RYA Tech', loadComponent: () => import('./features/auth/auth-page').then(m => m.AuthPage), data: { mode: 'login' } },
   { path: 'registro', title: 'Crear cuenta | RYA Tech', loadComponent: () => import('./features/auth/auth-page').then(m => m.AuthPage), data: { mode: 'register' } },

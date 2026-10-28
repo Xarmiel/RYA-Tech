@@ -97,7 +97,15 @@ public class FiltroServiceImpl implements FiltroService {
                 .build();
 
         // 4. Atributos técnicos configurados como filtrables en rya.atributos_tecnicos
-        List<AtributoTecnico> atributosTecnicos = atributoTecnicoRepository.findByFiltrableTrueAndIsDeletedFalseOrderByNombreAsc();
+        Map<String, AtributoTecnico> candidates = new LinkedHashMap<>();
+        atributoTecnicoRepository.findByFiltrableTrueAndIsDeletedFalseOrderByNombreAsc().stream()
+                .filter(at -> !at.getCodigo().startsWith("CATALOG_TECH_") || com.ecommerce.backend.service.ProductTechnicalData.isPublicFilterCode(at.getCodigo()))
+                .forEach(at -> candidates.put(at.getCodigo(), at));
+        atributoTecnicoRepository.findByCodigoStartingWithAndIsDeletedFalse("CATALOG_TECH_").stream()
+                .filter(at -> com.ecommerce.backend.service.ProductTechnicalData.isPublicFilterCode(at.getCodigo()))
+                .forEach(at -> candidates.put(at.getCodigo(), at));
+        List<AtributoTecnico> atributosTecnicos = new ArrayList<>(candidates.values());
+        atributosTecnicos.sort(Comparator.comparing(AtributoTecnico::getNombre));
         List<FiltroAtributoDto> atributosFiltro = new ArrayList<>();
 
         for (AtributoTecnico at : atributosTecnicos) {
@@ -116,7 +124,7 @@ public class FiltroServiceImpl implements FiltroService {
             if (!valores.isEmpty()) {
                 atributosFiltro.add(FiltroAtributoDto.builder()
                         .codigo(at.getCodigo())
-                        .nombre(at.getNombre())
+                        .nombre(at.getNombre().replaceFirst("^Ficha\\s*·\\s*", ""))
                         .tipoDato(at.getTipoDato())
                         .unidad(at.getUnidad())
                         .valores(valores)

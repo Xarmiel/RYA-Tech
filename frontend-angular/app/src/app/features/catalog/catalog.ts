@@ -2,7 +2,7 @@ import { CurrencyPipe } from '@angular/common';
 import { LoadingState } from '../../shared/loading-state/loading-state';
 import { RequestError } from '../../shared/request-error/request-error';
 import { DialogFocus } from '../../shared/dialog-focus/dialog-focus';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CatalogFacets, CatalogFilterGroup, CatalogFilterOption, CatalogPage } from './catalog.models';
@@ -10,15 +10,8 @@ import { CatalogService } from './catalog.service';
 import { CartService } from '../../core/cart/cart.service';
 import { ProductSummary } from './catalog.models';
 import { FavoriteButton } from '../../shared/favorite-button/favorite-button';
-import { Subscription } from 'rxjs';
-
-export interface CategoryBubble {
-  id: string;
-  name: string;
-  icon: string;
-  imageUrl?: string;
-  slug: string;
-}
+import { Subscription, combineLatest } from 'rxjs';
+import { CATALOG_CATEGORIES, categoryKey, categoryPresentation } from './catalog-categories';
 
 type ViewState = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -36,63 +29,23 @@ export class Catalog implements OnInit {
   private readonly cart = inject(CartService);
   private productsRequest?: Subscription;
   private filtersRequest?: Subscription;
+  private categoryRequest?: Subscription;
   private readonly pageSize = 12;
 
-  protected readonly categoryBubbles: CategoryBubble[] = [
-    {
-      id: 'mouse',
-      name: 'Mouse para gaming',
-      icon: 'mouse',
-      slug: 'mouse-gaming',
-    },
-    {
-      id: 'mousepads',
-      name: 'Mousepads para gaming',
-      icon: 'crop_landscape',
-      slug: 'mousepads-gaming',
-    },
-    {
-      id: 'teclados',
-      name: 'Teclados para gaming',
-      icon: 'keyboard',
-      slug: 'teclados-gaming',
-    },
-    {
-      id: 'audio',
-      name: 'Audio y audífonos con micrófono para juegos',
-      icon: 'headphones',
-      slug: 'audio-audifonos',
-    },
-    {
-      id: 'volantes',
-      name: 'Volantes de carreras',
-      icon: 'sports_motorsports',
-      slug: 'volantes-carreras',
-    },
-    {
-      id: 'microfonos',
-      name: 'Micrófonos',
-      icon: 'mic',
-      slug: 'microfonos',
-    },
-    {
-      id: 'simulacion',
-      name: 'Simulación',
-      icon: 'sports_esports',
-      slug: 'simulacion',
-    },
-    {
-      id: 'camaras',
-      name: 'Cámaras e iluminación',
-      icon: 'videocam',
-      slug: 'camaras-iluminacion',
-    },
-  ];
+  protected readonly categoryBubbles = CATALOG_CATEGORIES;
+  protected readonly categoryRoute = signal('');
+  protected readonly categorySlug = signal('');
+  protected readonly categoryName = signal('');
+  protected readonly categoryMissing = signal(false);
+  protected readonly categoryInfo = computed(() => categoryPresentation(this.categoryRoute()));
+  protected readonly isCategoryPage = computed(() => !!this.categoryRoute());
 
   protected readonly state = signal<ViewState>('loading');
   protected readonly page = signal<CatalogPage | null>(null);
   protected readonly query = signal('');
   protected readonly filtersOpen = signal(false);
+  protected readonly quickFilterOpen = signal<string|null>(null);
+  protected readonly quickGroups = computed(() => (this.facets()?.groups ?? []).filter(group => group.kind === 'filter' && group.options.length));
   protected readonly filtersState = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
   protected readonly facets = signal<CatalogFacets | null>(null);
   protected readonly selectedFilters = signal<Record<string, string[]>>({});
@@ -120,6 +73,7 @@ export class Catalog implements OnInit {
     const chips: Array<{ code: string; value: string; label: string }> = [];
     if (this.query()) chips.push({ code: 'q', value: this.query(), label: `Búsqueda: ${this.query()}` });
     for (const [code, values] of Object.entries(this.appliedFilters())) {
+      if (code === '__categoria' && this.isCategoryPage()) continue;
       const group = this.facets()?.groups.find(group => group.code === code);
       for (const value of values) {
         const option = code === '__categoria'
@@ -134,7 +88,12 @@ export class Catalog implements OnInit {
   });
 
   ngOnInit(): void {
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+    combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(([path, params]) => {
+      this.categoryRequest?.unsubscribe(); this.productsRequest?.unsubscribe(); this.filtersRequest?.unsubscribe();
+      this.filtersOpen.set(false); this.quickFilterOpen.set(null); this.page.set(null); this.failedImages.set(new Set()); this.state.set('loading');
+      const categoryPath = path.get('categoria') ?? '';
+      this.categoryRoute.set(categoryPath); this.categorySlug.set(''); this.categoryMissing.set(false);
+      this.categoryName.set(categoryPresentation(categoryPath)?.name ?? categoryPath.replace(/-/g, ' '));
       this.query.set(params.get('q') ?? '');
       const category = params.get('categoria');
       const filters: Record<string, string[]> = category ? { __categoria: [category] } : {};
@@ -147,12 +106,34 @@ export class Catalog implements OnInit {
       this.currentPage.set(Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage - 1 : 0);
       const order = params.get('orden');
       this.sort.set(this.sortOptions.some(option => option.value === order) ? order! : 'nombre-asc');
-      this.loadFilters(category ?? '');
-      this.load();
+      if (!categoryPath) { this.loadFilters(category ?? ''); this.load(); return; }
+      this.resolveCategory(categoryPath, filters);
+    });
+  }
+
+  private resolveCategory(path: string, filters: Record<string,string[]>): void {
+    this.categoryRequest = this.catalog.getCategories().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: categories => {
+        const info = categoryPresentation(path);
+        const keys = (info ? [...info.aliases, info.name, info.slug, path] : [path]).map(categoryKey);
+        const found = keys.map(key => categories.find(item => categoryKey(item.slug) === key || categoryKey(item.nombre) === key)).find(Boolean);
+        if (!found) {
+          this.categoryMissing.set(true); this.filtersState.set('ready'); this.facets.set({groups:[]});
+          this.page.set({items:[],page:0,size:this.pageSize,totalItems:0,totalPages:0}); this.state.set('empty'); return;
+        }
+        this.categorySlug.set(found.slug); this.categoryName.set(info?.name ?? found.nombre);
+        const scoped = {...filters, __categoria:[found.slug]};
+        this.appliedFilters.set(scoped); this.selectedFilters.set({...scoped});
+        this.loadFilters(found.slug); this.load();
+      },
+      error: () => { this.page.set(null); this.state.set('error'); },
     });
   }
 
   protected load(): void {
+    if (this.isCategoryPage() && !this.categorySlug()) {
+      this.state.set('loading'); this.resolveCategory(this.categoryRoute(), this.appliedFilters()); return;
+    }
     this.state.set('loading');
     this.productsRequest?.unsubscribe();
     const order = this.sortOptions.find(option => option.value === this.sort())!;
@@ -173,6 +154,7 @@ export class Catalog implements OnInit {
   }
 
   protected openFilters(): void {
+    this.quickFilterOpen.set(null);
     this.selectedFilters.set({ ...this.appliedFilters() });
     this.filtersOpen.set(true);
     this.loadFilters(this.selectedFilters()['__categoria']?.[0] ?? '');
@@ -190,6 +172,7 @@ export class Catalog implements OnInit {
   }
 
   protected toggleFilter(code: string, value: string, checked: boolean): void {
+    if (this.isCategoryPage() && ['__hardware','__software','__categoria'].includes(code)) return;
     const next = { ...this.selectedFilters() };
     if (code === '__hardware' || code === '__software') {
       if (checked) {
@@ -204,7 +187,13 @@ export class Catalog implements OnInit {
       this.loadFilters(checked ? value : '');
       return;
     }
-    if (checked) next[code] = [value]; else delete next[code];
+    if (code === '__marca' || code === '__stock') {
+      if (checked) next[code] = [value]; else delete next[code];
+    } else {
+      const values = new Set(next[code] ?? []);
+      if (checked) values.add(value); else values.delete(value);
+      if (values.size) next[code] = [...values]; else delete next[code];
+    }
     this.selectedFilters.set(next);
   }
 
@@ -225,12 +214,27 @@ export class Catalog implements OnInit {
   }
 
   protected visibleFilterOptions(group: CatalogFilterGroup): CatalogFilterOption[] {
-    if (group.kind === 'section') return group.options;
-    const selected = this.selectedFilters()[group.code]?.[0];
-    return selected ? group.options.filter(option => option.value === selected) : group.options;
+    return group.options;
   }
 
   protected applyFilters(): void { this.filtersOpen.set(false); this.navigateCatalog(this.selectedFilters()); }
+  protected openQuickFilter(code:string):void {
+    this.selectedFilters.set({...this.appliedFilters()});
+    this.quickFilterOpen.set(this.quickFilterOpen() === code ? null : code);
+  }
+  protected applyQuickFilter():void {
+    this.closeQuickFilter(); void this.navigateCatalog(this.selectedFilters());
+  }
+  protected closeQuickFilter():void {
+    const code=this.quickFilterOpen();this.quickFilterOpen.set(null);
+    if(code)document.getElementById('quick-trigger-'+code)?.focus();
+  }
+  protected clearQuickFilter(code:string):void {
+    const filters={...this.selectedFilters()};delete filters[code];this.selectedFilters.set(filters);
+  }
+  @HostListener('document:click',['$event']) closeQuickOutside(event:MouseEvent):void {
+    if (!(event.target instanceof Element) || !event.target.closest('.catalog-filter-actions')) this.quickFilterOpen.set(null);
+  }
   protected clearFilters(): void {
     this.selectedFilters.set({});
     this.filtersOpen.set(false);
@@ -270,24 +274,23 @@ export class Catalog implements OnInit {
   }
 
   private navigateCatalog(filters: Record<string, string[]>, page = 0, sort = this.sort(), query = this.query()): Promise<boolean> {
+    const scoped = this.isCategoryPage();
+    const path = this.categoryRoute();
     const queryParams: Record<string, string | string[] | number> = {};
     if (query) queryParams['q'] = query;
     if (page > 0) queryParams['pagina'] = page + 1;
     if (sort !== 'nombre-asc') queryParams['orden'] = sort;
     for (const [code, values] of Object.entries(filters)) {
+      if (scoped && code === '__categoria') continue;
       if (!values.length) continue;
       queryParams[code === '__categoria' ? 'categoria' : code === '__marca' ? 'marca' : code === '__stock' ? 'enStock' : `filtro.${code}`] = values;
     }
-    return this.router.navigate([], { relativeTo: this.route, queryParams });
+    return scoped ? this.router.navigate(['/catalogo', path], {queryParams}) : this.router.navigate([], { relativeTo: this.route, queryParams });
   }
 
   protected isCategoryActive(slug: string): boolean {
+    if (this.isCategoryPage()) return categoryPresentation(this.categoryRoute())?.slug === slug;
     return this.appliedFilters()['__categoria']?.includes(slug) ?? false;
-  }
-
-  protected toggleCategory(slug: string): void {
-    const isCurrent = this.isCategoryActive(slug);
-    this.navigateCatalog(isCurrent ? {} : { __categoria: [slug] });
   }
 
   protected activeCategoryName(): string | null {

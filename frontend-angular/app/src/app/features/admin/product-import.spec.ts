@@ -9,6 +9,11 @@ const sourceRow = () => ({ nombre: 'RAM 16 GB', sku: 'RAM-1', mpn: 'CMK16GX4M2B3
 const batch = () => JSON.stringify([sourceRow()]);
 
 describe('Product import parsing', () => {
+  it('recognizes explicit partial technical updates and rejects mismatched field lists',()=>{
+    const row={nombre:'Mouse',sku:'MOUSE-1',accion:'actualizar-ficha',camposFicha:['variant_notes','internal_notes'],fichaTecnica:{tipo:'mouse',valores:{variant_notes:null,internal_notes:'Revisar modelo'}}};
+    const parsed=parseProducts(JSON.stringify([row]),'json')[0];expect(parsed.errors).toEqual([]);expect(parsed.camposFicha).toEqual(row.camposFicha);
+    for(const camposFicha of [[],['variant_notes'],['variant_notes','variant_notes'],['unknown']])expect(parseProducts(JSON.stringify([{...row,camposFicha}]),'json')[0].errors.join()).toContain('camposFicha');
+  });
   it('parses image-only actions without requiring price, stock, brand, category or technical data',()=>{
     const [row]=parseProducts(JSON.stringify({modo:'agregar-imagenes',productos:[{accion:'agregar-imagenes',sku:'CPU-1',nombre:'CPU',imagenes:['https://example.com/cpu.webp']}]}),'json');
     expect(row.errors).toEqual([]);expect(row.accion).toBe('agregar-imagenes');expect(row.fichaTecnica).toBeUndefined();
@@ -83,12 +88,82 @@ describe('Product import workflow (no remote writes)', () => {
       saveItem: vi.fn(()=>of({row:{id:'saved',code:'RAM-1',title:'RAM 16 GB'},success:true})),
       updateProductTechnical:vi.fn(()=>of({id:'existing'})),
       addProductImages:vi.fn(()=>of({id:'existing'})),
+      getImportComparison:vi.fn(()=>of({revision:'revision-1',actual:{id:'existing',sku:'RAM-1',nombre:'RAM actual',categoriaSlug:'memoria-ram',marcaSlug:'corsair',precioBase:100,descripcion:null,imagenes:[]}})),
+      resolveImport:vi.fn(()=>of({revision:'revision-2',actual:{id:'existing',sku:'RAM-1'}})),
     };
     TestBed.configureTestingModule({imports:[ProductImport],providers:[{provide:AdminService,useValue:api}]});
     component = TestBed.createComponent(ProductImport).componentInstance;
     component.source = batch();
   });
   afterEach(()=>TestBed.resetTestingModule());
+  it('sends the partial field allowlist without commercial or inventory updates',async()=>{
+    api.getItems.mockReturnValue(of(page([{id:'existing',code:'MOUSE-1',title:'Mouse'}])));
+    api.getMetadata.mockReturnValue(of({categorias:[{id:'cat',slug:'mouse',nombre:'Mouse',fichaEsquema:{tipo:'mouse',nombre:'Mouse',campos:[{key:'internal_notes',label:'Notas internas',type:'text',unit:null,integer:false,positive:false}]}}],marcas:[]}));
+    component.source=JSON.stringify([{nombre:'Mouse',sku:'MOUSE-1',categoria:'Mouse',accion:'actualizar-ficha',camposFicha:['internal_notes'],fichaTecnica:{tipo:'mouse',valores:{internal_notes:'Revisar modelo'}}}]);
+    await component.preview();component.confirmed=true;await component.save();
+    expect(api.updateProductTechnical).toHaveBeenCalledWith('existing','MOUSE-1',expect.objectContaining({valores:{internal_notes:'Revisar modelo'}}),['internal_notes']);expect(api.saveItem).not.toHaveBeenCalled();
+  });
+  it('keeps exact duplicates by default, and completes them only after an explicit comparison',async()=>{
+    api.getItems.mockReturnValue(of(page([{id:'existing',code:'RAM-1',title:'RAM actual'}])));
+    await component.preview();const row=component.rows()[0];
+    expect(row.resolution).toBe('conservar');expect(row.selected).toBe(false);expect(api.getImportComparison).not.toHaveBeenCalled();
+    await component.chooseResolution(row,'completar');expect(component.ready(row)).toBe(true);component.confirmed=true;await component.save();
+    expect(api.resolveImport).toHaveBeenCalledWith('existing',expect.objectContaining({sku:'RAM-1',revision:'revision-1',modo:'completar',campos:[]}));
+    const payload=api.resolveImport.mock.calls[0][1];expect(payload.datos).not.toHaveProperty('stockInicial');expect(payload.datos).not.toHaveProperty('estado');
+    expect(api.saveItem).not.toHaveBeenCalled();expect(row.state).toBe('saved');
+  });
+  it('requires choosing replacement fields and sends only their allowlist',async()=>{
+    api.getItems.mockReturnValue(of(page([{id:'existing',code:'RAM-1',title:'RAM actual'}])));await component.preview();const row=component.rows()[0];
+    await component.chooseResolution(row,'actualizar');expect(component.ready(row)).toBe(false);
+    component.toggleResolutionField(row,'nombre',true);expect(component.ready(row)).toBe(true);component.confirmed=true;await component.save();
+    expect(api.resolveImport.mock.calls[0][1].campos).toEqual(['nombre']);expect(api.saveItem).not.toHaveBeenCalled();
+  });
+  it('never resolves products matched only by name or a normalized different SKU',async()=>{
+    api.getItems.mockReturnValue(of(page([{id:'other',code:'ram1',title:'RAM 16 GB'}])));await component.preview();
+    expect(component.rows()[0].duplicateId).toBeUndefined();await component.chooseResolution(component.rows()[0],'completar');
+    expect(api.getImportComparison).not.toHaveBeenCalled();expect(api.resolveImport).not.toHaveBeenCalled();
+  });
+  it('prepares a bulk decision without writing and can return all duplicates to keep',async()=>{
+    api.getItems.mockReturnValue(of(page([{id:'existing',code:'RAM-1',title:'RAM actual'}])));await component.preview();
+    component.bulkMode.set('completar');await component.applyResolutionToAll();expect(component.rows()[0].selected).toBe(true);
+    expect(api.resolveImport).not.toHaveBeenCalled();component.bulkMode.set('conservar');await component.applyResolutionToAll();expect(component.rows()[0].selected).toBe(false);
+  });
+  it('reports concurrent changes and prevents reapplying stale resolutions',async()=>{
+    api.getItems.mockReturnValue(of(page([{id:'existing',code:'RAM-1',title:'RAM actual'}])));await component.preview();const row=component.rows()[0];await component.chooseResolution(row,'completar');
+    api.resolveImport.mockReturnValue(throwError(()=>({status:409,error:{message:'El producto cambió después de la comparación.'}})));component.confirmed=true;await component.save();await component.save();
+    expect(api.resolveImport).toHaveBeenCalledTimes(1);expect(row.state).toBe('error');expect(component.report().some(item=>item.issues.join().includes('cambió'))).toBe(true);
+  });
+  it('reports every missing brand and category by product without writing, then resolves newly created references', async () => {
+    component.source=JSON.stringify([sourceRow(),{...sourceRow(),nombre:'Otra RAM',sku:'RAM-2',mpn:'OTRO',marca:'Razer',categoria:'Otra categoría'}]);
+    await component.preview();
+    expect(component.report()).toEqual([expect.objectContaining({sku:'RAM-2',issues:expect.arrayContaining([
+      expect.stringContaining('marca registrada: Razer'),expect.stringContaining('categoría registrada: Otra categoría')
+    ])})]);
+    component.confirmed=true;await component.save();expect(api.saveItem).not.toHaveBeenCalled();
+    component.referencesChanged({categorias:[...component.metadata().categorias,{id:'new-cat',nombre:'Otra categoría',slug:'otra'}],marcas:[...component.metadata().marcas,{id:'new-brand',nombre:'Razer',slug:'razer'}]});
+    expect(component.requirements(component.rows()[1])).toEqual([]);
+    expect(component.confirmed).toBe(false);
+  });
+  it('allows explicitly excluding a blocked row and saving the valid subset', async () => {
+    component.source=JSON.stringify([sourceRow(),{...sourceRow(),nombre:'Otra RAM',sku:'RAM-2',mpn:'OTRO',marca:'Sin registrar'}]);
+    await component.preview();component.rows()[1].selected=false;component.confirmed=true;await component.save();
+    expect(api.saveItem).toHaveBeenCalledTimes(1);expect(component.rows()[0].state).toBe('saved');expect(component.rows()[1].state).toBe('ready');
+  });
+  it('opens a modal for invalid file data and missing references, and closes it with Escape', async () => {
+    const fixture=TestBed.createComponent(ProductImport), c=fixture.componentInstance;
+    c.open.set(true);fixture.detectChanges();
+    c.source=JSON.stringify([{...sourceRow(),marca:'Razer',precio:-1}]);await c.preview();fixture.detectChanges();
+    const dialog:HTMLDialogElement=fixture.nativeElement.querySelector('dialog');
+    expect(dialog.open).toBe(true);expect(dialog.textContent).toContain('Razer');expect(dialog.textContent).toContain('Precio');expect(dialog.textContent).toContain('RAM-1');
+    dialog.dispatchEvent(new Event('cancel',{cancelable:true}));expect(dialog.open).toBe(false);
+    c.showIssues();c.resolveReferences();expect(c.referencesOpen()).toBe(true);expect(dialog.open).toBe(false);
+  });
+  it('reports invalid JSON and server field errors with the affected SKU', async () => {
+    component.source='{';await component.preview();expect(component.report()[0].name).toBe('Revisión del lote');
+    component.source=batch();await component.preview();component.confirmed=true;
+    api.saveItem.mockReturnValue(throwError(()=>({status:400,error:{message:'Datos inválidos',validationErrors:{slug:'Ya está registrado'}}})));
+    await component.save();expect(component.report().find(item=>item.sku==='RAM-1')?.issues.join()).toContain('slug: Ya está registrado');
+  });
   it('performs no requests until preview; preview only reads', async () => {
     expect(api.getItems).not.toHaveBeenCalled(); await component.preview();
     expect(component.rows()[0].categoriaId).toBe('cat'); expect(component.rows()[0].marcaId).toBe('brand');

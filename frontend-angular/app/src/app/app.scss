@@ -13,7 +13,7 @@
 .main-nav > a:hover::after, .main-nav > a.is-active::after, .nav-mega-item:hover > a::after, .nav-mega-item:focus-within > a::after { transform: scaleX(1); }
 .nav-mega-item { align-items: center; display: flex; position: static; }
 .mega-menu { background: var(--background); border: 1px solid var(--line); border-top: 2px solid var(--cyan); box-shadow: var(--shadow); display: grid; gap: 48px; grid-template-columns: 1.4fr .8fr; left: 0; opacity: 0; padding: 34px clamp(24px,5vw,72px); pointer-events: none; position: absolute; right: 0; top: calc(100% - 1px); transform: translateY(-8px); transition: opacity .2s, transform .2s, visibility .2s; visibility: hidden; }
-.nav-mega-item:hover .mega-menu, .nav-mega-item:focus-within .mega-menu { opacity: 1; pointer-events: auto; transform: translateY(0); visibility: visible; }
+.nav-mega-item.is-open .mega-menu { opacity: 1; pointer-events: auto; transform: translateY(0); visibility: visible; }
 .mega-menu-title { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; margin: 0 0 18px; text-transform: uppercase; }
 .mega-menu-grid { display: grid; gap: 10px; grid-template-columns: repeat(3,minmax(0,1fr)); }
 .mega-menu-grid a, .mega-menu-story { border: 1px solid transparent; border-radius: 4px; color: var(--muted); text-decoration: none; }

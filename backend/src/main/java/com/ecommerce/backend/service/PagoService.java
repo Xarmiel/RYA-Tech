@@ -6,5 +6,6 @@ import java.util.UUID;
 public interface PagoService {
     IniciarPagoResponseDto iniciarPago(String sessionKey, UUID usuarioId, CrearPedidoPagoRequestDto request);
     ResultadoPagoDto procesarCargo(String sessionKey, UUID usuarioId, ProcesarCargoRequestDto request);
-    void procesarWebhook(String eventPayload, String signature);
+    ResultadoPagoDto consultarPago(UUID pedidoId,UUID usuarioId);
+    void procesarWebhook(String eventPayload,String signature,String requestId,String dataId);
 }

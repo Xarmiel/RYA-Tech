@@ -1,13 +1,13 @@
 [
   {
-    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Teclado Mecánico / Gamer. Sin ficha técnica requerida. Campos obligatorios: nombre, sku, categoria, marca, precio, stockInicial, estado, requiereSerie, requiereEnvio.",
+    "_comentario_plantilla": "Ejemplo de estructura. Revisa modelo, SKU, imágenes, precio, stock y fuente; completa los datos técnicos publicados por el fabricante. No certifica compatibilidad.",
     "nombre": "Logitech G Pro X Mechanical Gaming Keyboard RGB (Switches GX Blue Clicky)",
     "sku": "LOGI-G-PRO-X-KEYB-BLUE",
     "slug": "logitech-g-pro-x-mechanical-keyboard",
-    "categoria": "Periféricos",
+    "categoria": "Teclados",
     "marca": "Logitech G",
-    "precio": 489.00,
-    "costoReferencia": 395.00,
+    "precio": 489.0,
+    "costoReferencia": 395.0,
     "stockInicial": 20,
     "estado": "active",
     "requiereSerie": true,
@@ -15,17 +15,22 @@
     "descripcion": "Teclado mecánico para gaming profesional en formato compacto tenkeyless (TKL) con switches intercambiables y retroiluminación RGB Lightsync.",
     "imagenes": [
       "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=80"
-    ]
+    ],
+    "fichaTecnica": {
+      "tipo": "keyboard",
+      "fuenteUrl": null,
+      "valores": {}
+    }
   },
   {
-    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Mouse Gamer / Inalámbrico. Sin ficha técnica requerida.",
+    "_comentario_plantilla": "Ejemplo de estructura. Revisa modelo, SKU, imágenes, precio, stock y fuente; completa los datos técnicos publicados por el fabricante. No certifica compatibilidad.",
     "nombre": "Logitech G Pro X Superlight 2 Wireless Gaming Mouse (Sensor Hero 2, 32000 DPI)",
     "sku": "LOGI-G-PRO-X-SUPERLIGHT2-BLK",
     "slug": "logitech-g-pro-x-superlight-2-wireless-black",
-    "categoria": "Periféricos",
+    "categoria": "Mouse",
     "marca": "Logitech G",
-    "precio": 569.00,
-    "costoReferencia": 460.00,
+    "precio": 569.0,
+    "costoReferencia": 460.0,
     "stockInicial": 25,
     "estado": "active",
     "requiereSerie": true,
@@ -33,17 +38,22 @@
     "descripcion": "Mouse inalámbrico ultraligero de 60 gramos con sensor Hero 2 de alta precisión, switches híbridos óptico-mecánicos Lightforce y conectividad Lightspeed.",
     "imagenes": [
       "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&auto=format&fit=crop&q=80"
-    ]
+    ],
+    "fichaTecnica": {
+      "tipo": "mouse",
+      "fuenteUrl": null,
+      "valores": {}
+    }
   },
   {
-    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Audífonos / Headset Gamer.",
+    "_comentario_plantilla": "Ejemplo de estructura. Revisa modelo, SKU, imágenes, precio, stock y fuente; completa los datos técnicos publicados por el fabricante. No certifica compatibilidad.",
     "nombre": "HyperX Cloud III Gaming Headset con Audio Espacial DTS y Micrófono 10mm",
     "sku": "HYPERX-CLOUD-III-RED",
     "slug": "hyperx-cloud-iii-gaming-headset-black-red",
-    "categoria": "Periféricos",
+    "categoria": "Audífonos",
     "marca": "HyperX",
-    "precio": 369.00,
-    "costoReferencia": 290.00,
+    "precio": 369.0,
+    "costoReferencia": 290.0,
     "stockInicial": 18,
     "estado": "active",
     "requiereSerie": true,
@@ -51,17 +61,42 @@
     "descripcion": "Auriculares gamer alámbricos con controladores angulares de 53 mm rediseñados, almohadillas viscoelásticas HyperX y conexión USB-C/USB-A/3.5mm.",
     "imagenes": [
       "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&auto=format&fit=crop&q=80"
-    ]
+    ],
+    "fichaTecnica": {
+      "tipo": "headset",
+      "fuenteUrl": null,
+      "valores": {
+        "design": null,
+        "fit": null,
+        "driver_type": null,
+        "driver_mm": null,
+        "frequency_min_hz": null,
+        "frequency_max_hz": null,
+        "impedance_ohm": null,
+        "sensitivity": null,
+        "connections": null,
+        "wireless": null,
+        "microphone": null,
+        "microphone_type": null,
+        "anc": null,
+        "audio_formats": null,
+        "battery_hours": null,
+        "cable_length_m": null,
+        "weight_g": null,
+        "platforms": null,
+        "variant_notes": null
+      }
+    }
   },
   {
-    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Mousepad Gamer / Superficie XL.",
+    "_comentario_plantilla": "Ejemplo de estructura. Revisa modelo, SKU, imágenes, precio, stock y fuente; completa los datos técnicos publicados por el fabricante. No certifica compatibilidad.",
     "nombre": "Corsair MM300 PRO Extended Mouse Pad de Tela Antisalpicaduras (930x300mm)",
     "sku": "CORSAIR-MM300-PRO-EXT",
     "slug": "corsair-mm300-pro-extended-mouse-pad",
-    "categoria": "Periféricos",
+    "categoria": "Mousepads",
     "marca": "Corsair",
-    "precio": 119.00,
-    "costoReferencia": 85.00,
+    "precio": 119.0,
+    "costoReferencia": 85.0,
     "stockInicial": 35,
     "estado": "active",
     "requiereSerie": false,
@@ -69,17 +104,36 @@
     "descripcion": "Mousepad gamer tamaño extendido con recubrimiento resistente a derrames y manchas, microtejido de precisión de 3 mm de grosor y bordes reforzados cosidos.",
     "imagenes": [
       "https://images.unsplash.com/photo-1616440347437-b1c73416efc2?w=800&auto=format&fit=crop&q=80"
-    ]
+    ],
+    "fichaTecnica": {
+      "tipo": "mousepad",
+      "fuenteUrl": null,
+      "valores": {
+        "width_mm": null,
+        "length_mm": null,
+        "thickness_mm": null,
+        "material": null,
+        "surface": null,
+        "base": null,
+        "stitched_edges": null,
+        "water_resistant": null,
+        "rgb": null,
+        "wireless_charging": null,
+        "connections": null,
+        "color": null,
+        "variant_notes": null
+      }
+    }
   },
   {
-    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Monitor Gamer de Alta Frecuencia.",
+    "_comentario_plantilla": "Ejemplo de estructura. Revisa modelo, SKU, imágenes, precio, stock y fuente; completa los datos técnicos publicados por el fabricante. No certifica compatibilidad.",
     "nombre": "ASUS TUF Gaming VG27AQ3A 27\" IPS QHD (2560x1440, 180Hz, 1ms, G-Sync Compatible)",
     "sku": "ASUS-TUF-VG27AQ3A-27-QHD",
     "slug": "asus-tuf-gaming-vg27aq3a-27-qhd-180hz",
-    "categoria": "Periféricos",
+    "categoria": "Monitores",
     "marca": "ASUS TUF",
-    "precio": 1199.00,
-    "costoReferencia": 980.00,
+    "precio": 1199.0,
+    "costoReferencia": 980.0,
     "stockInicial": 10,
     "estado": "active",
     "requiereSerie": true,
@@ -87,17 +141,41 @@
     "descripcion": "Monitor gaming de 27 pulgadas Fast IPS 2.5K WQHD con frecuencia de actualización de 180Hz, ELMB Sync, HDR10 y soporte DisplayPort / HDMI.",
     "imagenes": [
       "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80"
-    ]
+    ],
+    "fichaTecnica": {
+      "tipo": "monitor",
+      "fuenteUrl": null,
+      "valores": {
+        "size_inches": null,
+        "resolution": null,
+        "panel": null,
+        "refresh_hz": null,
+        "refresh_modes": null,
+        "response_ms": null,
+        "response_metric": null,
+        "brightness_nits": null,
+        "contrast": null,
+        "hdr": null,
+        "color_gamut": null,
+        "adaptive_sync": null,
+        "connections": null,
+        "vesa": null,
+        "height_adjustable": null,
+        "speakers": null,
+        "power_w": null,
+        "variant_notes": null
+      }
+    }
   },
   {
-    "_comentario_plantilla": "PLANTILLA PERIFÉRICOS: Micrófono USB para Streaming / Podcasting.",
+    "_comentario_plantilla": "Ejemplo de estructura. Revisa modelo, SKU, imágenes, precio, stock y fuente; completa los datos técnicos publicados por el fabricante. No certifica compatibilidad.",
     "nombre": "HyperX QuadCast S Micrófono de Condensador USB con Iluminación RGB y Filtro Antipop",
     "sku": "HYPERX-QUADCAST-S-RGB",
     "slug": "hyperx-quadcast-s-usb-condenser-mic-rgb",
-    "categoria": "Periféricos",
+    "categoria": "Micrófonos",
     "marca": "HyperX",
-    "precio": 549.00,
-    "costoReferencia": 435.00,
+    "precio": 549.0,
+    "costoReferencia": 435.0,
     "stockInicial": 12,
     "estado": "active",
     "requiereSerie": true,
@@ -105,6 +183,29 @@
     "descripcion": "Micrófono USB condensador independiente con soporte antivibraciones integrado, cuatro patrones polares seleccionables, sensor de silenciamiento táctil y software NGENUITY.",
     "imagenes": [
       "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&auto=format&fit=crop&q=80"
-    ]
+    ],
+    "fichaTecnica": {
+      "tipo": "microphone",
+      "fuenteUrl": null,
+      "valores": {
+        "microphone_type": null,
+        "polar_pattern": null,
+        "connections": null,
+        "frequency_min_hz": null,
+        "frequency_max_hz": null,
+        "sensitivity": null,
+        "impedance_ohm": null,
+        "max_spl_db": null,
+        "sample_rate_khz": null,
+        "bit_depth": null,
+        "phantom_power": null,
+        "power_requirements": null,
+        "headphone_output": null,
+        "mute": null,
+        "mount": null,
+        "weight_g": null,
+        "variant_notes": null
+      }
+    }
   }
 ]

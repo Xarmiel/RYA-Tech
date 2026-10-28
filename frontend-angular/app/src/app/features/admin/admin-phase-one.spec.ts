@@ -43,21 +43,37 @@ describe('Phase one service contracts',()=>{
 
 describe('Phase one admin workspace',()=>{
   let params:BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let query:BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let requests:Subject<any>[];
   let service:any;
   let data:{design:boolean};
   beforeEach(()=>{
-    vi.useFakeTimers();params=new BehaviorSubject(convertToParamMap({section:'catalogo'}));requests=[];data={design:false};
+    vi.useFakeTimers();params=new BehaviorSubject(convertToParamMap({section:'catalogo'}));query=new BehaviorSubject(convertToParamMap({}));requests=[];data={design:false};
     service={getStats:vi.fn(()=>of({totalProductos:null,pedidosPendientes:null,stockBajo:null,fichasPorVerificar:null,categoriasActivas:null})),
       getMetadata:vi.fn(()=>of({categorias:[],marcas:[]})),getItems:vi.fn(()=>{const request=new Subject();requests.push(request);return request;}),
       getPreviewItems:vi.fn(()=>of({items:[],total:0,page:0,pageSize:10,totalPages:0})),getPreviewStats:vi.fn(()=>of({totalProductos:0})),
       isModuleConnected:(section:string)=>['catalogo','inventario','contenido'].includes(section),saveItem:vi.fn(()=>of({message:'ok'}))};
     TestBed.configureTestingModule({imports:[AdminPage],providers:[provideRouter([]),
-      {provide:ActivatedRoute,useValue:{paramMap:params,snapshot:{paramMap:params.value,data}}},
+      {provide:ActivatedRoute,useValue:{paramMap:params,queryParamMap:query,snapshot:{paramMap:params.value,data}}},
       {provide:AdminService,useValue:service},{provide:NotificationService,useValue:{show:vi.fn()}},
       {provide:PreferencesService,useValue:{theme:signal('dark'),setTheme:vi.fn()}},{provide:SupabaseStorageService,useValue:{}}]});
   });
   afterEach(()=>{TestBed.resetTestingModule();vi.useRealTimers();vi.restoreAllMocks();});
+  it('opens create and import actions from the floating tools without saving anything',()=>{
+    const fixture=TestBed.createComponent(AdminPage);fixture.detectChanges();const page=fixture.componentInstance as any;
+    query.next(convertToParamMap({accion:'nuevo'}));vi.runOnlyPendingTimers();fixture.detectChanges();
+    expect(page.showFormModal()).toBe(true);expect(page.isEditing()).toBe(false);
+    vi.runOnlyPendingTimers();page.closeForm();
+    query.next(convertToParamMap({accion:'importar'}));vi.runOnlyPendingTimers();fixture.detectChanges();
+    expect(page.productImporter.open()).toBe(true);expect(service.saveItem).not.toHaveBeenCalled();
+  });
+  it('loads the exact product identifier requested by the tools',()=>{
+    service.getProductDetail=vi.fn(()=>new Subject());
+    const fixture=TestBed.createComponent(AdminPage);fixture.detectChanges();const page=fixture.componentInstance as any;
+    query.next(convertToParamMap({accion:'imagenes',producto:'exact-product-id'}));vi.runOnlyPendingTimers();
+    expect(service.getProductDetail).toHaveBeenCalledWith('exact-product-id');expect(page.showFormModal()).toBe(true);
+    expect(service.saveItem).not.toHaveBeenCalled();
+  });
   it('cancels old list requests and does not display stale responses',()=>{
     const fixture=TestBed.createComponent(AdminPage);fixture.detectChanges();const page=fixture.componentInstance as any;
     expect(requests[0].observed).toBe(true);page.setStatusFilter('draft');expect(requests[0].observed).toBe(false);

@@ -1,38 +1,41 @@
-<div class="admin-workspace">
+<div class="admin-workspace" [style.--admin-sidebar-width.px]="sidebar.width()" [class.sidebar-collapsed]="sidebar.width() === 72" [class.sidebar-resizing]="sidebar.dragging()">
   <a class="admin-skip" [routerLink]="base + (section ? '/' + section : '')" fragment="admin-main">
     Saltar al contenido
   </a>
 
   <!-- BARRA LATERAL (SIDEBAR) -->
-  <aside class="admin-sidebar">
-    <a class="brand" [routerLink]="base">RYA <span>CONTROL</span></a>
+  <div class="admin-sidebar-frame">
+  <aside class="admin-sidebar" id="admin-navigation">
+    <a class="brand" [routerLink]="base" aria-label="RYA Control" title="RYA Control">RYA <span>CONTROL</span></a>
     <p class="eyebrow">ADMINISTRACIÓN</p>
 
     <nav aria-label="Secciones de administración">
-      <a [routerLink]="base" routerLinkActive="selected" [routerLinkActiveOptions]="{ exact: true }">
+      <a [routerLink]="base" routerLinkActive="selected" [routerLinkActiveOptions]="{ exact: true }" title="Resumen" aria-label="Resumen">
         <span class="material-symbols-rounded" aria-hidden="true">space_dashboard</span>
-        Resumen
+        <span class="sidebar-label">Resumen</span>
       </a>
       @if (!design) {
-        <a [routerLink]="base + '/referencias'" routerLinkActive="selected">
-          <span class="material-symbols-rounded" aria-hidden="true">category</span>Marcas y categorías
+        <a [routerLink]="base + '/referencias'" routerLinkActive="selected" title="Marcas y categorías" aria-label="Marcas y categorías">
+          <span class="material-symbols-rounded" aria-hidden="true">category</span><span class="sidebar-label">Marcas y categorías</span>
         </a>
       }
       @for (module of modules; track module.id) {
-        <a [routerLink]="base + '/' + module.id" routerLinkActive="selected">
+        <a [routerLink]="base + '/' + module.id" routerLinkActive="selected" [title]="module.name" [attr.aria-label]="module.name">
           <span class="material-symbols-rounded" aria-hidden="true">{{ module.icon }}</span>
-          {{ module.name }}
+          <span class="sidebar-label">{{ module.name }}</span>
         </a>
       }
     </nav>
 
     <div class="sidebar-footer">
-      <a routerLink="/" class="back-link">
+      <a routerLink="/" class="back-link" title="Volver a la tienda" aria-label="Volver a la tienda">
         <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
-        Volver a la tienda
+        <span class="sidebar-label">Volver a la tienda</span>
       </a>
     </div>
   </aside>
+  <div adminSidebarResize #sidebar="sidebarResize" class="sidebar-resize-handle" role="separator" tabindex="0" aria-label="Ajustar ancho del menú. Flechas para cambiar; Inicio para contraer; Intro para restablecer." aria-orientation="vertical" aria-controls="admin-navigation" aria-valuemin="72" aria-valuemax="360" [attr.aria-valuenow]="sidebar.width()" [attr.aria-valuetext]="sidebar.width() === 72 ? 'Solo iconos' : sidebar.width() + ' píxeles'" title="Arrastra para ajustar · Doble clic para restablecer"></div>
+  </div>
 
   <!-- CONTENIDO PRINCIPAL -->
   <div class="admin-body">
@@ -56,6 +59,16 @@
         <app-technical-editor [isDesignMode]="design"></app-technical-editor>
       }
 
+      @else if (section === 'importacion' && !design) {
+        <h1>Importación de productos</h1><p>JSON y CSV con revisión de SKU, marcas, categorías, imágenes y fichas antes de guardar.</p>
+        <app-product-import (busyChange)="importBusy.set($event)" (saved)="loadStats()"></app-product-import>
+      }
+      @else if (!design && ['pedidos','resenas','contenido','compatibilidad','calidad','postventa','reportes'].includes(section)) {
+        <app-operations-admin [section]="section" (busyChange)="importBusy.set($event)"></app-operations-admin>
+      }
+      @else if (section === 'envios'  && !design) {
+        <app-shipping-admin (busyChange)="importBusy.set($event)"></app-shipping-admin>
+      }
       @else if (section === 'referencias' && !design) {
         <h1>Marcas y categorías</h1>
         <app-catalog-references (busyChange)="importBusy.set($event)" (changed)="loadMetadata(); loadStats()"></app-catalog-references>
@@ -604,9 +617,9 @@
             <span class="stat-pill is-good">{{ stats().totalProductos !== null ? (design ? 'Borradores locales' : 'Total administrativo') : (statsLoading() ? 'Consultando…' : 'No disponible') }}</span>
           </article>
           <article class="stat-card">
-            <small>Pedidos Registrados</small>
+            <small>Pedidos pendientes de pago</small>
             <strong>{{ stats().pedidosPendientes !== null ? stats().pedidosPendientes : '—' }}</strong>
-            <span class="stat-pill is-info">{{ stats().pedidosPendientes !== null ? 'Compras recientes' : 'Próxima fase' }}</span>
+            <span class="stat-pill is-info">{{ stats().pedidosPendientes !== null ? 'Pendientes de pago' : 'No disponible' }}</span>
           </article>
           <article class="stat-card">
             <small>Alertas de Stock</small>
@@ -648,7 +661,7 @@
           <p class="eyebrow">{{ current?.group || 'ADMINISTRACIÓN' }}</p>
           <h2 id="admin-form-title">{{ isEditing() ? 'Editar registro' : (current?.action || 'Nuevo registro') }}</h2>
         </div>
-        <button type="button" class="modal-close-btn" (click)="closeForm()" [disabled]="isSaving() || savingReference()" aria-label="Cerrar ventana">
+        <button type="button" class="modal-close-btn" (click)="closeForm()" [disabled]="isSaving() || savingReference() || customFieldsBusy()" aria-label="Cerrar ventana">
           <span class="material-symbols-rounded">close</span>
         </button>
       </div>
@@ -685,7 +698,7 @@
         }
 
         <form #adminForm="ngForm" (ngSubmit)="submitForm(adminForm)" class="modal-form">
-          <fieldset class="admin-form-fields" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" [attr.inert]="isLoadingDetail() || isSaving() || !!detailLoadError() ? '' : null">
+          <fieldset class="admin-form-fields" [disabled]="isLoadingDetail() || isSaving() || customFieldsBusy() || !!detailLoadError()" [attr.inert]="isLoadingDetail() || isSaving() || customFieldsBusy() || !!detailLoadError() ? '' : null">
           <div class="form-grid">
             <label>
               <span>Nombre / Título principal *</span>
@@ -729,7 +742,7 @@
                 <label for="product-category">Categoría *</label>
                 <button type="button" class="field-quick-add" (click)="toggleCreateCategory()" [disabled]="savingReference() || metadataLoading() || !!metadataError()" [attr.aria-expanded]="isCreatingCategory()">
                   <span class="material-symbols-rounded">{{ isCreatingCategory() ? 'close' : 'add' }}</span>
-                  <span>{{ isCreatingCategory() ? 'Cancelar' : '+ Nueva' }}</span>
+                  <span>{{ isCreatingCategory() ? 'Cancelar' : 'Nueva' }}</span>
                 </button>
               </div>
 
@@ -787,7 +800,7 @@
                 <label for="product-brand">Marca / Fabricante</label>
                 <button type="button" class="field-quick-add" (click)="toggleCreateBrand()" [disabled]="savingReference() || metadataLoading() || !!metadataError()" [attr.aria-expanded]="isCreatingBrand()">
                   <span class="material-symbols-rounded">{{ isCreatingBrand() ? 'close' : 'add' }}</span>
-                  <span>{{ isCreatingBrand() ? 'Cancelar' : '+ Nueva' }}</span>
+                  <span>{{ isCreatingBrand() ? 'Cancelar' : 'Nueva' }}</span>
                 </button>
               </div>
 
@@ -889,7 +902,9 @@
           </div>
           <p class="notice">{{ design ? 'Los estados son una demostración local.' : 'No publicado no significa revisado ni compatible. La ficha comercial no reemplaza la revisión técnica del configurador.' }}</p>
 
-          <div class="form-fullwidth"><app-product-technical-form [schema]="technicalSchema()" [value]="formData().fichaTecnica??null" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" (valueChange)="setTechnical($event)"></app-product-technical-form></div>
+          <div class="form-fullwidth" id="admin-product-technical" tabindex="-1"><app-product-technical-form [schema]="technicalSchema()" [value]="formData().fichaTecnica??null" [disabled]="isLoadingDetail() || isSaving() || !!detailLoadError()" (valueChange)="setTechnical($event)"></app-product-technical-form></div>
+          @if(!design && formData().categoriaId){<div class="form-fullwidth"><app-technical-field-manager [categoryId]="formData().categoriaId??''" [disabled]="isSaving() || isLoadingDetail() || !!detailLoadError()" (busyChange)="customFieldsBusy.set($event)" (changed)="customSchemaChanged($event)"></app-technical-field-manager></div>}
+
 
           <label class="form-fullwidth">
             <span>Descripción comercial</span>
@@ -901,13 +916,13 @@
             ></textarea>
           </label>
 
-          <div class="form-fullwidth product-media-wrapper">
+          <div class="form-fullwidth product-media-wrapper" id="admin-product-images" tabindex="-1">
             <app-product-media [isDesignMode]="design"></app-product-media>
           </div>
 
           </fieldset>
           <div class="modal-footer">
-            <button type="button" class="button button-secondary" (click)="closeForm()" [disabled]="isSaving() || savingReference()">
+            <button type="button" class="button button-secondary" (click)="closeForm()" [disabled]="isSaving() || savingReference() || customFieldsBusy()">
               Cancelar
             </button>
             @if (!isEditing()) {
@@ -915,13 +930,13 @@
                 type="button"
                 class="button button-secondary"
                 (click)="saveAsDraft(adminForm)"
-                [disabled]="isSaving() || savingReference() || metadataLoading() || !!metadataError() || isLoadingDetail() || !!detailLoadError()"
+                [disabled]="isSaving() || savingReference() || customFieldsBusy() || metadataLoading() || !!metadataError() || isLoadingDetail() || !!detailLoadError()"
               >
                 <span class="material-symbols-rounded">edit_note</span>
                 <span>{{ design ? 'Guardar borrador' : 'Guardar sin publicar' }}</span>
               </button>
             }
-            <button type="submit" class="button button-primary" [disabled]="isSaving() || savingReference() || metadataLoading() || !!metadataError() || isLoadingDetail() || !!detailLoadError()">
+            <button type="submit" class="button button-primary" [disabled]="isSaving() || savingReference() || customFieldsBusy() || metadataLoading() || !!metadataError() || isLoadingDetail() || !!detailLoadError()">
               @if (isSaving()) {
                 <span class="material-symbols-rounded spin">progress_activity</span>
                 <span>Guardando…</span>
@@ -1269,7 +1284,7 @@
                   <label for="asesoria-familia">Familia de uso *</label>
                   <button type="button" class="field-quick-add" (click)="toggleCreateFamilia()" [disabled]="savingFamilia()" [attr.aria-expanded]="isCreatingFamilia()">
                     <span class="material-symbols-rounded">{{ isCreatingFamilia() ? 'close' : 'add' }}</span>
-                    <span>{{ isCreatingFamilia() ? 'Cancelar' : '+ Nueva familia' }}</span>
+                    <span>{{ isCreatingFamilia() ? 'Cancelar' : 'Nueva familia' }}</span>
                   </button>
                 </div>
 

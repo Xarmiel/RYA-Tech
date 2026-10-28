@@ -73,11 +73,13 @@ Variables separadas: DB/JWT/CORS solo en Render; `API_URL`, `SUPABASE_URL` y `SU
 
 ## Variables de Entorno
 
-Copia el archivo `.env.example` en la raíz como `.env` para desarrollo local:
+Copia `backend/.env.example` como `backend/.env` para los comandos de desarrollo que se ejecutan desde `backend/`:
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
+
+La plantilla `.env.example` de la raíz también sirve de referencia general. Un `.env` en la raíz se carga al iniciar el backend desde esa raíz; no supongas que se leerá al arrancar desde `backend/`. Mantén una sola configuración local para evitar valores distintos entre archivos.
 
 Las variables principales requeridas (nunca compartir valores de producción ni secretos):
 
@@ -89,11 +91,21 @@ Las variables principales requeridas (nunca compartir valores de producción ni 
 | `DB_USERNAME` | Usuario de base de datos. | Backend |
 | `DB_PASSWORD` | Contraseña de conexión a la base de datos. | Backend |
 | `DB_SCHEMA` | Esquema relacional (`rya` o `public`). | Backend |
+| `DB_POOL_MAX_SIZE` | Máximo de conexiones por backend: `2` por defecto, también en desarrollo. | Backend |
+| `DB_POOL_MIN_IDLE` | Conexiones ociosas mínimas: `0` para no reservar sesiones innecesarias. | Backend |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (ej. `http://localhost:4200`). | Backend |
 | `SUPABASE_JWT_ISSUER` | URL emisora de tokens de Supabase Auth (`https://<PROJECT_REF>.supabase.co/auth/v1`). | Backend |
 | `SUPABASE_JWKS_URI` | Endpoint JWKS para validación pública de firmas JWT sin secreto compartido. | Backend |
 | `SUPABASE_URL` | Endpoint público del proyecto Supabase. | Frontend / Auth |
 | `SUPABASE_ANON_KEY` | Llave anónima pública de Supabase para el cliente web. | Frontend / Auth |
+| `MERCADOPAGO_PUBLIC_KEY` | Clave pública de la aplicación de prueba con Checkout API / Orders. | Backend / Render |
+| `MERCADOPAGO_ACCESS_TOKEN` | Credencial privada para enviar y consultar orders. Solo necesaria para pruebas de integración con Mercado Pago. | Backend / Render |
+| `MERCADOPAGO_WEBHOOK_SECRET` | Firma secreta para verificar notificaciones del evento Order. | Backend receptor del webhook |
+| `MERCADOPAGO_LIVE_MODE` | `false` con credenciales de prueba; valida el entorno de las respuestas. | Backend / Render |
+
+**Pruebas del equipo:** no se necesitan claves privadas de Mercado Pago para ejecutar las pruebas automatizadas ni para usar la página ya desplegada en Vercel. Para probar cobros desde un backend propio sí se requieren credenciales de prueba. La guía con los lugares del portal, las variables y las opciones para cada compañero está en [docs/MANUAL_MERCADO_PAGO.md](docs/MANUAL_MERCADO_PAGO.md). Los archivos `.env.example` de la raíz y del backend son plantillas; los valores privados quedan en `.env` o en Render, nunca en GitHub o Vercel.
+
+**Conexiones compartidas:** cada backend local y cada instancia desplegada tiene su propio pool. Mantén `DB_POOL_MAX_SIZE=2` y `DB_POOL_MIN_IDLE=0` cuando compartan Supabase; detén los backends locales que no estés usando. Si Render informa `EMAXCONNSESSION`, revisa las sesiones de Supabase y los procesos activos antes de volver a desplegar. El error posterior de Hibernate sobre el dialecto puede ser consecuencia de no conseguir una conexión, no de una URL JDBC ausente.
 
 ---
 
@@ -199,3 +211,13 @@ El sistema está configurado y optimizado para una arquitectura desacoplada:
 
 > Para el paso a paso detallado de aprovisionamiento, consulta la guía en:
 > `RYA_System_Archivo/documentacion/despliegue/VERCEL-RENDER.md`.
+
+### Envíos y recojo
+
+La activación del panel y el checkout está descrita en [docs/ENVIOS-Y-RECOJO.md](docs/ENVIOS-Y-RECOJO.md). Aplicar `backend/db/manual/envios-y-recojo.sql` antes de desplegar este módulo. Las tarifas y puntos de recojo se crean en `/admin/envios`; no hay datos de ejemplo automáticos.
+
+La activación de Pedidos, Reseñas, Contenido, Compatibilidad, Calidad, Importación, Postventa y Reportes está documentada en [docs/MODULOS-ADMINISTRATIVOS.md](docs/MODULOS-ADMINISTRATIVOS.md). Aplicar `backend/db/manual/modulos-administrativos.sql` antes de desplegar estos cambios.
+
+Los campos técnicos adicionales por categoría requieren aplicar `backend/db/manual/campos-ficha-personalizados.sql`. Instrucciones en [docs/CAMPOS-FICHA-PERSONALIZADOS.md](docs/CAMPOS-FICHA-PERSONALIZADOS.md).
+
+El pago seguro con tarjetas guardadas se activa siguiendo [docs/TARJETAS-GUARDADAS.md](docs/TARJETAS-GUARDADAS.md). Aplicar `backend/db/manual/tarjetas-guardadas.sql` antes de desplegar; guardar una tarjeta requiere autorización y no realiza un cobro.

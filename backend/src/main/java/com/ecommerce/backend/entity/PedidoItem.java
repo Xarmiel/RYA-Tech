@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "pedido_items", schema = "rya")
+@Table(name = "detalle_pedido", schema = "rya")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,10 +26,10 @@ public class PedidoItem {
     @Column(name = "producto_id", nullable = false)
     private UUID productoId;
 
-    @Column(nullable = false, length = 64)
+    @Column(name="sku_snapshot",nullable = false, length = 80)
     private String sku;
 
-    @Column(name = "nombre_producto", nullable = false)
+    @Column(name = "descripcion_snapshot", nullable = false)
     private String nombreProducto;
 
     @Column(name = "precio_unitario", nullable = false, precision = 12, scale = 2)
@@ -38,6 +38,6 @@ public class PedidoItem {
     @Column(nullable = false)
     private Integer cantidad;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 2,insertable=false,updatable=false)
     private BigDecimal subtotal;
 }

@@ -29,6 +29,8 @@ export class AuthPage implements OnInit {
   protected busy = false;
   protected message = '';
   protected success = false;
+  protected resetReady = false;
+  protected resetComplete = false;
 
   ngOnInit(): void {
     this.mode = this.route.snapshot.data['mode'] as AuthMode;
@@ -37,14 +39,17 @@ export class AuthPage implements OnInit {
       this.message = 'Correo confirmado. Ya puedes iniciar sesión.';
     }
     if (this.mode === 'reset') {
+      this.busy=true;
       void this.auth.initialize().then(session => {
-        if (!session) this.message = 'El enlace de recuperación no es válido o ya expiró.';
-      });
+        this.resetReady=!!session && this.auth.recoveryPending();
+        if (!this.resetReady) this.message = 'El enlace de recuperación no es válido o ya expiró. Solicita uno nuevo.';
+      }).catch(()=>{this.message='No se pudo verificar el enlace. Inténtalo nuevamente o solicita otro.';})
+        .finally(()=>{this.busy=false;});
     }
   }
 
   protected async submit(): Promise<void> {
-    if (this.busy) return;
+    if (this.busy || (this.mode==='reset' && (!this.resetReady || this.resetComplete))) return;
     this.message = ''; this.success = false;
     if (!this.valid()) return;
     this.busy = true;
@@ -68,6 +73,7 @@ export class AuthPage implements OnInit {
         await this.auth.updatePassword(this.password);
         this.success = true;
         this.message = 'Contraseña actualizada. Ya puedes continuar con tu cuenta.';
+        this.resetComplete=true;this.resetReady=false;
         this.password = ''; this.confirmPassword = '';
       }
     } catch (error: any) {

@@ -38,12 +38,16 @@
 
         <section class="page-shell detail-sections">
           <article class="specifications"><p class="eyebrow">INFORMACIÓN TÉCNICA</p><h2>Ficha técnica</h2>
-            @if (hasCommercialSpecs()) {<p class="spec-review-note">* Especificación comercial pendiente de revisión. No certifica compatibilidad; comprueba tu configuración en el asesor.</p>}
+            @if (hasCommercialSpecs()) {<p class="spec-review-note">* Especificaciones comerciales pendientes de revisión.@if(usesConfigurator()){ No certifican compatibilidad; comprueba tu configuración en el asesor.}</p>}
             @if (specifications().length) { <dl>@for (attribute of specifications(); track attribute.code) { <div><dt>{{ attribute.name }}@if(attribute.pendingReview){<span class="spec-pending" role="img" aria-label="Pendiente de revisión">*</span>}</dt><dd>{{ attributeValue(attribute.value, attribute.unit) }}</dd></div> }</dl> }
             @else { <div class="section-empty"><span class="material-symbols-rounded">description</span><p>Este producto todavía no tiene atributos técnicos publicados.</p></div> }
             @if(specSource();as source){<p class="spec-source"><a [href]="source" target="_blank" rel="noopener noreferrer">Consultar fuente de especificaciones <span aria-hidden="true">↗</span><span class="visually-hidden"> (se abre en una pestaña nueva)</span></a></p>}
           </article>
-          <aside class="compatibility-card"><span class="material-symbols-rounded">hub</span><p class="eyebrow">COMPATIBILIDAD</p><h2>Comprueba tu configuración</h2><p>La compatibilidad depende del conjunto completo: placa, memoria, refrigeración, fuente y gabinete. El motor del backend revalidará todas las piezas.</p><a class="button button-secondary" routerLink="/asesorias">Abrir configurador</a></aside>
+          @if(usesConfigurator()){
+            <aside class="compatibility-card"><span class="material-symbols-rounded">hub</span><p class="eyebrow">COMPATIBILIDAD</p><h2>Comprueba tu configuración</h2><p>La compatibilidad depende del conjunto completo: placa, memoria, refrigeración, fuente y gabinete. Comprueba el conjunto en el asesor y consulta las condiciones del fabricante.</p><a class="button button-secondary" routerLink="/asesorias">Abrir configurador</a></aside>
+          }@else{
+            <aside class="compatibility-card"><span class="material-symbols-rounded">devices</span><p class="eyebrow">CONEXIÓN Y USO</p><h2>Revisa tu dispositivo</h2><p>Consulta las conexiones, el sistema operativo y los accesorios necesarios en la ficha del fabricante antes de elegir.</p>@if(specSource();as source){<a class="button button-secondary" [href]="source" target="_blank" rel="noopener noreferrer">Consultar fabricante<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>}</aside>
+          }
         </section>
 
         <section class="page-shell reviews-section" id="resenas"><div class="section-heading"><div><p class="eyebrow">OPINIONES VERIFICADAS</p><h2>Reseñas del producto</h2></div>@if (reviews().total > 0) { <div class="review-score"><strong>{{ reviews().average }}</strong><span><span class="stars">@for (star of stars; track star) { <i [class.is-filled]="star <= reviews().average">★</i> }</span><small>{{ reviews().total }} publicadas</small></span></div> }</div>

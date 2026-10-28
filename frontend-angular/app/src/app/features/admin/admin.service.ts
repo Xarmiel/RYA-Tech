@@ -158,11 +158,12 @@ export class AdminService {
     return forkJoin({
       productos: this.http.get<any>('/api/v1/admin/productos?size=1').pipe(catchError(() => of(null))),
       alertas: this.http.get<any>('/api/v1/admin/productos?estado=alert&size=1').pipe(catchError(() => of(null))),
+      pedidos: this.http.get<any>('/api/v1/admin/operacion/pedidos?estado=PENDIENTE_PAGO').pipe(catchError(() => of(null))),
       categorias: this.http.get<any[]>('/api/v1/categorias').pipe(catchError(() => of(null))),
     }).pipe(
       map(res => ({
         totalProductos: res.productos?.totalElements !== undefined ? Number(res.productos.totalElements) : null,
-        pedidosPendientes: null,
+        pedidosPendientes: res.pedidos?.total ?? null,
         stockBajo: res.alertas?.totalElements !== undefined ? Number(res.alertas.totalElements) : null,
         fichasPorVerificar: null,
         categoriasActivas: Array.isArray(res.categorias) ? res.categorias.length : null,
@@ -563,8 +564,15 @@ export class AdminService {
     return throwError(() => new Error('La gestión de esta sección todavía no está conectada.'));
   }
 
-  updateProductTechnical(id:string,sku:string,fichaTecnica:ProductTechnicalFicha):Observable<any> {
-    return this.http.patch(`/api/v1/admin/productos/${id}/ficha-tecnica`,{sku,fichaTecnica});
+  updateProductTechnical(id:string,sku:string,fichaTecnica:ProductTechnicalFicha,campos?:string[]):Observable<any> {
+    return this.http.patch(`/api/v1/admin/productos/${id}/ficha-tecnica`,{sku,fichaTecnica,...(campos?{campos}:{})});
+  }
+
+  getImportComparison(id:string):Observable<import('./import-resolution-model').ImportSnapshot> {
+    return this.http.get<import('./import-resolution-model').ImportSnapshot>(`/api/v1/admin/productos/${encodeURIComponent(id)}/importacion`);
+  }
+  resolveImport(id:string,request:unknown):Observable<import('./import-resolution-model').ImportSnapshot> {
+    return this.http.patch<import('./import-resolution-model').ImportSnapshot>(`/api/v1/admin/productos/${encodeURIComponent(id)}/importacion`,request);
   }
 
   addProductImages(id:string,sku:string,urls:string[]):Observable<any>{

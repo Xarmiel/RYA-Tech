@@ -15,7 +15,7 @@ import java.util.UUID;
 public class IniciarPagoResponseDto {
     private UUID pedidoId;
     private String numeroPedido;
-    private String preferenceId;
+    private String metodoPagoCodigo;
     private BigDecimal total;
     private String moneda;
     private String publicKey;

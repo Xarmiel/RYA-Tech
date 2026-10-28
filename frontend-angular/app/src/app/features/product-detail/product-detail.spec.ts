@@ -56,4 +56,14 @@ describe('Recuperación del detalle de producto', () => {
     expect(section.querySelector('.spec-source a').getAttribute('href')).toBe('https://example.com/cpu');
     expect(component.product().attributes).toHaveLength(8);
   });
+  it('does not send peripheral buyers to the component configurator and keeps useful limitations',()=>{
+    const fixture=TestBed.createComponent(ProductDetailComponent);fixture.detectChanges();const component=fixture.componentInstance as any;
+    component.product.set({id:'mouse',sku:'MOUSE',name:'Mouse',category:'Mouse',categorySlug:'mouse',slug:'mouse',price:100,availableStock:0,shippable:true,images:[],attributes:[
+      {code:'CATALOG_TECH_TYPE',name:'Tipo',value:'mouse'},
+      {code:'CATALOG_TECH_MOUSE_CONNECTIONS',name:'Conexiones',value:'Bluetooth; USB-C para carga'},
+      {code:'CATALOG_TECH_MOUSE_INTERNAL_NOTES',name:'Notas internas',value:'No confundir modelos'}
+    ]});component.state.set('ready');fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Bluetooth; USB-C para carga');expect(fixture.nativeElement.textContent).not.toContain('No confundir modelos');
+    expect(fixture.nativeElement.querySelector('.spec-review-note').textContent).not.toContain('asesor');expect(fixture.nativeElement.querySelector('.compatibility-card').textContent).not.toContain('configurador');
+  });
 });

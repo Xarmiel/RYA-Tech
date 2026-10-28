@@ -21,6 +21,9 @@ describe('Current auth session and route regression',()=>{
   beforeEach(()=>{
     TestBed.configureTestingModule({providers:[{provide:SUPABASE_AUTH_CLIENT,useValue:{auth:sdk}}]});
     networkGuard=vi.spyOn(globalThis,'fetch').mockRejectedValue(new Error('Tests must not use real authentication requests'));
+    sessionStorage.removeItem('rya-password-recovery');
+    sdk.updateUser.mockReset().mockResolvedValue({data:{user:session.user},error:null});
+    sdk.resetPasswordForEmail.mockReset().mockResolvedValue({data:{},error:null});
     sdk.getSession.mockReset().mockResolvedValue({data:{session:null},error:null});
     sdk.signInWithPassword.mockReset().mockResolvedValue({data:{session},error:null});
     sdk.signUp.mockReset().mockResolvedValue({data:{session},error:null});
@@ -67,6 +70,31 @@ describe('Current auth session and route regression',()=>{
   it('does not authenticate after rejected credentials',async()=>{
     sdk.signInWithPassword.mockResolvedValue({data:{session:null},error:new Error('Invalid login credentials')});const auth=makeAuth();await auth.initialize();
     await expect(auth.signIn('test@example.invalid','wrong-test-password')).rejects.toThrow('Invalid');expect(await auth.initialize()).toBeNull();
+  });
+  it('opens the reset form after recovery even if Supabase redirects to the home page',async()=>{
+    TestBed.configureTestingModule({providers:[provideRouter([])]});const router=TestBed.inject(Router);const navigate=vi.spyOn(router,'navigateByUrl').mockResolvedValue(true);
+    vi.useFakeTimers();try{
+      const auth=makeAuth();await auth.initialize();event('PASSWORD_RECOVERY',session);
+      expect(auth.recoveryPending()).toBe(true);expect(navigate).not.toHaveBeenCalled();await vi.advanceTimersByTimeAsync(1);
+      expect(navigate).toHaveBeenCalledWith('/restablecer-clave',{replaceUrl:true});
+      expect(sessionStorage.getItem('rya-password-recovery')).not.toContain(session.access_token);
+      await auth.updatePassword('new-test-password');expect(sdk.updateUser).toHaveBeenCalledWith({password:'new-test-password'});expect(auth.recoveryPending()).toBe(false);
+    }finally{vi.useRealTimers();}
+  });
+  it('restores only a pending recovery belonging to the current user and clears it on logout',async()=>{
+    sessionStorage.setItem('rya-password-recovery',JSON.stringify({userId:session.user.id,expires:Date.now()+60000}));sdk.getSession.mockResolvedValue({data:{session},error:null});
+    const auth=makeAuth();await auth.initialize();expect(auth.recoveryPending()).toBe(true);await auth.signOut();expect(auth.recoveryPending()).toBe(false);expect(sessionStorage.getItem('rya-password-recovery')).toBeNull();
+  });
+  it.each([{userId:'another-user',expires:Date.now()+60000},{userId:session.user.id,expires:0}])('ignores stale or foreign recovery markers',async marker=>{
+    sessionStorage.setItem('rya-password-recovery',JSON.stringify(marker));sdk.getSession.mockResolvedValue({data:{session},error:null});const auth=makeAuth();await auth.initialize();expect(auth.recoveryPending()).toBe(false);
+    await expect(auth.updatePassword('new-test-password')).rejects.toThrow('enlace');expect(sdk.updateUser).not.toHaveBeenCalled();
+  });
+  it('keeps the recovery form available when password update is rejected',async()=>{
+    const auth=makeAuth();event('PASSWORD_RECOVERY',session);sdk.updateUser.mockResolvedValue({error:new Error('same password')});
+    await expect(auth.updatePassword('new-test-password')).rejects.toThrow('same password');expect(auth.recoveryPending()).toBe(true);await auth.signOut();
+  });
+  it('requests a reset with the dedicated callback rather than the login route',async()=>{
+    const auth=makeAuth();await auth.requestPasswordReset(' test@example.invalid ');expect(sdk.resetPasswordForEmail).toHaveBeenCalledWith('test@example.invalid',{redirectTo:location.origin+'/restablecer-clave'});
   });
   it('actually navigates to guarded routes after login, and blocks them again after logout',async()=>{
     TestBed.configureTestingModule({providers:[provideRouter([

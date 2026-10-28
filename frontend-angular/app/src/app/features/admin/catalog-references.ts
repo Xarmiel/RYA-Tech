@@ -1,14 +1,22 @@
-import { Component, DestroyRef, HostListener, OnInit, inject, input, output, signal } from '@angular/core';
+import {TechnicalFieldManager} from './technical-field-manager';
+import { Component, DestroyRef, HostListener, OnInit, ViewChild, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom, timeout } from 'rxjs';
 import { AdminMetadata, AdminReferenceItem, AdminService } from './admin.service';
 import { importKey } from './product-import-model';
 
 @Component({
-  selector: 'app-catalog-references', imports: [FormsModule],
+  selector: 'app-catalog-references', imports: [FormsModule, TechnicalFieldManager],
   templateUrl: './catalog-references.html', styleUrl: './catalog-references.scss',
 })
 export class CatalogReferences implements OnInit {
+  @ViewChild(TechnicalFieldManager) fieldManager?: TechnicalFieldManager;
+  fieldsCategoryId='';
+  selectFieldsCategory(event:Event){const input=event.target as HTMLSelectElement;if(this.fieldManager&&!this.fieldManager.canLeave()){input.value=this.fieldsCategoryId;return;}this.fieldsCategoryId=input.value;}
+  fieldBusy(value:boolean){this.setBusy(value);}
+  fieldsChanged(){queueMicrotask(()=>{if(!this.destroyed)void this.load();});}
+  canLeave(){return !this.busy()&&(!this.fieldManager||this.fieldManager.canLeave());}
+
   private readonly api = inject(AdminService);
   private destroyed = false;
   readonly disabled = input(false);

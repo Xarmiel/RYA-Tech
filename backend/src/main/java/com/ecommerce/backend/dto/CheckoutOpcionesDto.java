@@ -18,6 +18,9 @@ public class CheckoutOpcionesDto {
 
     @Value @Builder
     public static class TarifaEnvioDto {
+        String modalidad;
+        String direccionRecojo;
+        String horarioRecojo;
         UUID id;
         String transportista;
         String departamento;

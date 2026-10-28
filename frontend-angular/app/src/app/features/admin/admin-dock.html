@@ -1,0 +1,54 @@
+@if (access.allowed() || design) {
+  <div class="admin-dock" [class.is-minimized]="minimized()" [class.is-dragging]="dragging()" [style.right.px]="right()" [style.bottom.px]="bottom()" (keydown.escape)="open.set(false)">
+    @if (open()) {
+      <section id="admin-quick-tools" class="dock-panel" aria-label="Herramientas rápidas de administración" [style.right.px]="panelRight()" [style.bottom.px]="panelBottom()">
+        <header><strong>Herramientas de administrador</strong><button type="button" class="dock-icon" (click)="open.set(false)" aria-label="Cerrar herramientas"><span class="material-symbols-rounded" aria-hidden="true">close</span></button></header>
+        <p class="dock-context">{{ context }}</p>
+        <nav aria-label="Acciones para esta página">
+          @if (product(); as current) {
+            <button type="button" (click)="action('editar', current.id)">Editar este producto</button>
+            <button type="button" (click)="action('imagenes', current.id)">Gestionar imágenes</button>
+            <button type="button" (click)="action('ficha', current.id)">Revisar ficha técnica</button>
+            <a [routerLink]="[base, 'inventario']" [queryParams]="{buscar: current.sku}" (click)="open.set(false)">Consultar stock de este producto</a>
+          } @else {
+            @if (contextBusy()) { <small role="status">Consultando producto…</small> }
+            <button type="button" (click)="action('nuevo')">Nuevo producto</button>
+            @if (path.endsWith('/inventario')) { <button type="button" (click)="action('stock')">Registrar movimiento de inventario</button> }
+            @if (!design) { <button type="button" (click)="action('importar')">Importar productos o imágenes</button> }
+            @if (!design) { <a [routerLink]="[base, 'referencias']" (click)="open.set(false)">Gestionar marcas y categorías</a> }
+          }
+        </nav>
+        @if (!design) {
+          <div class="dock-pending">
+            <header><strong>Pendientes del catálogo</strong><button type="button" class="dock-icon" (click)="refresh()" [disabled]="busy() || technicalBusy()" aria-label="Actualizar pendientes"><span class="material-symbols-rounded" aria-hidden="true">refresh</span></button></header>
+            @if (busy()) { <p role="status">Consultando catálogo completo…</p> }
+            @else if (error()) { <p role="alert">{{ error() }}</p> }
+            @else if (pending() !== null) {
+              <div class="dock-filters" aria-label="Tipo de pendiente">
+                <button type="button" [attr.aria-pressed]="pendingKind() === 'images'" (click)="pendingKind.set('images')">Sin imagen principal {{ filtered('images').length }}</button>
+                <button type="button" [attr.aria-pressed]="pendingKind() === 'drafts'" (click)="pendingKind.set('drafts')">Borradores {{ filtered('drafts').length }}</button>
+                <button type="button" [attr.aria-pressed]="pendingKind() === 'stock'" (click)="pendingKind.set('stock')">Stock bajo {{ filtered('stock').length }}</button>
+                <button type="button" [attr.aria-pressed]="pendingKind() === 'technical'" (click)="selectTechnical()">Fichas {{ technicalRows() === null ? '—' : filtered('technical').length }}</button>
+              </div>
+              @if (pendingKind() === 'technical' && technicalBusy()) { <p role="status">Revisando fichas técnicas…</p> }
+              @else if (pendingKind() === 'technical' && technicalError()) { <p role="alert">{{ technicalError() }}</p><button type="button" (click)="selectTechnical()">Reintentar fichas</button> }
+              @else {
+              <ul>@for (row of filtered(); track row.id) {
+                <li>@if (pendingKind() === 'stock') { <a [routerLink]="[base, 'inventario']" [queryParams]="{buscar:row.code}" (click)="open.set(false)">{{ row.title }}<small>{{ row.code }}</small></a> }
+                @else { <button type="button" (click)="action(pendingKind() === 'images' ? 'imagenes' : pendingKind() === 'technical' ? 'ficha' : 'editar', row.id)">{{ row.title }}<small>{{ row.code }}</small></button> }</li>
+              } @empty { <li>Sin pendientes de este tipo.</li> }</ul>
+              }
+              <small>{{ pendingKind() === 'technical' ? 'Fichas marcadas pendientes y datos heredados. No certifica compatibilidad.' : 'Stock bajo: hasta 3 unidades disponibles. Datos de la última consulta; actualiza después de editar.' }}</small>
+            }
+          </div>
+        }
+        <a class="dock-panel-link" [routerLink]="inAdmin ? '/' : base" (click)="open.set(false)">{{ inAdmin ? 'Salir del panel · Ir a la tienda' : 'Entrar al panel administrativo' }}</a>
+        <button type="button" class="dock-reset" (click)="resetPosition()">Restablecer posición</button>
+      </section>
+    }
+    <div class="dock-bar">
+      <button type="button" class="dock-icon dock-handle" (click)="minimize()" (pointerdown)="start($event)" (pointermove)="move($event)" (pointerup)="end($event)" (pointercancel)="end($event)" (lostpointercapture)="end($event)" (keydown)="moveKey($event)" [attr.aria-label]="minimized() ? 'Mostrar barra de herramientas' : 'Ocultar barra de herramientas'" [attr.aria-expanded]="!minimized()" title="Clic para ocultar o mostrar. Mantén presionado para mover. Alt + flechas para mover con teclado."><span class="material-symbols-rounded" aria-hidden="true">construction</span></button>
+      @if (!minimized()) { <button type="button" class="dock-toggle" (click)="toggle()" [attr.aria-expanded]="open()" aria-controls="admin-quick-tools">Herramientas <span aria-hidden="true">{{open() ? '−' : '+'}}</span></button> }
+    </div>
+  </div>
+}

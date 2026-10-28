@@ -5,6 +5,7 @@ export interface ImportProduct {
   precio: number; stockInicial: number; descripcion: string; imagenes: string[];
   errors: string[]; warnings: string[];
   fichaTecnica?: ProductTechnicalFicha;
+  camposFicha?: string[];
   accion?: 'crear'|'actualizar-ficha'|'agregar-imagenes';
   slug?: string;
   costoReferencia?: number;
@@ -101,6 +102,13 @@ export function parseProducts(source: string, format: 'json' | 'csv'): ImportPro
     if(product.accion==='actualizar-ficha'){
       if(!(product as ImportProduct).fichaTecnica)errors.push('Actualizar ficha requiere fichaTecnica.');
       warnings.push('ACTUALIZAR SOLO FICHA del SKU exacto. Precio, stock, imágenes y publicación se conservan.');
+    }
+    if(item.camposFicha!==undefined){
+      const fields=item.camposFicha;
+      if(product.accion!=='actualizar-ficha'||!Array.isArray(fields)||!fields.length||fields.length>60||fields.some((key:unknown)=>typeof key!=='string'||!key.trim())||new Set(fields).size!==fields.length
+        ||!((product as ImportProduct).fichaTecnica)||Object.keys((product as ImportProduct).fichaTecnica!.valores).length!==fields.length||fields.some((key:string)=>!Object.hasOwn((product as ImportProduct).fichaTecnica!.valores,key)))
+        errors.push('camposFicha requiere actualizar-ficha y una lista única con exactamente las claves incluidas en fichaTecnica.valores.');
+      else{(product as ImportProduct).camposFicha=[...fields];warnings.push('Actualización parcial: solo se reemplazan los campos indicados; se conservan la fuente y los demás valores actuales de la ficha.');}
     }
     if(product.accion==='agregar-imagenes'){
       if(!imagenes.length)errors.push('Incluye al menos una imagen.');

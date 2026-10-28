@@ -31,6 +31,7 @@ class CheckoutServiceTest {
         Producto producto = Producto.builder().activo(true).vendible(true).isDeleted(false)
                 .precioBase(new BigDecimal("100.00")).build();
         when(pago.getNombre()).thenReturn("Pasarela segura");
+        when(tarifa.getActivo()).thenReturn(true);
         when(tarifa.getCosto()).thenReturn(new BigDecimal("15.00"));
         when(tarifa.getDepartamento()).thenReturn("Lima");
         when(carritoService.obtener("session-key-valid-123", null))
@@ -56,7 +57,7 @@ class CheckoutServiceTest {
         cliente.setTipoDocumento("DNI"); cliente.setNumeroDocumento("12345678");
         cliente.setNombre("Cliente Real"); cliente.setEmail("cliente@example.com"); cliente.setTelefono("999999999");
         ValidarCheckoutRequestDto.Entrega entrega = new ValidarCheckoutRequestDto.Entrega();
-        entrega.setTarifaEnvioId(tarifaId); entrega.setDireccion("Dirección válida");
+        entrega.setDepartamento("Lima"); entrega.setProvincia("Lima"); entrega.setDistrito("Miraflores"); entrega.setTarifaEnvioId(tarifaId); entrega.setDireccion("Dirección válida");
         dto.setCliente(cliente); dto.setEntrega(entrega); dto.setMetodoPagoId(pagoId);
         return dto;
     }

@@ -1,0 +1,26 @@
+.admin-workspace {
+  .admin-sidebar-frame { position: sticky; top: 0; height: 100dvh; min-width: 0; }
+  .admin-sidebar { position: static; overflow-x: hidden; }
+  .sidebar-resize-handle {
+    position: absolute; inset: 0 -5px 0 auto; width: 10px; z-index: 5;
+    cursor: col-resize; touch-action: none;
+    &::after { content: ''; position: absolute; inset: 0 4px; background: transparent; transition: background .15s; }
+    &:hover::after, &:focus-visible::after { background: var(--cyan); }
+    &:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+  }
+  &.sidebar-resizing { cursor: col-resize; user-select: none; }
+  &.sidebar-resizing .sidebar-resize-handle::after { background: var(--cyan); }
+  @media (min-width: 761px) {
+    grid-template-columns: var(--admin-sidebar-width, 260px) minmax(0, 1fr);
+    &.sidebar-collapsed {
+      .admin-sidebar { padding: 26px 8px; }
+      .sidebar-label, .brand span, .admin-sidebar > .eyebrow { display: none; }
+      .brand { font-size: 18px; letter-spacing: 1px; text-align: center; }
+      .admin-sidebar nav a, .sidebar-footer .back-link { justify-content: center; padding: 12px 0; min-height: 44px; }
+    }
+  }
+  @media (max-width: 760px) {
+    .admin-sidebar-frame { position: static; height: auto; }
+    .sidebar-resize-handle { display: none; }
+  }
+}

@@ -7,6 +7,10 @@ import { CatalogFacets, CatalogPage } from './catalog.models';
 export class CatalogService {
   private readonly http = inject(HttpClient);
 
+  getCategories(): Observable<Array<{nombre:string;slug:string}>> {
+    return this.http.get<Array<{nombre:string;slug:string}>>('/api/v1/categorias');
+  }
+
   getProducts(query = '', page = 0, size = 12, filters: Record<string, string[]> = {}, sortBy = 'nombre', sortDir = 'asc'): Observable<CatalogPage> {
     let params = new HttpParams().set('page', page).set('size', size).set('sortBy', sortBy).set('sortDir', sortDir);
     if (query.trim()) params = params.set('q', query.trim());
@@ -99,7 +103,8 @@ export class CatalogService {
     if (normalized.includes('frecuencia_base')) return 'Frecuencia base';
     if (normalized.includes('frecuencia_maxima') || normalized.includes('frecuencia_max')) return 'Frecuencia turbo';
     if (normalized.includes('cache_l3')) return 'Caché L3';
-    if (normalized.includes('potencia_base') || normalized.includes('tdp')) return 'Consumo (TDP)';
+    if (normalized.includes('tdp')) return 'TDP declarado';
+    if (normalized.includes('potencia_base')) return 'Potencia base';
     return fallback;
   }
 
@@ -112,7 +117,7 @@ export class CatalogService {
     if (!Number.isFinite(numericValue)) return value;
 
     const normalizedCode = code.toLocaleLowerCase();
-    if (normalizedCode.includes('frecuencia')) {
+    if (normalizedCode.includes('frecuencia') || normalizedCode.endsWith('_base_mhz') || normalizedCode.endsWith('_boost_mhz')) {
       return `${this.compactNumber(numericValue / 1000)} GHz`;
     }
     if (normalizedCode.includes('cache') && unit?.toLocaleLowerCase() === 'kb') {
@@ -121,7 +126,7 @@ export class CatalogService {
     if (normalizedCode.includes('potencia') || normalizedCode.includes('tdp') || unit?.toLocaleLowerCase() === 'w') {
       return `${this.compactNumber(numericValue)} W`;
     }
-    return this.compactNumber(numericValue);
+    return `${this.compactNumber(numericValue)}${unit ? ' ' + unit : ''}`;
   }
 
   private compareFilterValues(left: string, right: string): number {

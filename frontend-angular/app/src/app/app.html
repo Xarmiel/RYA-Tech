@@ -1,13 +1,13 @@
 @if (!isAuthRoute() && !isAdminRoute()) {
 <a class="skip-link" href="#main-content" (click)="skipToContent($event)">Ir al contenido</a>
-<header class="app-header">
+<header class="app-header" (mouseleave)="leaveCatalogMenu($event)" (mousemove)="crossCatalogHeader($event)">
   <a class="brand-link" routerLink="/" aria-label="RYA Tech, volver al inicio"><img src="assets/brand/group-2.png" alt="Logo de RYA Tech"></a>
   <button class="icon-button mobile-menu-toggle" type="button" aria-label="Abrir navegación" [attr.aria-expanded]="mobileMenuOpen()" (click)="mobileMenuOpen.set(!mobileMenuOpen())"><span class="material-symbols-rounded">menu</span></button>
   <nav class="main-nav" [class.is-open]="mobileMenuOpen()" aria-label="Navegación principal">
     <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }" (click)="mobileMenuOpen.set(false)">Inicio</a>
-    <div class="nav-mega-item">
-      <a routerLink="/catalogo" routerLinkActive="is-active" (click)="mobileMenuOpen.set(false)">Catálogo</a>
-      <section class="mega-menu" aria-label="Explorar catálogo">
+    <div class="nav-mega-item" [class.is-open]="catalogMenuOpen()" (mouseenter)="openCatalogMenu()" (mouseleave)="leaveCatalogMenu($event)" (focusin)="openCatalogMenu()" (focusout)="leaveCatalogMenu($event)">
+      <a routerLink="/catalogo" routerLinkActive="is-active" [attr.aria-expanded]="catalogMenuOpen()" aria-controls="catalog-mega-menu" (click)="mobileMenuOpen.set(false)">Catálogo</a>
+      <section id="catalog-mega-menu" class="mega-menu" aria-label="Explorar catálogo" (mouseenter)="openCatalogMenu()">
         <div><p class="mega-menu-title">Por categoría</p><div class="mega-menu-grid">
           <a routerLink="/catalogo" [queryParams]="{ categoria: 'componentes' }"><span class="material-symbols-rounded">developer_board</span><span>Componentes</span></a>
           <a routerLink="/catalogo" [queryParams]="{ categoria: 'procesadores-gpu' }"><span class="material-symbols-rounded">memory</span><span>Procesadores y GPU</span></a>

@@ -10,6 +10,11 @@ import java.util.UUID;
 
 @Repository
 public interface CategoriaRepository extends JpaRepository<Categoria, UUID> {
+    @org.springframework.data.jpa.repository.Query("select f from CampoFichaCategoria f where f.categoriaId=:categoria order by f.createdAt,f.id")
+    List<com.ecommerce.backend.entity.CampoFichaCategoria> findTechnicalFields(@org.springframework.data.repository.query.Param("categoria") UUID categoria);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select c from Categoria c where c.id=:id and c.isDeleted=false")
+    Optional<Categoria> findForTechnicalFieldUpdate(@org.springframework.data.repository.query.Param("id") UUID id);
     List<Categoria> findByIsDeletedFalseOrderByPosicionAsc();
     Optional<Categoria> findBySlugAndIsDeletedFalse(String slug);
     Optional<Categoria> findByAcronimoIgnoreCaseAndIsDeletedFalse(String acronimo);

@@ -17,6 +17,7 @@ import java.util.UUID;
 public class AyudaController {
     private final AyudaService service;
     private final SoporteProperties soporte;
+    private final com.ecommerce.backend.service.AdminContentService contenido;
 
     @GetMapping("/preguntas")
     public AyudaDto preguntas(@RequestParam(required=false) @Size(max=200) String q,
@@ -28,12 +29,13 @@ public class AyudaController {
 
     @GetMapping("/contacto")
     public Contacto contacto() {
-        String phone = limpio(soporte.getTelefono());
+        var saved=contenido.contact();
+        String phone = limpio(saved.get("telefono")==null ? soporte.getTelefono() : saved.get("telefono").toString());
         String digits = phone == null ? "" : phone.replaceAll("[^0-9]", "");
-        String whatsapp = limpio(soporte.getWhatsapp());
-        return new Contacto(limpio(soporte.getEmail()),phone,
+        String whatsapp = limpio(saved.get("whatsapp")==null ? soporte.getWhatsapp() : saved.get("whatsapp").toString());
+        return new Contacto(limpio(saved.get("email")==null ? soporte.getEmail() : saved.get("email").toString()),phone,
                 digits.isEmpty() || digits.matches("0+") ? null : "tel:" + phone.replaceAll("[^+0-9]", ""),
-                whatsapp == null ? null : "https://wa.me/" + whatsapp,limpio(soporte.getHorario()));
+                whatsapp == null ? null : "https://wa.me/" + whatsapp,limpio(saved.get("horario")==null ? soporte.getHorario() : saved.get("horario").toString()));
     }
 
     public record Contacto(String email,String telefono,String telefonoUrl,String whatsappUrl,String horario) {}

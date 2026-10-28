@@ -1,10 +1,11 @@
+import {EditorialContent} from '../../shared/editorial-content/editorial-content';
 import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-experiences',
-  imports: [RouterLink],
+  imports: [RouterLink, EditorialContent],
   templateUrl: './experiences.html',
   styleUrl: './experiences.scss',
 })

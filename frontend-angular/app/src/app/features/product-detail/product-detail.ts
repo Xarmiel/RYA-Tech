@@ -12,7 +12,7 @@ import { ProductSummary } from '../catalog/catalog.models';
 import { ProductDetail, ProductReviews } from './product-detail.models';
 import { ProductDetailService } from './product-detail.service';
 import { FavoriteButton } from '../../shared/favorite-button/favorite-button';
-import { productSpecifications, specificationSource } from './product-specifications';
+import { productSpecifications, specificationSource, usesComponentConfigurator } from './product-specifications';
 
 type ViewState = 'loading' | 'ready' | 'error';
 
@@ -37,6 +37,7 @@ export class ProductDetailComponent implements OnInit {
   protected readonly specifications = computed(() => productSpecifications(this.product()?.attributes??[]));
   protected readonly hasCommercialSpecs = computed(() => this.specifications().some(attribute=>attribute.pendingReview));
   protected readonly specSource = computed(() => specificationSource(this.product()?.attributes??[]));
+  protected readonly usesConfigurator = computed(() => usesComponentConfigurator(this.product()?.attributes??[]));
   protected readonly reviews = signal<ProductReviews>({ average: 0, total: 0, items: [] });
   protected readonly reviewsError = signal(false);
   protected readonly relatedError = signal(false);

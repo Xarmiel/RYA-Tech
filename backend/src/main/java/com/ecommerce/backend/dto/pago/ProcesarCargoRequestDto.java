@@ -17,15 +17,23 @@ public class ProcesarCargoRequestDto {
     @NotNull(message = "El ID del pedido es obligatorio")
     private UUID pedidoId;
 
+    @jakarta.validation.constraints.Size(max=100)
+    private String savedCardId;
+
     private String token; // Token de tarjeta generado por Brick
 
     private String paymentMethodId; // visa, master, yape, etc.
+    private String paymentTypeId;
+    private String identificationType;
+    private String identificationNumber;
 
     private Integer installments; // Cuotas (default 1)
 
     private String issuerId;
 
     @NotBlank(message = "El email del pagador es obligatorio")
+    @jakarta.validation.constraints.Email
+    @jakarta.validation.constraints.Size(max=255)
     private String email;
 }
 

@@ -259,3 +259,88 @@ CREATE TABLE IF NOT EXISTS rya.reglas_presupuesto_perfil (
   created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Checkout Orders uses the canonical purchases tables above.
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS session_key varchar(128);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS tipo_documento varchar(10);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS numero_documento varchar(20);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS nombre_completo varchar(255);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS email varchar(255);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS telefono varchar(20);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS tarifa_envio_id uuid;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS direccion_envio text;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS referencia_envio text;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS preference_id varchar(128);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS metodo_pago_codigo varchar(40);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+CREATE TABLE IF NOT EXISTS rya.pagos (
+ id uuid PRIMARY KEY,pedido_id uuid NOT NULL,pasarela varchar(30) NOT NULL,
+ mp_payment_id varchar(64),mp_order_id varchar(64) UNIQUE,payment_method_id varchar(64),payment_type_id varchar(30),ultimos_digitos varchar(4),
+ monto numeric(12,2) NOT NULL,moneda varchar(3) NOT NULL,estado varchar(30) NOT NULL,status_detail varchar(100),codigo_respuesta varchar(100),
+ mensaje_respuesta text,raw_response jsonb,instrucciones_url text,referencia_pago varchar(100),created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS modalidad_entrega VARCHAR(20);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS entrega_snapshot TEXT;
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS estado_entrega VARCHAR(30);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS transportista_seguimiento VARCHAR(160);
+ALTER TABLE rya.pedidos ADD COLUMN IF NOT EXISTS codigo_seguimiento VARCHAR(100);
+
+CREATE TABLE IF NOT EXISTS rya.transportistas(id uuid PRIMARY KEY,nombre varchar(160),is_deleted boolean NOT NULL DEFAULT false);
+
+CREATE TABLE IF NOT EXISTS rya.tarifas_envio (
+ id uuid PRIMARY KEY, transportista_id uuid, nombre_servicio varchar(160), modalidad varchar(20) NOT NULL DEFAULT 'DOMICILIO',
+ activo boolean NOT NULL DEFAULT true, departamento varchar(100), provincia varchar(100), distrito varchar(100),
+ costo numeric(12,2) NOT NULL, plazo_dias integer, direccion_recojo varchar(300), horario_recojo varchar(200), is_deleted boolean NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS rya.resenas_producto(id uuid PRIMARY KEY,usuario_id uuid NOT NULL,producto_id uuid NOT NULL,calificacion smallint NOT NULL,comentario text,publicada boolean NOT NULL DEFAULT false,created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,is_deleted boolean NOT NULL DEFAULT false);
+CREATE TABLE IF NOT EXISTS rya.versiones_bios(id uuid PRIMARY KEY,placa_revision_id uuid NOT NULL,version varchar(100) NOT NULL,orden integer NOT NULL,publicada_el date,fuente_id uuid NOT NULL);
+CREATE TABLE IF NOT EXISTS rya.compatibilidad_cpu_placa(cpu_id uuid NOT NULL,placa_revision_id uuid NOT NULL,soporte varchar(30) NOT NULL,bios_minima_id uuid,condiciones text,fuente_id uuid NOT NULL,verificada_at timestamp with time zone NOT NULL,PRIMARY KEY(cpu_id,placa_revision_id));
+CREATE TABLE IF NOT EXISTS rya.historial_administrativo (
+ id uuid PRIMARY KEY,actor_id uuid NOT NULL,modulo varchar(40) NOT NULL,registro varchar(100) NOT NULL,
+ accion varchar(40) NOT NULL,motivo text NOT NULL,created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS rya.solicitudes_postventa (
+ id uuid PRIMARY KEY,pedido_id uuid NOT NULL REFERENCES rya.pedidos(id),tipo varchar(30) NOT NULL,
+ motivo text NOT NULL,evidencia_url text,estado varchar(30) NOT NULL DEFAULT 'ABIERTA',resolucion text,
+ creado_por uuid NOT NULL,version bigint NOT NULL DEFAULT 0,created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS rya.contenido_editorial (
+ id uuid PRIMARY KEY,tipo varchar(30) NOT NULL,titulo varchar(200) NOT NULL,texto text NOT NULL,
+ ubicacion varchar(30) NOT NULL,enlace text,imagen_url text,posicion integer NOT NULL DEFAULT 0,
+ publicada boolean NOT NULL DEFAULT false,version bigint NOT NULL DEFAULT 0,created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS rya.contacto_tienda (
+ id integer PRIMARY KEY,email varchar(254),telefono varchar(30),whatsapp varchar(20),horario varchar(200),version bigint NOT NULL DEFAULT 0);
+ALTER TABLE rya.preguntas_frecuentes ADD COLUMN IF NOT EXISTS revision_admin bigint NOT NULL DEFAULT 0;
+ALTER TABLE rya.preguntas_frecuentes ADD COLUMN IF NOT EXISTS created_admin_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE rya.resenas_producto ADD COLUMN IF NOT EXISTS estado_moderacion varchar(30) NOT NULL DEFAULT 'PENDIENTE';
+ALTER TABLE rya.resenas_producto ADD COLUMN IF NOT EXISTS motivo_moderacion text;
+ALTER TABLE rya.resenas_producto ADD COLUMN IF NOT EXISTS moderado_por uuid;
+ALTER TABLE rya.resenas_producto ADD COLUMN IF NOT EXISTS moderado_at timestamp with time zone;
+ALTER TABLE rya.resenas_producto ADD COLUMN IF NOT EXISTS revision_admin bigint NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_postventa_pedido ON rya.solicitudes_postventa(pedido_id);
+CREATE INDEX IF NOT EXISTS idx_historial_registro ON rya.historial_administrativo(modulo,registro);
+
+MERGE INTO rya.contacto_tienda (id) KEY(id) VALUES (1);
+
+CREATE TABLE IF NOT EXISTS rya.campos_ficha_categoria (
+ id uuid PRIMARY KEY,categoria_id uuid NOT NULL REFERENCES rya.categorias(id),
+ clave varchar(40) NOT NULL UNIQUE,nombre varchar(100) NOT NULL,tipo_dato varchar(10) NOT NULL,
+ unidad varchar(20),ejemplo varchar(120),solo_enteros boolean NOT NULL DEFAULT false,
+ version bigint NOT NULL DEFAULT 0,creado_por uuid NOT NULL,actualizado_por uuid NOT NULL,
+ created_at timestamp with time zone NOT NULL,updated_at timestamp with time zone NOT NULL,
+ CONSTRAINT ck_campo_ficha_tipo CHECK(tipo_dato IN ('text','number','boolean')),
+ CONSTRAINT ck_campo_ficha_numero CHECK(tipo_dato='number' OR (solo_enteros=false AND unidad IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_campo_ficha_categoria ON rya.campos_ficha_categoria(categoria_id);
+
+
+-- Aplicar antes de arrancar/desplegar el backend. No guarda PAN, CVV ni tokens.
+
+CREATE TABLE IF NOT EXISTS rya.clientes_pago (
+ id uuid PRIMARY KEY,
+ usuario_id uuid NOT NULL,
+ entorno varchar(80) NOT NULL,
+ customer_id varchar(100),
+ CONSTRAINT ux_clientes_pago_usuario_entorno UNIQUE(usuario_id,entorno)
+);

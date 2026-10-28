@@ -1,8 +1,13 @@
-<section class="page-shell page-heading catalog-heading">
+<section class="page-shell page-heading catalog-heading" [class.category-page-heading]="isCategoryPage()">
   <div>
-    <p class="eyebrow">CATÁLOGO RYA TECH</p>
-    <h1>{{ query() ? 'Resultados para “' + query() + '”' : 'Hardware para tu próxima PC.' }}</h1>
-    <p>Encuentra los componentes para tu próximo setup. Explora, filtra y compara las opciones disponibles.</p>
+    @if (isCategoryPage()) {
+      <nav class="catalog-breadcrumb" aria-label="Ruta de navegación"><a routerLink="/">Inicio</a><span aria-hidden="true">/</span><a routerLink="/catalogo">Catálogo</a><span aria-hidden="true">/</span><span aria-current="page">{{ categoryName() }}</span></nav>
+      <h1>{{ categoryName() }}</h1>
+    } @else {
+      <p class="eyebrow">CATÁLOGO RYA TECH</p>
+      <h1>{{ query() ? 'Resultados para “' + query() + '”' : 'Hardware para tu próxima PC.' }}</h1>
+      <p>Encuentra los componentes para tu próximo setup. Explora, filtra y compara las opciones disponibles.</p>
+    }
   </div>
 </section>
 
@@ -14,10 +19,10 @@
       @if (filtersState() === 'loading') { <p class="filter-message">Cargando filtros disponibles desde la base de datos…</p> }
       @if (filtersState() === 'error') { <div class="filter-message" role="alert"><strong>No se pudieron cargar los filtros.</strong><span>Comprueba tu conexión e inténtalo nuevamente.</span><button class="button button-secondary" type="button" (click)="retryFilters()">Reintentar</button></div> }
       @if (filtersState() === 'ready' && !facets()?.groups?.length) { <p class="filter-message">No hay filtros disponibles para estos productos.</p> }
-      <p class="filter-step">1. Elige una sección y un tipo de producto</p>
+      @if (!isCategoryPage()) { <p class="filter-step">1. Elige una sección y un tipo de producto</p> }
       <label><input type="checkbox" [checked]="isSelected('__stock', 'true')" (change)="toggleFilter('__stock', 'true', $any($event.target).checked)"><span>Solo productos con stock</span></label>
       @for (group of facets()?.groups ?? []; track group.code) {
-        @if (group.kind === 'section') {
+        @if (group.kind === 'section' && !isCategoryPage()) {
           <details class="filter-accordion" [open]="group.code === '__hardware'">
             <summary>{{ group.label }} <span>{{ group.options.length }}</span></summary>
             <div class="filter-options">
@@ -30,7 +35,7 @@
         }
       }
       @if (selectedCategoryLabel()) {
-        <div class="technical-filters"><p class="filter-step">2. Filtros de {{ selectedCategoryLabel() }}</p>
+        <div class="technical-filters"><p class="filter-step">{{ isCategoryPage() ? 'Filtros de ' + categoryName() : '2. Filtros de ' + selectedCategoryLabel() }}</p>
           @for (group of facets()?.groups ?? []; track group.code) {
             @if (group.kind === 'filter') {
               <details class="filter-accordion">
@@ -52,30 +57,50 @@
 
 <section class="page-shell">
   <!-- Sección de categorías rápidas destacadas estilo RYA Tech -->
+  @if (!isCategoryPage()) {
   <section class="category-bubbles-section" aria-label="Categorías de gaming y accesorios">
-    <div class="category-bubbles-nav" role="group" aria-label="Filtrar por categoría">
+    <nav class="category-bubbles-nav" aria-label="Explorar categorías">
       @for (cat of categoryBubbles; track cat.id) {
-        <button
-          type="button"
+        <a
+          [routerLink]="['/catalogo', cat.slug]"
           class="category-bubble-item"
           [class.is-active]="isCategoryActive(cat.slug)"
-          [attr.aria-pressed]="isCategoryActive(cat.slug)"
-          (click)="toggleCategory(cat.slug)">
+          [attr.aria-current]="isCategoryActive(cat.slug) ? 'page' : null">
           <div class="bubble-circle">
             @if (cat.imageUrl) {
               <img [src]="cat.imageUrl" [alt]="cat.name" class="bubble-image" />
             } @else {
-              <span class="material-symbols-rounded bubble-icon">{{ cat.icon }}</span>
+              <span class="material-symbols-rounded bubble-icon" aria-hidden="true">{{ cat.icon }}</span>
             }
           </div>
           <span class="bubble-label">{{ cat.name }}</span>
-        </button>
+        </a>
       }
-    </div>
+    </nav>
   </section>
+  }
 
-  <div class="catalog-filter-actions">
-    <button class="button button-secondary filter-trigger" type="button" (click)="openFilters()" [attr.aria-expanded]="filtersOpen()">Filtros @if (activeFilters().length) { <span class="filter-count">{{ activeFilters().length }}</span> }</button>
+  <div class="catalog-filter-actions" (keydown.escape)="closeQuickFilter()">
+    <button class="button button-secondary filter-trigger" type="button" (click)="openFilters()" [disabled]="categoryMissing()" [attr.aria-expanded]="filtersOpen()"><span class="material-symbols-rounded" aria-hidden="true">tune</span>Todos los filtros @if (activeFilters().length) { <span class="filter-count">{{ activeFilters().length }}</span> }</button>
+    <label class="category-quick-filter sort-control" for="catalog-sort"><span>Ordenar por</span>
+      <select id="catalog-sort" (change)="changeSort($any($event.target).value)">
+        @for (option of sortOptions; track option.value) { <option [value]="option.value" [selected]="sort() === option.value">{{ option.label }}</option> }
+      </select>
+    </label>
+    @if (isCategoryPage() && !categoryMissing()) {
+      @for (group of quickGroups(); track group.code) {
+        <button type="button" class="quick-filter-trigger" [id]="'quick-trigger-' + group.code" [class.is-applied]="appliedFilters()[group.code]?.length" [attr.aria-expanded]="quickFilterOpen() === group.code" [attr.aria-controls]="'quick-options-' + group.code" (click)="openQuickFilter(group.code)">{{ group.label }} @if (appliedFilters()[group.code]?.length) { <span class="quick-filter-count">{{ appliedFilters()[group.code].length }}</span> }<span class="material-symbols-rounded" aria-hidden="true">expand_more</span></button>
+        @if (quickFilterOpen() === group.code) {
+          <section class="quick-filter-panel" [id]="'quick-options-' + group.code" [attr.aria-label]="'Opciones de ' + group.label">
+            <header><strong>{{ group.label }}</strong><button type="button" (click)="closeQuickFilter()" [attr.aria-label]="'Cerrar ' + group.label">×</button></header>
+            <div class="quick-filter-options">@for (option of group.options; track option.value) {
+              <label><input type="checkbox" [checked]="isSelected(group.code, option.value)" (change)="toggleFilter(group.code,option.value,$any($event.target).checked)"><span>{{ option.label }}</span></label>
+            }</div>
+            <footer><button type="button" class="button button-secondary" (click)="clearQuickFilter(group.code)">Limpiar</button><button type="button" class="button button-primary" (click)="applyQuickFilter()">Aplicar</button></footer>
+          </section>
+        }
+      }
+    }
   </div>
 
   @if (activeFilters().length) {
@@ -89,11 +114,6 @@
 
   <div class="catalog-toolbar" id="catalog-results">
     <p role="status" aria-live="polite">@if (state() === 'loading') { Cargando productos… } @else if (page()) { {{ resultStart() }}–{{ resultEnd() }} de {{ page()!.totalItems }} productos } @else { Catálogo de productos }</p>
-    <div class="sort-control"><label for="catalog-sort">Ordenar por</label>
-      <select id="catalog-sort" (change)="changeSort($any($event.target).value)">
-        @for (option of sortOptions; track option.value) { <option [value]="option.value" [selected]="sort() === option.value">{{ option.label }}</option> }
-      </select>
-    </div>
   </div>
 
   @if (cartMessage()) { <p class="cart-feedback" role="status">{{ cartMessage() }}</p> }
@@ -107,11 +127,12 @@
     @case ('empty') {
       <div class="empty-state">
         <span class="material-symbols-rounded" aria-hidden="true">search_off</span>
-        <h2>{{ activeFilters().length ? 'No encontramos resultados' : 'Aún no hay productos disponibles' }}</h2>
+        <h2>{{ isCategoryPage() && !activeFilters().length ? 'Por ahora no hay productos de ' + categoryName() : activeFilters().length ? 'No encontramos resultados' : 'Aún no hay productos disponibles' }}</h2>
         <p>{{ activeFilters().length ? 'Prueba con otra búsqueda o quita algunos filtros para encontrar más opciones.' : 'Vuelve pronto para descubrir nuevos productos.' }}</p>
         @if (activeFilters().length) {
           <button class="button button-secondary" type="button" (click)="clearFilters()">Limpiar búsqueda y filtros</button>
         }
+        @if (isCategoryPage()) { <a class="button button-secondary" routerLink="/catalogo">Ver todo el catálogo</a> }
       </div>
     }
     @case ('ready') {

@@ -14,7 +14,7 @@ export class CheckoutService {
       paymentMethods: response.metodosPago.map(item => ({ id: item.id, code: item.codigo, name: item.nombre })),
       shippingRates: response.tarifasEnvio.map(item => ({ id: item.id, carrier: item.transportista,
         department: item.departamento, province: item.provincia, district: item.distrito,
-        cost: item.costo, days: item.plazoDias })),
+        cost: item.costo, days: item.plazoDias, mode: item.modalidad ?? 'DOMICILIO', pickupAddress: item.direccionRecojo, pickupHours: item.horarioRecojo })),
     })));
   }
 
@@ -23,7 +23,7 @@ export class CheckoutService {
       cliente: { tipoDocumento: customer.documentType, numeroDocumento: customer.documentNumber,
         nombre: customer.name, email: customer.email, telefono: customer.phone },
       entrega: { tarifaEnvioId: delivery.shippingRateId, direccion: delivery.address,
-        referencia: delivery.reference || null },
+        referencia: delivery.reference || null, departamento: delivery.department, provincia: delivery.province, distrito: delivery.district },
       metodoPagoId: paymentMethodId,
     }, { headers: this.cart.requestHeaders() }).pipe(map(response => ({
       valid: response.valido, requiresAuthentication: response.requiereAutenticacion,
@@ -38,7 +38,7 @@ export class CheckoutService {
       cliente: { tipoDocumento: customer.documentType, numeroDocumento: customer.documentNumber,
         nombre: customer.name, email: customer.email, telefono: customer.phone },
       entrega: { tarifaEnvioId: delivery.shippingRateId, direccion: delivery.address,
-        referencia: delivery.reference || null },
+        referencia: delivery.reference || null, departamento: delivery.department, provincia: delivery.province, distrito: delivery.district },
       metodoPagoId: paymentMethodId,
     }, { headers: this.cart.requestHeaders() });
   }
@@ -46,16 +46,28 @@ export class CheckoutService {
   procesarCargo(
     pedidoId: string,
     email: string,
-    paymentData: { token?: string; paymentMethodId?: string; installments?: number; issuerId?: string }
+    paymentData: import('./checkout.models').OrdersPaymentData
   ): Observable<import('./checkout.models').ResultadoPago> {
     return this.http.post<import('./checkout.models').ResultadoPago>('/api/v1/pagos/procesar', {
       pedidoId,
       email,
       token: paymentData.token,
+      savedCardId: paymentData.savedCardId,
       paymentMethodId: paymentData.paymentMethodId,
       installments: paymentData.installments,
-      issuerId: paymentData.issuerId,
+      paymentTypeId: paymentData.paymentTypeId,
+      identificationType: paymentData.identificationType,
+      identificationNumber: paymentData.identificationNumber,
     }, { headers: this.cart.requestHeaders() });
+  }
+  savedCards():Observable<import('./checkout.models').SavedPaymentCard[]>{
+    return this.http.get<import('./checkout.models').SavedPaymentCard[]>('/api/v1/pagos/tarjetas');
+  }
+  saveCard(token:string):Observable<import('./checkout.models').SavedPaymentCard>{
+    return this.http.post<import('./checkout.models').SavedPaymentCard>('/api/v1/pagos/tarjetas',{token,consentimiento:true});
+  }
+  consultarPago(pedidoId:string):Observable<import('./checkout.models').ResultadoPago>{
+    return this.http.get<import('./checkout.models').ResultadoPago>(`/api/v1/pagos/pedidos/${encodeURIComponent(pedidoId)}`);
   }
 }
 
@@ -63,7 +75,7 @@ export class CheckoutService {
 
 interface BackendOptions {
   metodosPago: Array<{ id: string; codigo: string; nombre: string }>;
-  tarifasEnvio: Array<{ id: string; transportista: string; departamento: string | null; provincia: string | null; distrito: string | null; costo: number; plazoDias: number | null }>;
+  tarifasEnvio: Array<{ id: string; transportista: string; modalidad?: 'DOMICILIO'|'RECOJO'; direccionRecojo?: string; horarioRecojo?: string; departamento: string | null; provincia: string | null; distrito: string | null; costo: number; plazoDias: number | null }>;
 }
 interface BackendValidation {
   valido: boolean; requiereAutenticacion: boolean; moneda: string; subtotal: number; envio: number;

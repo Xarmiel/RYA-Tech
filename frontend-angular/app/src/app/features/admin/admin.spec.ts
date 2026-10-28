@@ -554,7 +554,9 @@ describe('Admin service and listings', () => {
     const reqProd = httpMock.expectOne('/api/v1/admin/productos?size=1');
     const reqAlert = httpMock.expectOne('/api/v1/admin/productos?estado=alert&size=1');
     const reqCat = httpMock.expectOne('/api/v1/categorias');
+    const reqOrders = httpMock.expectOne('/api/v1/admin/operacion/pedidos?estado=PENDIENTE_PAGO');
 
+    reqOrders.flush({total:7});
     reqProd.flush({ totalElements: 42 });
     reqAlert.flush({ totalElements: 5 });
     reqCat.flush([{ id: 'c1' }, { id: 'c2' }]);
@@ -562,7 +564,7 @@ describe('Admin service and listings', () => {
     expect(stats.totalProductos).toBe(42);
     expect(stats.stockBajo).toBe(5);
     expect(stats.categoriasActivas).toBe(2);
-    expect(stats.pedidosPendientes).toBeNull();
+    expect(stats.pedidosPendientes).toBe(7);
     expect(stats.fichasPorVerificar).toBeNull();
   });
 

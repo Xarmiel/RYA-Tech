@@ -30,6 +30,12 @@ public class Pago {
 
     @Column(name = "mp_payment_id", length = 64)
     private String mpPaymentId;
+    @Column(name = "mp_order_id", length = 64)
+    private String mpOrderId;
+    @Column(name = "instrucciones_url", columnDefinition = "TEXT")
+    private String instruccionesUrl;
+    @Column(name = "referencia_pago", length = 100)
+    private String referenciaPago;
 
     @Column(name = "payment_method_id", length = 64)
     private String paymentMethodId;
@@ -61,7 +67,8 @@ public class Pago {
     @Column(name = "mensaje_respuesta", columnDefinition = "TEXT")
     private String mensajeRespuesta;
 
-    @Column(name = "raw_response", columnDefinition = "TEXT")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "raw_response", columnDefinition = "jsonb")
     private String rawResponse;
 
     @Column(name = "created_at", nullable = false, updatable = false)
